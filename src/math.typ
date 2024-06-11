@@ -10,6 +10,8 @@
 #let linf(a) = math.sans(a)
 #let bilf(a) = math.sans(a)
 
+#let div = $"div"$
+#let grad = $avec("curl")$
 #let grad = $avec("grad")$
 
 #let inner(a, b) = $lr(angle.l #a, #b angle.r)$
@@ -26,23 +28,19 @@
 #let argmax = math.op("arg max", limits: true)
 
 #let mesh = $cal(M)$
-#let nodes = $cal(N)$
 
-#let Sdisc = $cal(S)^(-1)_0$
-#let S0p = $cal(S)^0_p$
-#let S10 = $cal(S)_1^0$
-#let S100 = $cal(S)_(1,0)^0$
+#let wedge = $and$
+#let wedgebig = $and.big$
+#let wedgespace = $Lambda$
+#let sharp = "♯"
+#let flat = "♭"
 
-#let S0p0 = $cal(S)^0_(p,0)$
-
-#let S0pM = $S0p(mesh)$
-#let S0pMt = $S0p(mesh')$
-#let S10M = $S10(mesh)$
-#let S100M = $S100(mesh)$
-#let S0p0M = $S0p0(mesh)$
-
+#let dom = "dom"
 
 #let math-template(doc) = [
+  #show math.equation: set text(font: "New Computer Modern Math")
+  #show math.equation: set text(font: "Fira Math Book")
+  
   #set math.mat(delim: "[")
   #set math.vec(delim: "[")
   #set math.cancel(stroke: red)

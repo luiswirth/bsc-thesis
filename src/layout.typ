@@ -1,6 +1,6 @@
 #let finishline = line(stroke: red + 0.3pt, length: 100%)
 
-#let myblock(color: red.darken(40%), width: 100%, title, content) = block(
+#let titlebox(color: red.darken(40%), width: 100%, title, content) = block(
   fill: color,
   stroke: white,
   inset: 0.3em,
@@ -18,6 +18,13 @@
       ]
     )
   ]
+)
+
+#let theorembox(content) = block(
+  stroke: 0.5pt,
+  inset: 5pt,
+  breakable: false,
+  content
 )
 
 #let circletext(content) = box(

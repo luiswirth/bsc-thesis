@@ -9,8 +9,6 @@
 
 #show outline: set heading(outlined: true)
 
-#set text(font: "New Computer Modern")
-
 #outline(
   title: "Table of Contents",
   indent: auto,

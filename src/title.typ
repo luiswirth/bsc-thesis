@@ -1,7 +1,6 @@
 #import "setup.typ": *
 
-#page(
-)[
+#page[
   #image("../res/ethz-logo.svg")
 
   #hide[#heading()[Title]]
@@ -9,7 +8,6 @@
   #align(center + horizon)[
     #[
       #set text(size: 25pt, weight: "bold")
-      #set text(font: "New Computer Modern")
 
       Arbitrary Dimension \
       Finite Element Exterior Calculus \

@@ -3,7 +3,7 @@
 #import "math.typ": *
 #import "layout.typ": *
 
-#let monospaced(content) = text(font: "DejaVu Sans Mono", content)
+#let monospaced(content) = text(font: "Fira Code", content)
 
 #let weblink(url, content) = monospaced(link(url, content))
 
@@ -12,7 +12,7 @@
 
   set page(paper: "a4")
   set text(size: 10pt)
-  set text(font: "New Computer Modern")
+  set text(font: "New Computer Modern Sans")
 
   //#set page(margin: 1cm)
   //#set par(justify: true)
@@ -29,9 +29,8 @@
   set heading(numbering: none)
 
   show heading: it => {
-    set text(font: "New Computer Modern")
     if it.level == 1 {
-      //pagebreak()
+      //pagebreak(weak: true)
       v(70pt)
       text(size: 25pt)[#it.body]
       v(40pt)
@@ -56,9 +55,8 @@
   set heading(numbering: "1.1.1")
 
   show heading: it => {
-    set text(font: "New Computer Modern")
     if it.level == 1 {
-      pagebreak()
+      pagebreak(weak: true)
       v(60pt)
       text(size: 18pt)[Chapter #counter(heading).display()]
       v(0pt)
@@ -85,9 +83,8 @@
   counter(heading).update(0)
 
   show heading: it => {
-    set text(font: "New Computer Modern")
     if it.level == 1 {
-      pagebreak()
+      pagebreak(weak: true)
       v(60pt)
       text(size: 18pt)[Appendix #counter(heading).display()]
       v(0pt)
@@ -114,9 +111,8 @@
   set heading(numbering: none)
 
   show heading: it => {
-    set text(font: "New Computer Modern")
     if it.level == 1 {
-      //pagebreak()
+      pagebreak(weak: true)
       text(size: 25pt)[#it.body]
       v(50pt, weak: true)
     } else {

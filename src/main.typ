@@ -8,8 +8,9 @@
 ]
 
 #body-style[
-  = Introduction
-  == Basic concepts
+  #include "introduction.typ"
+  #include "theory.typ"
+  #include "implementation.typ"
 ]
 
 
@@ -18,9 +19,9 @@
   = Typst Source Code
 ]
 
-
 #postface-style[
-  = Bibliography
+  #bibliography("bibliography.yaml")
+
   = Glossary
   = Declaration of originality
 ]
