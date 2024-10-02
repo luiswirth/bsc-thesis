@@ -14,11 +14,14 @@
   set text(size: 10pt)
   set text(font: "New Computer Modern Sans")
 
-  //#set page(margin: 1cm)
-  //#set par(justify: true)
+  //set page(margin: 1cm)
+  //set par(justify: true)
 
-  //#set page(fill: black)
-  //#set text(white)
+  //set page(fill: black)
+  //set text(white)
+  set page(fill: rgb("444352"))
+  set text(fill: rgb("fdfdfd"))
+
  
   doc
 }

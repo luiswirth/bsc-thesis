@@ -8,10 +8,9 @@
   #align(center + horizon)[
     #[
       #set text(size: 25pt, weight: "bold")
-
-      Arbitrary Dimension \
-      Finite Element Exterior Calculus \
-      Implementation in Rust
+      Rust Implementation of \
+      Finite Element Exterior Calculus on \
+      Coordinate-Free Simplicial Complexes \
     ]
 
     #v(1cm)
@@ -19,7 +18,7 @@
       Luis Wirth
     ]
     \
-    #weblink("mailto:luwirth@student.ethz.ch", "luwirth@student.ethz.ch") \
+    #weblink("mailto:luwirth@ethz.ch", "luwirth@ethz.ch") \
     #weblink("https://ethz.lwirth.com", "ethz.lwirth.com")
 
     #v(0.75cm)
