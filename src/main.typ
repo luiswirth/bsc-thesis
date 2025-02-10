@@ -1,27 +1,24 @@
 #import "setup.typ": *
-#show: general-style
+#show: thesis-template
 
 #preface-style[
   #include "title.typ"
-  #include "abstract.typ"
+  #include "introduction.typ"
   #include "toc.typ"
 ]
 
 #body-style[
-  #include "introduction.typ"
-  #include "theory.typ"
-  #include "implementation.typ"
+  #include "matter.typ"
 ]
 
 
 #appendix-style[
-  = Rust Source Code
-  = Typst Source Code
+  //= Rust Source Code
+  //= Typst Source Code
 ]
 
 #postface-style[
   #bibliography("bibliography.yaml")
-
-  = Glossary
-  = Declaration of originality
+  //= Glossary
+  //= Declaration of originality
 ]

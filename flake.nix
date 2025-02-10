@@ -16,7 +16,7 @@
       devShell.${system} = pkgs.mkShell {
         nativeBuildInputs = with pkgs; [
           typst
-          typst-lsp
+          tinymist
         ];
       };
     };

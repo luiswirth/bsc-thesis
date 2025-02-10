@@ -1,30 +1,38 @@
-#import "@preview/cetz:0.2.1"
+//#import "@preview/cetz:0.2.1"
 
-#import "math.typ": *
+#import "setup-math.typ": *
+#import "setup-code.typ": *
+
 #import "layout.typ": *
 
-#let monospaced(content) = text(font: "Fira Code", content)
+#let fgcolor = white
+#let bgcolor = black
 
-#let weblink(url, content) = monospaced(link(url, content))
-
-#let general-style(doc) = {
+#let thesis-template(doc) = {
   show: math-template
+  show: code-template
+  
+  set page(fill: bgcolor)
+  set text(fill: fgcolor)
 
   set page(paper: "a4")
-  set text(size: 10pt)
+  set page(margin: 1cm)
+
   set text(font: "New Computer Modern Sans")
+  set text(size: 12pt)
 
-  //set page(margin: 1cm)
   //set par(justify: true)
-
-  //set page(fill: black)
-  //set text(white)
-  set page(fill: rgb("444352"))
-  set text(fill: rgb("fdfdfd"))
-
  
   doc
 }
+
+
+#let weblink(..args) = text(
+  fill: blue,
+  link(..args)
+)
+
+#let monospaced(content) = text(font: "Fira Code", content)
 
 #let preface-style(doc) = {
   set page(numbering: "I")

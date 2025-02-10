@@ -12,5 +12,5 @@
 #outline(
   title: "Table of Contents",
   indent: auto,
-  fill: line(length: 100%, stroke: 0.1pt),
+  fill: line(length: 100%, stroke: 0.2pt + white),
 )

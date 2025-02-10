@@ -10,7 +10,7 @@
       #set text(size: 25pt, weight: "bold")
       Rust Implementation of \
       Finite Element Exterior Calculus on \
-      Coordinate-Free Simplicial Complexes \
+      Coordinate-Free Simplicial Manifolds\
     ]
 
     #v(1cm)
