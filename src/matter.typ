@@ -1,70 +1,311 @@
 #import "setup-math.typ": *
 #import "layout.typ": *
+#import "setup.typ": *
 
-= Simplical Manifold
+= The Mesh
+
+
+In this chapter we will develop a mesh data structure for our finite element library.
+It will store the topological and geometrical properties of our discrete PDE domain.
+This will be in the form of a discretized Riemannian manifold, which will be represented
+as a simplicial complex (with manifold topology) equipped with the Regge metric.
+Our data structure will be special in two senses:
+- It will support arbitrary dimensions.
+- It will use intrinsic Riemannian geometry, instead of an embedding providing global coordinates.
+We will restrict ourselves to simplicial meshes.
+
+== The PDE Domain as a Manifold
 
 PDEs are posed over a domain, a patch of space on which the solution, we are
 searching for, lives.
-Oftentimes this domain is just a subset of euclidean space, but
-the more general way to describe the domain as a manifold.
+Usually one thinks of this domain as just being a subset of euclidean space,
+but the more general way is to describe the domain as a manifold.
 This is the first way in which differential geometry enters our theory.
 
-A manifold is a topological space, which first and foremost tells us
-how our space is connected. The topology being manifold, tells
-us that at any point it is locally homeomorphic to $n$-dimensional euclidean space.
+One can intuitively think of a manifold $Omega$ just as a subspace of euclidean space $RR^N$.
+#footnote[
+This is a valid perspective thanks to the Whitney Embedding Theorem, telling us that
+every $n$-dimensional topological manifold can be embedded in $RR^(2n)$.
+]
+An easy example for a manifold would be the unit sphere $SS^2$ inside of $RR^3$.
+It's the set of points ${ xv in RR^3 mid(|) norm(xv) = 1 }$, distance 1 from the origin.
+So it's just the surface and not the ball, that has it's volume filled in.
+This perspective is called the extrinsic view of a manifold.
+$RR^3$ plays the role of an ambient space, in which the actual manifold lives in.
+We can study this manifold using the tools from euclidean geometry.
+This extrinsic perspective studies the manifold through it's embedding $Phi: Omega -> RR^N$.
+The ambient space is usually higher dimensional than the manifold itself. For our example
+the ambient space is 3 dimensional, while the dimension of the manifold is just
+2D, since the sphere is just a surface.
+
+But the manifold is an object in it's own right, that exists independent from the ambient space.
+We can take an intrinsic view and study the manifold without ever referring to the surroundings.
+This is the perspective that differential geometry takes and is the one we will be using.
+Here we forget about the embedding $Phi$ and study the manifold as an abstract mathematical object.
+This is also the way in which Einstein's Theory of General Relativity describe the spacetime continuum.
+Spacetime is a manifold of intrinsic dimension 4 and the theory doesn't say anything about
+the ambient space in which the manifold is embeddable into. It might as well not exist!
+Spacetime is purely intrinsic and there is no outside.
+
+Let's dive into the intrinsic description of manifolds.
+A manifold is a type of topological space. Topology tells us how our space is
+connected and gives us a notion of closeness.
+The topology being manifold, tells us that our space is at each point locally
+homeomorphic to $n$-dimensional euclidean space. Here $n$ is the intrinsic dimension.
+In the case of $SS^2$, we have $n=2$.
+Intuitively this means that if you zoom close enough the space looks just like flat space.
+
+Differentiable/Smooth structure?
+Topology gives us a notion of continuity and makes our manifold have $C^0$ regualarity,
+but in order to solve PDEs on manifolds, we need them to be differentiable.
+For this we need an additional differentiable/smooth structure. Given this we are able
+to do calculus on the manifold. This is done on the tangent spaces of the manifold.
+These are vector spaces at each point of the manifold, which make the curvy manifold
+look like a flat linear vector space locally.
+
+Next to topological and differentiable structures, we also need geometrical information.
+Geometry lets us measure angles, lengths, areas, volumes and so on.
+This is not possible with differential topology alone.
+In the extrinsic view, we do geometry using the global coordinates
+$(x_1,dots,x_N)$ of the manifold, provided by the embedding $Phi: p |-> (x_1,dots,x_N)$.
+These coordinates describe the position of the manifold in the ambient space.
+Using coordinates all geometrical properties can easily be calculated, using euclidean geometry.
+
+The intrinsic way to describe the geometry of the manifold is called Riemannian geometry.
+For this we need to equipe our toplogical manifold with an additional structure called
+a Riemannian metric. It allows us to measure angles, lengths, areas, etc in a fashion
+that is completly independent of the ambient space and the embedding.
+The Riemannian metric is an inner product on the tangent spaces that continuously varies
+across the manifold. This inner product induces a norm on the tangent vectors, that
+let's us measure their lengths and the inner product gives us angles. Using the metric
+we can compute all geometric properties that one could compute with an embedding.
+This turns our differentiable manifold into a Riemannian manifold.
+
+In the most general sense our PDE domain is a piecewise smooth oriented and
+bounded $n$-dimensional (pseudo) Riemannian manifold, $n in NN$ with a piecewise
+smooth boundary.
+
+Orientability is the property of a manifold that we can choose a consistent
+orientation. Famous examples of manifolds that are not orientable are the möbius strip and the
+klein bottle, both of which only have one side. So they are lacking a backside.
+
+== The mesh as a discretized Riemannian manifold
 
 Finite Element Techniques heavily rely on the existance of a mesh, a
-discretization of the domain on which the PDE is posed. Since FEEC is situated
-in differential geometry, we understand our PDE domain as a Riemannian manifold.
+discretization of the PDE domain. So our mesh is giong to be a discrete
+variant of a Riemannian manifold. Our implementation will embrace the intrinsic
+differential geometry view as much as possible. This will manifest in two specialities
+of our mesh data structure: Firstly our implementation is dimensionality independent.
+Instead of hardcoding the mesh to e.g. 3 dimensions the dimension will just be a property
+chosen at runtime. Secondly we will not assign any global coordiantes to the geometric entities
+of our mesh, but instead only rely on a discrete Riemannian metric, instead of an embedding.
+All finite element calculations will solely rely on this metric.
 
-In this section we will develop a mesh implementation that is rather
-special compared to other finite element implementations. This is because
-our implementation tries to embrace differential geometry as much as possible.
-This manifests mostly in two ways.
-Firstly differential geometry and exterior calculus generalizes to
-arbitrary dimensions. We want the same for our implementation.
-So instead of hardcoding our FE library to only 3D as most implementations do
-and having only at most Tetrahedrons we will be using the general concept
-of a simplex that generalizes triangles and tetrahedrons.
+== The Simplex
 
-The second speciality is maybe even less common, which is not relying
-on any global coordinate system. Instead we once again embrace differential geometry,
-now in the sense that we only rely on an intrinsic description of the geometry
-through a Riemannian metric. Coordiantes are not needed for any calculations
-at the heart of FEEC, so we will not rely on them.
+Finite Element methods benefit from their ability to work on unstructured meshes.
+So instead of subdividing a domain into a regular grid FEM works on potentially very non-uniform
+meshes. The simplest type of mesh that works for such non-uniform meshes are simplicial meshes.
+In 2D these are triangular and in 3D we have meshes made from tetrahedron. These building blocks
+need to be generalized to arbitrary dimensions for our implementation.
 
-This Riemannian manifold will be discretized into a simplicial approximation
-through the means of a triangulation.
-An abstract simplicial complex will capture the full topology of our manifold.
+The generalization of triangles in 2D and tetrahedron in 3D to arbitray dimensions
+is called a simplex.
+There is a type of simplex for every dimension:
+A 0-simplex is a vertex, a 1-simplex is an edge, a 2-simplex is a triangle and
+a 3-simplex is a tetrahedon.
+The idea here is that an $n$-simplex is the polytope with the fewest vertices
+that lives in $n$ dimensions. It's the simplest $n$-polytope there is.
+A $n$-simplex always has $n+1$ vertices and the simplex is the patch of space
+bounded by the convex hull of the vertices.
 
-The geometry of the manifold will also get discretized by means of the Regge metric,
-which is a piecewise-flat (over the facets) metric on the simplicial complex.
+== Simplicial Topology
 
-In this first chapter we will develop the necessary data structures and
-algorithms for representing our discretized version of a Riemannian manifold,
-which is a simplicial complex (with manifold topology) equipped with the Regge metric.
+In our coordinate-independent framework, we consider abstract simplicies,
+which are just finite ordered sets of vertex indicies.
+An example for a simplex simplex could be the list $[12, 27, 4]$, which
+represent a 2-simplex, so a triangle with the three vertices 12, 27 and 4 in
+this very order.
+This makes our simplicies just combinatorial objects and these combinatorics
+will be heart of our mesh datastructure.
+
+In our code we will represent a simplex as
+```rust
+pub type VertexIdx = usize;
+pub struct Simplex {
+  vertices: Vec<VertexIdx>,
+}
+```
+
+Abstract simplicies only convey topological information.
+Which vertices are connected to each other to form this simplex and which
+simplicies share the same vertices, giving us adjacency information.
+
+=== Orientation
+
+Simplicies have an orientation, that is determined through the order
+of the vertices. For any simplex there are exactly two orientations, which
+are opposites of each other.
+In euclidean geometry the orientation is absolute and can be determined based
+on the sign of determinant of the spanning vectors.
+
+#table(
+  columns: 4,
+  stroke: fgcolor,
+  $n$, [Simplex], [Positive], [Negative],
+  $1$, [Edge], [left-to-right], [right-to-left],
+  $2$, [Triangle], [counterclockwise], [clockwise],
+  $3$, [Tetrahedron], [right-handed], [left-handed],
+)
+
+All permutations can be divided into two equivalence classes.
+Given a reference ordering of the vertices of a simplex,
+we can call these even and odd permutations, relative to this reference.
+We call simplicies with even permutations, positively oriented and
+simplicies with odd permutations negatively oriented.
+For example we have: $[12, 27, 4] = -[27, 12, 4]$.
+
+=== Skeleton
+
+It's our goal to have a discrete variant of a $n$-manifold.
+We can do this by combining multiple $n$-simplicies.
+These $n$-simplicies are supposed to approximate the topology of the manifold.
+We call such a set of simplicies a skeleton.
+We will be using $n$-skeletons to represent the top-level topology of our domain
+$n$-manifold.
+
+```rust
+pub struct Skeleton {
+  simplicies: Vec<Simplex>,
+}
+```
+
+=== Triangulation of Manifold
+
+The procedure of producing a skeleton from a manifold is called
+triangulation.
+We aren't too concerned with triangulating manifolds in this thesis
+as we mostly assume that we are already given such a triangulation.
+
+Nontheless formoniq features a triangulation algorithm for arbitrary dimensional
+tensor-product domains. These domains are $n$-dimensional cartesian products $[0,1]^n$
+of the unit interval $[0,1]$. The simplicial skeleton will be computed based on
+a cartesian grid that subdivides the domain into $l^n$ many $n$-cubes, which are
+generalizations of squares and cubes. Here $l$ is the number of subdivisions per axis.
+To obtain a simplicial skeleton, we need to split each $n$-cube into non-overlapping simplicies
+that make us it's volume. In 2D it's very natural to split a square into two triangles
+of equal volume. This can be generalized to higher dimensions. The trivial
+triangulation of a $n$-cube into $n!$ simplicies is based on the $n!$ many permutations
+of the $n$ coordinate axes.
+
+The $n$-cube has $2^n$ vertices, which can all be identified using a multi-indicies
+$
+  V = {(i_1,dots,i_n) mid(|) i_j in {0,1}}
+$
+All $n!$ simplicies will be based on this vertex base set. To generate the list
+of vertices of the simplex, we start at the origin vertex $v_0 = 0 = (0)^n$.
+From there we walk along on axis directions from vertex to vertex.
+For this we consider all $n!$ permutations of the basis directions $vvec(e_1),dots,vvec(e)_n$.
+A permutation $sigma$ tells in which axis direction we need to walk next.
+This gives us the vertices $v_0,dots,v_n$ that forms a simplex.
+$
+  v_k = v_0 + sum_(i=1)^k vvec(e)_sigma(i)
+$
+
+The algorithm in Rust looks like:
+```rust
+pub fn compute_cell_skeleton(&self) -> Skeleton {
+  let nboxes = self.ncells();
+  let nboxes_axis = self.ncells_axis();
+
+  let dim = self.dim();
+  let nsimplicies = factorial(dim) * nboxes;
+  let mut simplicies: Vec<SortedSimplex> = Vec::with_capacity(nsimplicies);
+
+  // iterate through all boxes that make up the mesh
+  for ibox in 0..nboxes {
+    let cube_icart = linear_index2cartesian_index(ibox, nboxes_axis, self.dim());
+
+    let vertex_icart_origin = cube_icart;
+    let ivertex_origin =
+      cartesian_index2linear_index(vertex_icart_origin.clone(), self.nvertices_axis());
+
+    let basisdirs = IndexSet::increasing(dim);
+
+    // Construct all $d!$ simplexes that make up the current box.
+    // Each permutation of the basis directions (dimensions) gives rise to one simplex.
+    let cube_simplicies = basisdirs.permutations().map(|basisdirs| {
+      // Construct simplex by adding all shifted vertices.
+      let mut simplex = vec![ivertex_origin];
+
+      // Add every shift (according to permutation) to vertex iteratively.
+      // Every shift step gives us one vertex.
+      let mut vertex_icart = vertex_icart_origin.clone();
+      for basisdir in basisdirs.set.iter() {
+        vertex_icart[basisdir] += 1;
+
+        let ivertex = cartesian_index2linear_index(vertex_icart.clone(), self.nvertices_axis());
+        simplex.push(ivertex);
+      }
+
+      Simplex::from(simplex).assume_sorted()
+    });
+
+    simplicies.extend(cube_simplicies);
+  }
+
+  Skeleton::new(simplicies)
+}
+```
+
+We can note here, that the computational complexity of this algorithm, grows extremly fast
+in the dimension $n$.
+We have a factorial scaling $cal(O)(n!)$ (worse than exponential scaling $cal(O)(e^n)$)
+for splitting the cube into simplicies. Given $l$ subdivisions per dimensions, we have
+$l^n$ cubes. So the overall computational complexity is dominated by $cal(O)(l^n n!)$,
+a terrible result, due to the curse of dimensionality.
+The memory usage is dictated by the same scaling law.
 
 
-== Manifolds and Simplicial Complexes
+=== The Simplicial Complex
+
+A simplicial skeleton contains all information necessary to define the topology
+of the discrete manifold, but it's lacking information on all lower-dimensional
+simplicies contained in it. These are very relevant to the algorithms of FEEC.
+
+Inside of a simplex we can identify subsimplicies.
+For example a triangle $[0,1,2]$ contains the edges $[0,1]$, $[1,2]$ and $[3, 2]$.
+
+Every $n$-simplex $sigma$ contains $k$-subsimplicies $Delta_k (sigma)$ for all $k <= n$.
+For every subset of vertices there exists a subsimplex.
+
+The skeleton only stores the top-level simplicies $Delta_n (mesh)$, but our FEM library
+also needs to reference the lower-level simplicies $Delta_k (mesh)$, because DOFs
+live on these.
+
+For this reason these should also be stored in our mesh data structure.
+
+Our topological mesh data structure needs to provide the following functionality:
+- Container for mesh entities (simplicies).
+- Global numbering for unique identification of the entities.
+- Entity iteration.
+- Incidence Information.
+- Adjacency Information.
 
 
-When solving the PDEs on a computer we need to discretize the domain, which is a manifold.
-For this we use what is called a triangulation.
+An abstract simplicial complex is a familiy of abstract simplicies,
+which are set-like, that are closed under the subset operation.
 
-Our domain is a piecewise smooth oriented and bounded $n$-dimensional (pseudo) Riemannian manifold, $n in NN$
-with a piecewise smooth boundary.
+More algebra is possible with simplicies.
+For this we take the free albelian group generated by taking
+a collection of simplicies as basis.
+This allows us to express formal $ZZ$-linear combinations of simplicies,
+such as $[0,1] - [1,2] + [2,3]$
+
+
 
 A name triangulation stems from the 2D case, where a surface (2D topology)
 is approximated by a collection of triangles.
-
-This can be extended to arbitrary dimensions.
-So we need to generalize the notion of a triangle.
-For this we need the concept of a simplex.
-A 0-simplex is a vertex, a 1-simplex is an edge, a 2-simplex is a triangle,
-a 3-simplex is a tetrahedon, and so on.
-
-The rule is always that a $n$-simplex is the convex hull of
-$n+1$ vertices.
 
 When we collect all top-level simplicies together with their subsimplicies,
 we obtain what is called a simplicial complex.
@@ -103,10 +344,76 @@ Simplicial complexes are objects that are studied in algebraic topology.
 They are very general and also allow for topological spaces that are not manifolds.
 But for the application of them for PDE domains we restrict ourself to only
 simplicial complexes with manifold topology, meaning every $k$-subsimplex is contained
-in some $n$-simplex. And there are at most 2 faces ($(n-1)$-simplices) for each facet ($n$-simplex).
+in some $n$-simplex. And there are at most 2 facets ($(n-1)$-simplices) for each cell ($n$-simplex).
 
 So to summarize the topology of our PDE domain is represented as a simplicial complex
 that is manifold.
+
+== Simplicial Homology
+
+
+One of the major theories relevant to FEEC is homology theory,
+which is rooted in algebraic topology.
+Informally speaking homology is all about identifying holes
+of a topological space, which in our case is our PDE domain manifold
+represented as a simplicial complex.
+
+The presence of holes has influence on the existance and uniqueness of
+PDE solutions and therefore is relevant and needs to be studied.
+
+Let's start with an informal outline of how homology works.
+
+A topological space can have various holes of different dimensions.
+A 1-dimensional hole (circular hole) is the kind of hole a circle has.
+A sphere has a 2D hole (void).
+The number of 0 dimensional holes, is just the number of connected components.
+
+We want to count the numbers of these holes in a space.
+
+The $k$-th Betti number $beta_k (X)$ is the number of $k$ dimensional holes of a topological space $X$.
+So for the circle, we have $beta_0 (SS^1) = 1, beta_1 (SS^1) = 1$
+and the sphere has $beta_0 (SS^2)=1, beta_1 (SS^2)=0, beta_2 (SS^2)=1$.
+The torus has $beta_0 (TT^2) = 1, beta_1 (TT^2) = 2, beta_2 (TT^2) = 1$.
+
+Homology is all about computing these numbers of any topological space.
+There are various different homology theories, such as
+singular homology and cellular homolgy, but the one relevant to us
+is simplicial homology, since we are working with simplicial complexes.
+So we study the connectivity of our simplicial complex.
+
+
+We first define what a $k$-chain is.
+A $k$-chain is a formal $ZZ$-linear combination of $k$-simplicies in the simplicial complex.
+We have a linear structure over $ZZ$, which is a ring but not a field.
+Therefore this is not a vector space, but a free albelian group generated by the $k$-simplicies.
+This is also gives rise to a space of $k$-chains. If we take all of these spaces together
+for all $k<=n$, we obtain a graded algebraic strucuture containing all chains of the simplicial complex.
+
+On this graded structure we can now introduce the boundary operator $diff$.
+It is a graded $ZZ$-linear operator $diff = plus.big.circle_k diff_k$ of order -1 with each individual
+$diff_k: Delta_k -> Delta_(k-1)$, being defined by
+$
+  diff_k: sigma = [sigma_0,dots,sigma_n] |-> sum_i (-1)^i [sigma_0,dots,hat(sigma)_i,dots,sigma_n]
+$
+where the hat $hat(sigma)_i$ indicates that vertex $sigma_i$ is omitted.
+
+This is the standard textbook definition of the boundary opertator and we will also be
+using it, but the sum sign here suggests an order for the boundary simplicies that
+gives a reversed lexicographical ordering, relative to the input, which is not optimal
+for implementation. So instead we reverse this order.
+
+The boundary operator has the important property that $diff^2$ = $diff compose diff = 0$.
+This can be easily shown with some algebra.
+$
+  diff^2 sigma &= diff_(n-1) diff_n sigma
+  \ &= diff (sum_i (-1)^i [sigma_0,dots,hat(sigma)_i,dots,sigma_n])
+  \ &= sum_i (-1)^i diff [sigma_0,dots,hat(sigma)_i,dots,sigma_n]
+  \ &= sum_i (-1)^i sum_j (-1)^j [sigma_0,dots,hat(sigma)_i,dots,hat(sigma)_j,dots,sigma_n]
+  \ &= sum_(i,j) (-1)^i (-1)^j [sigma_0,dots,hat(sigma)_i,dots,hat(sigma)_j,dots,sigma_n]
+  \ &= sum_(i<j) (-1)^i (-1)^(j-1) [sigma_0,dots,hat(sigma)_i,dots,hat(sigma)_j,dots,sigma_n]
+   + sum_(i>j) (-1)^i (-1)^j [sigma_0,dots,hat(sigma)_j,dots,hat(sigma)_i,dots,sigma_n]
+  \ &= 0
+$
 
 Simplicial Chain Complex
 $
@@ -115,7 +422,7 @@ $
   diff^2 = diff compose diff = 0
 $
 
-= Differential Geometry
+= Riemannian Geometry
 
 Okay now that we've established the topology of the mesh, we need to equipe it
 with some geometry as well.
@@ -123,6 +430,10 @@ with some geometry as well.
 The standard way of doing so is using coordinates. Usually PDE solvers always rely
 on coordinates. This would just require that all vertices of the mesh have a known
 coordinates.
+
+
+The euclidean geometry
+of a simplex would be fully specified by giving the coordinates of the $n+1$ vertices.
 
 ```rust
 pub struct VertexCoords(na::DMatrix<f64>);
@@ -167,6 +478,7 @@ $
 $
 
 
+
 An inner product on a vector space can be represented as a Gramian matrix given a basis.
 
 The Riemannian metric (tensor) is an inner product on the tangent vectors with
@@ -176,7 +488,7 @@ The inverse metric is an inner product on covectors / 1-forms with basis $dif x^
 Our mesh should be a piecewise flat approximation of the manifold.
 Meaning that each simplex is considered to be flat and all the curvature is concentrated
 in the faces $Delta_(n-1)$.
-This means that the metric tensor only changes from facet to facet and therefore
+This means that the metric tensor only changes from cell to cell and therefore
 is constant on each $n$-simplex.
 
 The most natural simplex to consider is the orthogonal simplex, basically a corner of a n-cube.
@@ -204,6 +516,9 @@ information for the full geometry of the simplex,
 the edge lengths of a simplex are sufficent information for the full information of
 a coordinate-free simplex.
 
+The geometry of the manifold will also get discretized by means of the Regge metric,
+which is a piecewise-flat (over the cells) metric on the simplicial complex.
+
 The piecewise-flat metric for a simplicial manifold, is called the Regge metric.
 It only depends on the edge lengths of the simplicies. It's a concept that comes
 from Regge calculus, which is a theory developed for numerical algorithms
@@ -222,7 +537,7 @@ $
 $
 that gives each edge $e in Delta_1 (mesh)$ a positive length $f(e) in RR^+$.
 
-From this one can derive the facet-piecewise constant Regge metric.
+From this one can derive the cell-piecewise constant Regge metric.
 
 This gives us a simplicial Riemannian manifold.
 
@@ -451,6 +766,27 @@ for any sufficiently smooth differential form $omega$.
 Under some restrictions on the topology of $Omega$ the converse is
 also true, which is called the exact sequence property:
 
+$
+  omega in Lambda^k: quad
+  dif omega = 0 => omega = dif eta
+  quad beta_k = 0
+$
+
+$
+  grad F = 0 &=> F = "const"
+  quad beta_0 = 0
+  \
+  curl F = 0 &=> F = grad f
+  quad beta_1 = 0
+  \
+  div F = 0  &=> F = curl A
+  quad beta_2 = 0
+$
+
+$
+  frak(H)^k = {omega | dif omega = 0}/{omega | dif eta = omega}
+$
+
 == Poincaré's lemma
 For a contractible domain $Omega subset.eq RR^n$ every
 $omega in Lambda^l_1 (Omega), l >= 1$, with $dif omega = 0$ is the exterior
@@ -466,13 +802,13 @@ $
   phi(avec(b)) - phi(avec(a))
 $
 
-Curl Theorem
+Curl Theorem (Ordinary Stokes' Theorem)
 $
   integral.double_S curl avec(F) dot dif avec(S) =
   integral.cont_(diff S) avec(F) dot dif avec(s)
 $
 
-Divergence Theorem
+Divergence Theorem (Gauss theorem)
 $
   integral.triple_V "div" avec(F) dif V =
   integral.surf_(diff V) avec(F) dot nvec(n) dif A
@@ -539,35 +875,6 @@ For vanishing boundary it's the formal $L^2$-adjoint of the exterior derivative.
 
 = Homology
 
-One of the major theories relevant to FEEC is homology theory,
-which is rooted in algebraic topology.
-Informally speaking homology is all about identifying holes
-of a topological space, which in our case is our PDE domain manifold
-represented as a simplicial complex.
-
-The presence of holes has influence on the existance and uniqueness of
-PDE solutions and therefore is relevant and needs to be studied.
-
-Let's start with an informal outline of how homology works.
-
-A topological space can have various holes of different dimensions.
-A 1-dimensional hole (circular hole) is the kind of hole a circle has.
-A sphere has a 2D hole (void).
-The number of 0 dimensional holes, is just the number of connected components.
-
-We want to count the numbers of these holes in a space.
-
-The $k$-th Betti number $beta_k (X)$ is the number of $k$ dimensional holes of a topological space $X$.
-So for the circle, we have $beta_0 (SS^1) = 1, beta_1 (SS^1) = 1$
-and the sphere has $beta_0 (SS^2)=1, beta_1 (SS^2)=0, beta_2 (SS^2)=1$.
-The torus has $beta_0 (TT^2) = 1, beta_1 (TT^2) = 2, beta_2 (TT^2) = 1$.
-
-Homology is all about computing these numbers of any topological space.
-There are various different homology theories, such as
-singular homology and cellular homolgy, but the one relevant to us
-is simplicial homology, since we are working with simplicial complexes.
-So we study the connectivity of our simplicial complex.
-
 There is a dual notion to homology, called cohomology.
 The most important of which is going to be de Rham cohomology.
 Which makes statements about the existance of the existance of anti-derivaties of
@@ -578,36 +885,7 @@ of the differential forms is isomorphic.
 Okay let's formally define what homology is.
 The main object of study is a chain complex.
 
-We first define what a $k$-chain is.
-A $k$-chain is a formal $ZZ$-linear combination of $k$-simplicies in the simplicial complex.
-We have a linear structure over $ZZ$, which is a ring but not a field.
-Therefore this is not a vector space, but a free albelian group generated by the $k$-simplicies.
-This is also gives rise to a space of $k$-chains. If we take all of these spaces together
-for all $k<=n$, we obtain a graded algebraic strucuture containing all chains of the simplicial complex.
 
-On this graded structure we can now introduce the boundary operator $diff$.
-It is a graded $ZZ$-linear operator $diff = plus.big.circle_k diff_k$ of order -1 with each individual
-$diff_k: Delta_k -> Delta_(k-1)$, being defined by
-$
-  diff_k: sigma = (sigma_0,dots,sigma_n) |-> sum_i (-1)^i (sigma_0,dots,hat(sigma)_i,dots,sigma_n)
-$
-where the hat $hat(sigma)_i$ indicates that vertex $sigma_i$ is omitted.
-
-This is the standard textbook definition of the boundary opertator and we will also be
-using it, but the sum sign here suggests an order for the boundary simplicies that
-gives a reversed lexicographical ordering, relative to the input, which is not optimal
-for implementation. So instead we reverse this order.
-
-The boundary operator has the important property that $diff^2$ = $diff compose diff = 0$.
-This can be easily shown with some algebra.
-$
-  diff diff sigma
-  &= diff (sum_i (-1)^i (sigma_0,dots,hat(sigma)_i,dots,sigma_n))
-  \ &= sum_i (-1)^i diff (sigma_0,dots,hat(sigma)_i,dots,sigma_n)
-  \ &= sum_i (-1)^i sum_j (-1)^j (sigma_0,dots,hat(sigma)_i,dots,hat(sigma)_j,dots,sigma_n)
-  \ &= sum_(i,j) (-1)^(i+j) (sigma_0,dots,hat(sigma)_i,dots,hat(sigma)_j,dots,sigma_n)
-  \ &= 0 "TODO"
-$
 
 This gives us a cell complex.
 
@@ -647,7 +925,6 @@ The homology and cohomology are isomorphic.
 
 Homology and Cohomology will be very important to the proper treatment of FEEC.
 
-
 == De Rham Complex
 == De Rham Cohomology
 == Hodge Theory
@@ -663,6 +940,10 @@ built on the work of Georges de Rham on de Rham cohomology.
 == De Rham Theorem
 
 Singular cohomology with real coefficients is isomorphic to de Rham cohomology.
+
+The de Rham map is important for us as discretization of differential forms.
+It is the projection of differential $k$-forms onto $k$-cochains,
+which are functions defined on the $k$-simplicies of the mesh.
 
 = Finite Element Exterior Calculus
 
