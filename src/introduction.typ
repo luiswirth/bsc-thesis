@@ -82,6 +82,14 @@ Relevant mathematical theories to this thesis:
 - Homology
 - Functional Analysis
 
+The implementation of the FEM library will be done in the Rust programming language.
+Rust was chosen for its strong guarantees in memory safety, performance, and
+modern language features, making it ideal for high-performance computing tasks
+like finite elements. The Rust ownership model, borrow checker, and type system
+act as a proof system to ensure there are no memory bugs, race conditions, or
+similar undefined behaviors in any program, while achieving performance levels
+comparable to C/C++.
+
 The structure of this thesis is as follows:
 
 We first learn about the building blocks of our mesh,
@@ -111,11 +119,14 @@ A lot of the magic of FEEC lies in homology.
 
 Once we've explored al of these various theories relevant to the implementation,
 we will finally talk about the implementation of the heart of our FEEC library,
-which is the computation of the galerkin matrices for various weak differential operator.
+which is the computation of the galerkin matrices for various weak differential operators.
 We will both be solving the Hodge-Laplace EVP and the Hodge-Laplace source problem.
 For this we will look at the Whitney basis functions and the Whitney FE space.
 
 Lastly we will test our library and generate various results by solving
 model problems, visualizing them and looking at error convergences and other metrics.
+To this end we will use the method of manufactured solutions to verify
+the correctness of our FE solutions.
+
 
 #pagebreak()
