@@ -1,8 +1,10 @@
+#import "setup.typ": *
+
 #let finishline = line(stroke: red + 0.3pt, length: 100%)
 
 #let titlebox(color: red.darken(40%), width: 100%, title, content) = block(
   fill: color,
-  stroke: white,
+  stroke: fgcolor,
   inset: 0.3em,
   radius: 0.3em,
   breakable: false,
@@ -29,7 +31,7 @@
 
 #let circletext(content) = box(
   baseline: 0.2em,
-  stroke: white,
+  stroke: fgcolor,
   inset: 0.2em,
   radius: 0.3em,
   content,

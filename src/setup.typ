@@ -3,10 +3,10 @@
 #import "setup-math.typ": *
 #import "setup-code.typ": *
 
-#import "layout.typ": *
-
-#let fgcolor = white
-#let bgcolor = black
+//#let fgcolor = white
+//#let bgcolor = black
+#let fgcolor = black
+#let bgcolor = white
 
 #let thesis-template(doc) = {
   show: math-template
@@ -49,7 +49,7 @@
       let size = 20pt - 4pt * (it.level - 1)
       set text(size, weight: "bold")
       v(size, weak: true)
-      counter(heading).display()
+      //counter(heading).display()
       h(size, weak: true)
       it.body
       v(size, weak: true)

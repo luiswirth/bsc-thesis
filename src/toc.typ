@@ -1,3 +1,5 @@
+#import "setup.typ": *
+
 #show outline.entry.where(
   level: 1
 ): it => {
@@ -12,5 +14,5 @@
 #outline(
   title: "Table of Contents",
   indent: auto,
-  fill: line(length: 100%, stroke: 0.2pt + white),
+  fill: line(length: 100%, stroke: 0.2pt + fgcolor),
 )

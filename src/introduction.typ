@@ -1,5 +1,7 @@
 = Introduction 
 
+== FEEC and its significance
+
 Partial Differential Equations (PDEs) are the mathematical language we use to
 model continuum problems across physics and engineering. From heat transfer
 and fluid dynamics to electromagnetism and quantum mechanics, PDEs describe
@@ -50,19 +52,6 @@ We will restrict ourselves to 1st order piecewise linear FEM and therefore
 also just piecewise-flat approximations of the underlying manifold (admissable geometric variational crime).
 These approximations are in the forms of a simplicial complex.
 
-For this, we are using the Rust programming language, leveraging its performance,
-safety, and concurrency to create a robust tool.
-This library brings FEEC into computational practice, bridging the gap between
-theory and application.
-
-The thesis aims to lower the bar of entry to the theory of FEEC by providing
-a beginner friendly exposition of the main concepts.
-Furthermore we provide a implementation of a FEEC library that should be useable
-for solving real-life PDEs. It should also guide as a reference for future implementations
-of FEEC in other programming languages with different paradigmes.
-We want to to lay out the necessary steps without relying too much on the vast and complicated mathematical framework
-that was created around FEEC. This thesis is more pragmatic and should appeal to a wider audiance
-than the original books and papers on FEEC.
 
 The prototypical PDE in FEEC is the elliptic Hodge-Laplace Source Problem.
 Which we will mainly focus on and will be guiding the implementation.
@@ -82,6 +71,8 @@ Relevant mathematical theories to this thesis:
 - Homology
 - Functional Analysis
 
+== Rust in scientific computing
+
 The implementation of the FEM library will be done in the Rust programming language.
 Rust was chosen for its strong guarantees in memory safety, performance, and
 modern language features, making it ideal for high-performance computing tasks
@@ -89,6 +80,30 @@ like finite elements. The Rust ownership model, borrow checker, and type system
 act as a proof system to ensure there are no memory bugs, race conditions, or
 similar undefined behaviors in any program, while achieving performance levels
 comparable to C/C++.
+
+For this, we are using the Rust programming language, leveraging its performance,
+safety, and concurrency to create a robust tool.
+This library brings FEEC into computational practice, bridging the gap between
+theory and application.
+
+
+== Goals and Contributions
+
+The thesis aims to lower the bar of entry to the theory of FEEC by providing
+a beginner friendly exposition of the main concepts.
+Furthermore we provide a implementation of a FEEC library that should be useable
+for solving real-life PDEs. It should also guide as a reference for future implementations
+of FEEC in other programming languages with different paradigmes.
+We want to to lay out the necessary steps without relying too much on the vast and complicated mathematical framework
+that was created around FEEC. This thesis is more pragmatic and should appeal to a wider audiance
+than the original books and papers on FEEC.
+
+== Outline of the thesis structure
+
+- Our library is the core of the thesis, so the structure should parallel its modularity.
+- The first two sections provide context: Rust choices and software architecture.
+- The next sections introduce the mathematical foundations that your crates encapsulate.
+- The final sections describe how Formoniq ties everything together and its practical application.
 
 The structure of this thesis is as follows:
 

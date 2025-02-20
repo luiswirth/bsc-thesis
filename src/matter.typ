@@ -2,8 +2,48 @@
 #import "layout.typ": *
 #import "setup.typ": *
 
-= The Mesh as a discretized Riemannian Manifold
+= Software Design & Implementation Choices
 
+== Why Rust? Safety, performance, and parallelism!
+== External libraries
+=== nalgebra (linear algebra)
+
+nalgebra and nalgebra-sparse
+
+=== PETSc (solvers)
+
+Sparse matrix direct solvers and eigensolvers
+
+== General software architecture
+
+=== Modularity
+
+Thanks to Rust's amazing build system package manager cargo, (in stark contrast to Make and CMake)
+the setup of a rather complicated project such as ours, is extremly simple.
+We rely on a Cargo workspace to organize the various parts of our library ecosystem.
+
+We have multiple crates (libraries):
+- multi-index
+- manifold
+- exterior
+- whitney
+- formoniq
+
+===  Type safety
+=== Performance considerations
+
+= Arbitrary Dimensions & Multi-Index Combinatorics
+
+== The nature of Arbitrary Dimensions
+== Cartesian Multi-Index
+
+- Cartesian product style for-loops
+- Reference simplex style for-loops
+
+== Anti-symmetric multi-indices
+Applications in simplices and exterior algebra
+
+= Algebraic Topology & Riemannian Geometry of our Simplicial Riemannian Manifold Mesh
 
 In this chapter we will develop a mesh data structure for our finite element library.
 It will store the topological and geometrical properties of our discrete PDE domain.
@@ -127,6 +167,32 @@ The idea here is that an $n$-simplex is the polytope with the fewest vertices
 that lives in $n$ dimensions. It's the simplest $n$-polytope there is.
 A $n$-simplex always has $n+1$ vertices and the simplex is the patch of space
 bounded by the convex hull of the vertices.
+
+
+The most natural simplex to consider is the orthogonal simplex, basically a corner of a n-cube.
+This simplex can be defined as it's own coordindate realisation as an actual convex hull of
+some points.
+$
+  Delta_perp^n = {(t_1,dots,t_n) in RR^n mid(|) sum_i t_i <= 1 "and" t_i >= 0}
+$
+
+This is the reference simplex.
+It has vertices $v_0 = avec(0)$ and $v_i = avec(e)_(i-1)$.
+Vertex 0 is special because it's the origin. The edges that include the origin
+are the spanning edges. They are the standard basis vectors.
+They give rise to an euclidean orthonormal tangent space basis. Which manifests
+as a metric tensor that is equal to the identity matrix $amat(G) = amat(I)_n$.
+
+By applying an affine linear transformation to the reference simplex, we can obtain
+any other coordinate realization simplex.
+
+If we forget about coordinates, we can obtain any metric simplex by applying
+a linear transformation to the standard simplex.
+
+Just as for a coordinate-based geometry the coordinates of the vertices are sufficent
+information for the full geometry of the simplex,
+the edge lengths of a simplex are sufficent information for the full information of
+a coordinate-free simplex.
 
 == Simplicial Topology
 
@@ -292,7 +358,7 @@ For every subset of vertices there exists a subsimplex.
 
 Some useful terminology is
 - The $n$-simplicies are called cells.
-- The $n-1$-simplicies are called facets.
+- The $(n-1)$-simplicies are called facets.
 - The $0$-simplicies are called vertices.
 - The $1$-simplicies are called edges.
 - The $2$-simplicies are called triangles.
@@ -414,114 +480,106 @@ $
 
 == Riemannian Geometry
 
-Okay now that we've established the topology of the mesh, we need to equipe it
-with some geometry as well.
+Okay so much for the topology of our mesh, now we want to focus on the geometry of it.
 
-The standard way of doing so is using coordinates. Usually PDE solvers always rely
-on coordinates. This would just require that all vertices of the mesh have a known
-coordinates.
+Our PDE domain is a curved manifold, it's curvature is not represented in the topology,
+but in the geometry. Curvature is a infintesimal notion, but for our discrete mesh
+we will need to discretize it.
+The approximation we will make here, is that the mesh is *piecewise-flat* over the cells
+of the mesh, meaning inside of a cell we don't observe any change of curvature.
+So we will not be using any higher-order mesh elements, like quadratic or cubic elements.
+This approximation will be fine for our implementation, as we restrict ourselves to
+1st order finite elements, where the basis functions are only linear.
+For linear finite elements, the piecewise-flat approximation is an *admissable geometric variational crime*,
+meaning it doesn't influence the order of convergence and therefore doesn't have a
+too bad influence on the solution.
 
+There are two ways of doing geometry.
+- *Extrinsic Eucliean Geometry*, and
+- *Intrinsic Riemannian Geometry*
+Formoniq supports both representation of the mesh. This might come as a suprise, since
+initially we stated that we will be solely relying on coordinate-free meshes.
+What we mean by this is that the finite element algorithms will only rely on the
+intrinisic geometry. This is still true. But in order to obtain the intrinsic description
+it is helpful to first construct a coordinate representation and then compute
+the intrinsic geometry and to forget about the coordinates then.
+We will see how this works in formoniq.
 
-The euclidean geometry
-of a simplex would be fully specified by giving the coordinates of the $n+1$ vertices.
-
+Extrinsic geometry, is the typical euclidean geometry
+everybody knows, where the manifold is embedded in an ambient space, for example the
+unit sphere inside of $RR^3$. The euclidean ambient space allows one to measure
+angles, lengths and volumes by using the standard euclidean inner product (dot product).
+The embedding gives the manifold global coordinates, which identify the points of the manifold
+using a position $xv in RR^N$. For our piecewise-flat mesh, the necessary geometrical information
+would only be the coordinates of all vertices.
+This is the usual way mesh-based PDE solvers work, by relying on these global coordinates.
+These vertex coordinates can be easily stored in a single struct that lays out
+the vertex coordinates as the columns of a matrix.
 ```rust
-pub struct VertexCoords(na::DMatrix<f64>);
-
+pub struct MeshVertexCoords(na::DMatrix<f64>);
 ```
+Specifying the $k+1$ vertex coordinates $v_i in RR^N$ of a $k$-simplex defines a $k$-dimensional affine subspace
+of the ambient euclidean space $RR^N$. This is because $k+1$ points always define a $k$-dimensional plane
+uniquely. This makes the geometry piecewise-flat.
 
-This is something formoniq supports, but it's not what is used by
-the actual finite element code.
+In contrast to this we have intrinsic Riemannian geometry that souly relies
+on a structure over the manifold called a *Riemannian metric* $g$.
+It is a continuous function over the whole manifold, which at each point $p$
+gives us an inner product $g_p: T_p M times T_p M -> RR^+$ on the tangent space $T_p M$ at this point.
+It is the analog to the euclidean inner product in euclidean geometry. Since the manifold
+is curved the inner product changes from point to point, reflecting the changing geometry.
 
-Instead we want to do a coordinate-free treatment and rely souly on intrinsic
-geometry as known from differential geometry.
+The Riemannian metric is a fully covariant grade 2 symmetric tensor field.
+Given a basis $diff/(diff x^1),dots,diff/(diff x^n)$ of the tangent space $T_p M$ (induced by a chart)
+the metric at a point $p$ can be fully represented as a matrix $amat(G) in RR^(n times n)$
+by plugging in all combinations of basis vectors into the two arguments of the bilinear form.
+$
+  amat(G) = [g(diff/(diff x^i),diff/(diff x^j))]_(i,j=1)^(n times n)
+$
+This is called a gramian matrix and can be used to represent any inner product
+of a vector space, given a basis. We will use gramians to computationally represent
+the metric at a point.
 
-A manifold with intrinsic geometry is called a Riemannian manifold and it relies
-on what is called a Riemannian metric $g$. It is a continuous function on the manifold
-that gives at each point an inner product $g_p$ on the tangent space at this point.
-
-
-If we have an immersion (maybe also embedding) $f: M -> RR^n$,
-then it's differential $dif f: T_p M -> T_p RR^n$, is called the push-forward
-and tells us how our intrinsic tangential vectors are being stretched when viewed geometrically.
-
-Computationally this differential $dif f$ can be represented, since it is a linear map, by
-a Jacobi Matrix $J$.
-
+One can easily derive the Riemannian metric from
+an embedding (or even an immersion) $f: M -> RR^N$. It's differential is a
+function $dif f: T_p M -> T_p RR^n$, also called the push-forward and tells
+us how our intrinsic tangential vectors are being stretched when viewed
+geometrically.
 The differential tells us also how to take an inner product of our tangent
 vectors, by inducing a metric
 $
   g(u, v) = dif f(u) dot dif f(v)
 $
 
-Computationally this metric is represented, since it's a bilinear form, by a
-metric tensor $G$.\
-The above relationship then becomes
+Computationally this differential $dif f$ can be represented, since it is a
+linear map, by a Jacobi Matrix $J$.
+The metric gramian can then be obtained by a simple matrix product.
 $
   G = J^transp J
 $
 
-Given a basis $diff/(diff x^1),dots,diff/(diff x^n)$ of the tangent space $T_p M$ (induced by a chart)
-the metric at a point p can be fully represented by a 2-tensor called the metric tensor $amat(G)$, since it's just a bilinear form.
-$
-  amat(G) = [g(diff/(diff x^i),diff/(diff x^j))]_(i,j=1)^(n times n)
-$
 
-
-
-An inner product on a vector space can be represented as a Gramian matrix given a basis.
-
-The Riemannian metric (tensor) is an inner product on the tangent vectors with
+The Riemannian metric (tensor) is an inner product on the tangent space with
 basis $diff/(diff x^i)$.\
-The inverse metric is an inner product on covectors / 1-forms with basis $dif x^i$.\
+The inverse metric is an inner product on the cotangent space with basis $dif x^i$.\
 
-Our mesh should be a piecewise flat approximation of the manifold.
-Meaning that each simplex is considered to be flat and all the curvature is concentrated
-in the faces $Delta_(n-1)$.
-This means that the metric tensor only changes from cell to cell and therefore
-is constant on each $n$-simplex.
+The fact that our geometry is piecewise-flat over the cells, means that
+the metric is constant over each cell and changes only from cell to cell.
 
-The most natural simplex to consider is the orthogonal simplex, basically a corner of a n-cube.
-This simplex can be defined as it's own coordindate realisation as an actual convex hull of
-some points.
-$
-  Delta_perp^n = {(t_1,dots,t_n) in RR^n mid(|) sum_i t_i <= 1 "and" t_i >= 0}
-$
+This piecewise-constant metric is known as the *Regge metric* and comes from
+Regge calculus, a theory for numerical general relativety that is about
+producing simplicial approximations of spacetimes that are solutions to the
+Einstein field equation.
 
-This is the reference simplex.
-It has vertices $v_0 = avec(0)$ and $v_i = avec(e)_(i-1)$.
-Vertex 0 is special because it's the origin. The edges that include the origin
-are the spanning edges. They are the standard basis vectors.
-They give rise to an euclidean orthonormal tangent space basis. Which manifests
-as a metric tensor that is equal to the identity matrix $amat(G) = amat(I)_n$.
-
-By applying an affine linear transformation to the reference simplex, we can obtain
-any other coordinate realization simplex.
-
-If we forget about coordinates, we can obtain any metric simplex by applying
-a linear transformation to the standard simplex.
-
-Just as for a coordinate-based geometry the coordinates of the vertices are sufficent
-information for the full geometry of the simplex,
-the edge lengths of a simplex are sufficent information for the full information of
-a coordinate-free simplex.
-
-The geometry of the manifold will also get discretized by means of the Regge metric,
-which is a piecewise-flat (over the cells) metric on the simplicial complex.
-
-The piecewise-flat metric for a simplicial manifold, is called the Regge metric.
-It only depends on the edge lengths of the simplicies. It's a concept that comes
-from Regge calculus, which is a theory developed for numerical algorithms
-for general relativity.
+A global way to store the Regge metric is based of edge lengths. Instead
+of giving all vertices a global coordinate, as one would do in extrinsic
+geometry, we just give each edge in the mesh a positive length. Just knowing
+the lengths doesn't tell you the positioning of the mesh in an ambient space
+but it's enough to give the whole mesh it's piecewise-flat geometry.
 Storing only the edge lengths of the whole mesh is a more memory efficent
 representation of the geometry than storing all the metric tensors.
-These can be derived from the edge lengths via the law of cosines:
-$
-  amat(G)_(i j) = 1/2 (e_(0 i)^2 + e_(0 j)^2 - e_(i j)^2)
-$
 
-So one way of equipping our simplicial complex with geometric
-information, is by specifying a function
+Mathematically this is just a function on the edges to the positive real numbers.
 $
   f: Delta_1 (mesh) -> RR^+
 $
@@ -531,9 +589,34 @@ As an interesting side-note: If we would allow for pseudo-Riemannian manifolds
 with a pseudo-metric, meaning we would drop the positive-definiteness requirement,
 the edge lengths could become zero or even negative.
 
-From this one can derive the cell-piecewise constant Regge metric.
+Computationally we repesent the edge lengths in a single struct
+that has all lengths stored continuously in memory in a nalgebra vector.
+```rust
+pub struct MeshEdgeLengths {
+  vector: na::DVector<f64>,
+}
+```
+Our topological simplicial complex struct gives a global numbering to our
+edges, which then gives us the indices into this nalgebra vector.
 
-This gives us a simplicial Riemannian manifold.
+Our topological simplicial manifold together with these edge lengths
+gives us a simplicial Riemannian manifold.
+
+One can reconstruct the constant Regge metric on each cell based on the edge lengths
+of this very cell. 
+It can be derived via the law of cosines:
+$
+  amat(G)_(i j) = 1/2 (e_(0 i)^2 + e_(0 j)^2 - e_(i j)^2)
+$
+
+== Further Functionality
+
+Formoniq implements some further functionality for the mesh,
+such as importing and exporting meshes.
+It supports loading gmsh meshes, as well as `.obj` meshes.
+We are also consider implementing Visualization Toolkit (VTK) export
+functionality.
+
 
 == Manifold Crate
 
@@ -573,7 +656,16 @@ manifold/src
     └── vtk.rs
 ```
 
+= Exterior Algebra & Lexicographical Basis Representation
+
+== Exterior Algebra as Generalization of Vector Algebra
+
+Multivectors
+
+// Section with most math compared to code
 = Exterior Calculus of Differential Forms
+
+== Exterior Calculus as Generalization of Vector Calculus
 
 FEEC makes use of Exterior Calculus and Differential Forms. To develop
 these notions a good starting point is exterior algebra.
@@ -655,14 +747,13 @@ $
   alpha_(i_1 dots i_k) g^(i_1 j_1) dots.c g^(i_k j_k) epsilon_(j_1 dots j_n)
 $
 
-= Exterior Calculus
 
-You can think of $k$-vector field as a *density* of infinitesimal oriented $k$-dimensional.
-
-The differential $k$-form is just a $k$-form field, which is the dual measuring object.
 
 
 == Differential Forms
+
+You can think of $k$-vector field as a *density* of infinitesimal oriented $k$-dimensional.
+The differential $k$-form is just a $k$-form field, which is the dual measuring object.
 
 - $k$-dimensional ruler $omega in Lambda^k (Omega)$
 - ruler $omega: p in Omega |-> omega_p$ varies continuously  across manifold according to coefficent functions.
@@ -824,6 +915,79 @@ For a contractible domain $Omega subset.eq RR^n$ every
 $omega in Lambda^l_1 (Omega), l >= 1$, with $dif omega = 0$ is the exterior
 derivative of an ($l − 1$)–form over $Omega$.
 
+
+== De Rham Cohomology
+
+There is a dual notion to homology, called cohomology.
+The most important of which is going to be de Rham cohomology.
+Which makes statements about the existance of the existance of anti-derivaties of
+differential forms and differential forms that have derivative 0.
+It will turn out that the homology of PDE domain and the cohomology
+of the differential forms is isomorphic.
+
+Okay let's formally define what homology is.
+The main object of study is a chain complex.
+
+
+
+This gives us a cell complex.
+
+Chain Complex: Sequence of algebras and linear maps
+
+$
+  dots.c -> V_(k+1) ->^(diff_(k+1)) V_k ->^(diff_k) V_(k-1) -> dots.c
+  quad "with" quad
+  diff_k compose diff_(k+1) = 0
+$
+
+Graded algebra $V = plus.big.circle_k V_k$ with graded linear operator $diff = plus.big.circle_k diff_k$ of degree -1,
+such that $diff compose diff = 0$.
+
+$V_k$: $k$-chains \
+$diff_k$: $k$-th boundary operator \
+$frak(Z)_k = ker diff_k$: $k$-cycles \
+$frak(B)_k = im diff_(k+1)$: $k$-boundaries \
+$frak(H)_k = frak(Z)_k \/ frak(B)_k$: $k$-th homology space \
+
+The main star of the show is the homology space $frak(H)_k$, which is a quotient
+space of the $k$-cycles divided by the $k$-boundaries.
+
+The dimension of the $k$-th homology space is equal to the $k$-th Betti numbers.
+$
+  dim frak(H)_k = B_k
+$
+
+Therefore knowing the homology space of a topological space gives us the information
+about all the holes of the space.
+
+Dual to homology there is also cohomology, which is basically just homology
+on the dual space of $k$-chains, which are the $k$-cochains. These are functions
+on the simplicies to the integeres $ZZ$.
+
+The homology and cohomology are isomorphic.
+
+Homology and Cohomology will be very important to the proper treatment of FEEC.
+
+== De Rham Complex
+== De Rham Cohomology
+== Hodge Theory
+
+Wikipedia:\
+A method for studying the cohomology groups of a smooth manifold M using partial
+differential equations. The key observation is that, given a Riemannian metric
+on M, every cohomology class has a canonical representative, a differential form
+that vanishes under the Laplacian operator of the metric. Such forms are called
+harmonic.
+built on the work of Georges de Rham on de Rham cohomology.
+
+== De Rham Theorem
+
+Singular cohomology with real coefficients is isomorphic to de Rham cohomology.
+
+The de Rham map is important for us as discretization of differential forms.
+It is the projection of differential $k$-forms onto $k$-cochains,
+which are functions defined on the $k$-simplicies of the mesh.
+
 == Stokes' Theorem
 
 Stokes' theorem unifies the main theorems from vector calculus.
@@ -904,78 +1068,202 @@ $
 
 For vanishing boundary it's the formal $L^2$-adjoint of the exterior derivative.
 
+= Discrete Differential Forms: Simplicial Cochains and Whitney Forms
 
-= Homology
+Cochains are isomorphic to our 1st order FEEC basis functions.
+The basis we will be working with is called the Whitney basis.
+The Whitney space is the space of piecewise-linear (over the cells)
+differential forms.
 
-There is a dual notion to homology, called cohomology.
-The most important of which is going to be de Rham cohomology.
-Which makes statements about the existance of the existance of anti-derivaties of
-differential forms and differential forms that have derivative 0.
-It will turn out that the homology of PDE domain and the cohomology
-of the differential forms is isomorphic.
+== Discrete Differential Forms
 
-Okay let's formally define what homology is.
-The main object of study is a chain complex.
+The discretization of differential forms on a mesh is of outmost importance.
+Luckily the discretization is really simple in the case of 1st order FEEC, which
+gives us the same discretization as in DEC.
 
+A discrete differential $k$-form on a mesh is a $k$-cochain on this mesh.
+So just a real-valued function $omega: Delta_k (mesh) -> RR$ defined on all
+$k$-simplicies $Delta_k (mesh)$ of the mesh $mesh$.
 
-
-This gives us a cell complex.
-
-Chain Complex: Sequence of algebras and linear maps
+The discretization of the continuous differential forms is then just a projection
+onto this cochain space. This projection is the very geometric step of
+integration the continuous differential form over each $k$-simplex to obtain
+the real value, the function has as output.
+This map is called the *de Rham map*.
+It ensures that the homology is preserved.
 
 $
-  dots.c -> V_(k+1) ->^(diff_(k+1)) V_k ->^(diff_k) V_(k-1) -> dots.c
-  quad "with" quad
-  diff_k compose diff_(k+1) = 0
+  omega_sigma = integral_sigma omega
+  quad forall sigma in Delta_k (mesh)
 $
 
-Graded algebra $V = plus.big.circle_k V_k$ with graded linear operator $diff = plus.big.circle_k diff_k$ of degree -1,
-such that $diff compose diff = 0$.
+== Cochain-Projection & Discretization
 
-$V_k$: $k$-chains \
-$diff_k$: $k$-th boundary operator \
-$frak(Z)_k = ker diff_k$: $k$-cycles \
-$frak(B)_k = im diff_(k+1)$: $k$-boundaries \
-$frak(H)_k = frak(Z)_k \/ frak(B)_k$: $k$-th homology space \
+== Whitney-Interpolation & Reconstruction
 
-The main star of the show is the homology space $frak(H)_k$, which is a quotient
-space of the $k$-cycles divided by the $k$-boundaries.
+== Whitney Forms
 
-The dimension of the $k$-th homology space is equal to the $k$-th Betti numbers.
+
+== Barycentric Coordinates
+
+Barycentric coordinates exist for all $k$-simplicies.\
+They are a coordinate system relative to the simplex.\
+Where the barycenter of the simplex has coordinates $(1/k)^k$.\
+
 $
-  dim frak(H)_k = B_k
+  x = sum_(i=0)^k lambda^i (x) space v_i
+$
+with $sum_(i=0)^k lambda_i(x) = 1$ and inside the simplex $lambda_i (x) in [0,1]$ (partition of unity).
+
+$
+  lambda^i (x) = det[v_0,dots,v_(i-1),x,v_(i+1),dots,v_k] / det[x_0,dots,v_k]
 $
 
-Therefore knowing the homology space of a topological space gives us the information
-about all the holes of the space.
+Linear functions on simplicies can be expressed as
+$
+  u(x) = sum_(i=0)^k lambda^i (x) space u(v_i)
+$
 
-Dual to homology there is also cohomology, which is basically just homology
-on the dual space of $k$-chains, which are the $k$-cochains. These are functions
-on the simplicies to the integeres $ZZ$.
+The following integral formula for powers of barycentric coordinate functions holds (NUMPDE):
+$
+  integral_K lambda_0^(alpha_0) dots.c lambda_n^(alpha_n) vol
+  =
+  n! abs(K) (alpha_0 ! space dots.c space alpha_n !)/(alpha_0 + dots.c + alpha_n + n)!
+$
+where $K in Delta_n, avec(alpha) in NN^(n+1)$.\
+The formula treats all barycoords symmetrically.
 
-The homology and cohomology are isomorphic.
+For piecewise linear FE, the only relevant results are:
+$
+  integral_K lambda_i lambda_j vol
+  = abs(K)/((n+2)(n+1)) (1 + delta_(i j))
+$
 
-Homology and Cohomology will be very important to the proper treatment of FEEC.
+$
+  integral_K lambda_i vol = abs(K)/(n+1)
+$
 
-== De Rham Complex
-== De Rham Cohomology
-== Hodge Theory
+== Lagrange Basis
+#v(1cm)
 
-Wikipedia:\
-A method for studying the cohomology groups of a smooth manifold M using partial
-differential equations. The key observation is that, given a Riemannian metric
-on M, every cohomology class has a canonical representative, a differential form
-that vanishes under the Laplacian operator of the metric. Such forms are called
-harmonic.
-built on the work of Georges de Rham on de Rham cohomology.
+If we have a triangulation $mesh$, then the barycentric coordinate functions
+can be collected to form the lagrange basis.
 
-== De Rham Theorem
+We can represent piecewiese-linear (over simplicial cells) functions on the mesh.
+$
+  u(x) = sum_(i=0)^N b^i (x) space u(v_i)
+$
 
-Singular cohomology with real coefficients is isomorphic to de Rham cohomology.
 
-The de Rham map is important for us as discretization of differential forms.
-It is the projection of differential $k$-forms onto $k$-cochains,
-which are functions defined on the $k$-simplicies of the mesh.
+Fullfills Lagrange basis property basis.
+$
+  b^i (v_j) = delta_(i j)
+$
+
+== Whitney Forms and Whitney Basis
+#v(1cm)
+
+Whitney $k$-forms $cal(W) Lambda^k (mesh)$ are piecewise-constant (over cells $Delta_k (mesh)$)
+differential $k$-forms.
+
+The defining property of the Whitney basis is a from pointwise to integral
+generalized Lagrange basis property (from interpolation):\
+For any two $k$-simplicies $sigma, tau in Delta_k (mesh)$, we have
+$
+  integral_sigma lambda_tau = cases(
+    +&1 quad &"if" sigma = +tau,
+    -&1 quad &"if" sigma = -tau,
+     &0 quad &"if" sigma != plus.minus tau,
+  )
+$
+
+The Whitney $k$-form basis function live on all $k$-simplicies of the mesh $mesh$.
+$
+  cal(W) Lambda^k (mesh) = "span" {lambda_sigma : sigma in Delta_k (mesh)}
+$
+
+There is a isomorphism between Whitney $k$-forms and cochains.\
+Represented through the de Rham map (discretization) and Whitney interpolation:\
+- The integration of each Whitney $k$-form over its associated $k$-simplex yields a $k$-cochain.
+- The interpolation of a $k$-cochain yields a Whitney $k$-form.\
+
+
+Whitney forms are affine invariant. \
+Let $sigma = [x_0 dots x_n]$ and $tau = [y_0 dots y_n]$ and $phi: sigma -> tau$
+affine map, such that $phi(x_i) = y_i$, then
+$
+  cal(W)[x_0 dots x_n] = phi^* (cal(W)[y_0 dots y_n])
+$
+
+The Whitney basis ${lambda_sigma}$ is constructed from barycentric coordinate functions ${lambda_i}$.
+
+$
+  lambda_(i_0 dots i_k) =
+  k! sum_(l=0)^k (-1)^l lambda_i_l
+  (dif lambda_i_0 wedge dots.c wedge hat(dif lambda)_i_l wedge dots.c wedge dif lambda_i_k)
+$
+
+#align(center)[#grid(
+  columns: 2,
+  gutter: 10%,
+  $
+    cal(W)[v_0 v_1] =
+    &-lambda_1 dif lambda_0
+     + lambda_0 dif lambda_1 
+    \
+    cal(W)[v_0 v_1 v_2] =
+    &+2 lambda_2 (dif lambda_0 wedge dif lambda_1) \
+    &-2 lambda_1 (dif lambda_0 wedge dif lambda_2) \
+    &+2 lambda_0 (dif lambda_1 wedge dif lambda_2) \
+  $,
+  $
+    cal(W)[v_0 v_1 v_2 v_3] =
+    - &6 lambda_3 (dif lambda_0 wedge dif lambda_1 wedge dif lambda_2) \
+    + &6 lambda_2 (dif lambda_0 wedge dif lambda_1 wedge dif lambda_3) \
+    - &6 lambda_1 (dif lambda_0 wedge dif lambda_2 wedge dif lambda_3) \
+      &6 lambda_0 (dif lambda_1 wedge dif lambda_2 wedge dif lambda_3) \
+  $
+)]
+
+From this definition we can easily derive the constant exterior derivative
+of a whitney form!
+
+$
+  dif lambda_(i_0 dots i_k)
+  &= k! sum_(l=0)^k (-1)^l dif lambda_i_l wedge
+  (dif lambda_i_0 wedge dots.c wedge hat(dif lambda)_i_l wedge dots.c wedge dif lambda_i_k)
+  \
+  &= k! sum_(l=0)^k (-1)^l (-1)^l
+  (dif lambda_i_0 wedge dots.c wedge dif lambda_i_l wedge dots.c wedge dif lambda_i_k)
+  \
+  &= (k+1)! dif lambda_i_0 wedge dots.c wedge dif lambda_i_k
+$
+
+
+== Whitney Forms
+
+The DOFs of an element of the Whitney $k$-form space are the $k$-simplicies of the mesh.
+
+$omega in cal(W) Lambda^k (mesh)$ has DOFs on $Delta_k (mesh)$
+
+The Whitney space unifies and generalizes the Lagrangian, Raviart-Thomas and Nédélec
+Finite Element spaces.
+$
+  cal(W) Lambda^0 (mesh) &=^~ cal(S)^0_1 (mesh) \
+  cal(W) Lambda^1 (mesh) &=^~ bold(cal(N)) (mesh) \
+  cal(W) Lambda^2 (mesh) &=^~ bold(cal(R T)) (mesh) \
+$
+
+The Whitney Subcomplex
+$
+  0 -> cal(W) Lambda^0 (mesh) limits(->)^dif dots.c limits(->)^dif cal(W) Lambda^n (mesh) -> 0
+$
+
+It generalizes the discrete subcomplex from vector calculus.
+$
+  0 -> cal(S)^0_1 (mesh) limits(->)^grad bold(cal(N)) (mesh) limits(->)^curl bold(cal(R T)) (mesh) limits(->)^div cal(S)^(-1)_0 (mesh) -> 0
+$
+
 
 = Finite Element Exterior Calculus
 
@@ -1037,32 +1325,7 @@ $
   div compose curl = 0
 $
 
-
-== Whitney Forms
-
-The DOFs of an element of the Whitney $k$-form space are the $k$-simplicies of the mesh.
-
-$omega in cal(W) Lambda^k (mesh)$ has DOFs on $Delta_k (mesh)$
-
-The Whitney space unifies and generalizes the Lagrangian, Raviart-Thomas and Nédélec
-Finite Element spaces.
-$
-  cal(W) Lambda^0 (mesh) &=^~ cal(S)^0_1 (mesh) \
-  cal(W) Lambda^1 (mesh) &=^~ bold(cal(N)) (mesh) \
-  cal(W) Lambda^2 (mesh) &=^~ bold(cal(R T)) (mesh) \
-$
-
-The Whitney Subcomplex
-$
-  0 -> cal(W) Lambda^0 (mesh) limits(->)^dif dots.c limits(->)^dif cal(W) Lambda^n (mesh) -> 0
-$
-
-It generalizes the discrete subcomplex from vector calculus.
-$
-  0 -> cal(S)^0_1 (mesh) limits(->)^grad bold(cal(N)) (mesh) limits(->)^curl bold(cal(R T)) (mesh) limits(->)^div cal(S)^(-1)_0 (mesh) -> 0
-$
-
-
+== Assembly
 
 == Mass bilinear form
 
@@ -1103,7 +1366,118 @@ $
 $
 
 
-== Hodge-Laplacian
+== Mass Bilinear Form
+
+All bilinear forms that occur in the mixed weak formulation of Hodge-Laplacian
+are just a variant of the inner product on Whitney forms.
+
+$
+  c(u, v) &= inner(delta u, v)_(L^2 Lambda^k (Omega)) = inner(u, dif v)_(L^2 Lambda^k (Omega)) \
+$
+
+$
+  m^k (u, v) &= inner(u, v)_(L^2 Lambda^k (Omega)) \
+  d^k (u, v) &= inner(dif u, v)_(L^2 Lambda^k (Omega)) \
+  c^k (u, v) &= inner(u, dif v)_(L^2 Lambda^k (Omega)) \
+  l^k (u, v) &= inner(dif u, dif v)_(L^2 Lambda^k (Omega)) \
+$
+
+After Galerkin discretization we arrive at these Galerkin matrices for our
+four weak operators.
+$
+  amat(M)^k &= [inner(phi^k_i, phi^k_j)]_(i j) \
+  amat(D)^k &= [inner(phi^k_i, dif phi^(k-1)_j)]_(i j) \
+  amat(C)^k &= [inner(dif phi^(k-1)_i, phi^k_j)]_(i j) \
+  amat(L)^k &= [inner(dif phi^k_i, dif phi^k_j)]_(i j) \
+$
+
+
+As we can see all bilinear forms are just inner product with a potential exterior derivative
+on either argument. Since the exterior derivative is purely topological it only involves a
+signed incidende matrix.
+
+$
+  amat(D)^k &= amat(M)^k amat(dif)^(k-1) \
+  amat(C)^k &= (amat(dif)^(k-1))^transp amat(M)^k \
+  amat(L)^k &= (amat(dif)^(k-1))^transp amat(M)^k amat(dif)^(k-1) \
+$
+
+
+For this reason we really just need a formula for the element matrix
+of this inner product. This galerkin matrix is called the mass matrix
+and the inner product could also be called the mass bilinear form.
+
+$
+  M = [inner(lambda_tau, lambda_sigma)_(L^2 Lambda^k (K))]_(sigma,tau in Delta_k (K))
+$
+
+$
+  inner(lambda_(i_0 dots i_k), lambda_(j_0 dots j_k))_(L^2)
+  &= k!^2 sum_(l=0)^k sum_(m=0)^k (-)^(l+m) innerlines(
+    lambda_i_l (dif lambda_i_0 wedge dots.c wedge hat(dif lambda)_i_l wedge dots.c wedge dif lambda_i_k),
+    lambda_j_m (dif lambda_j_0 wedge dots.c wedge hat(dif lambda)_j_m wedge dots.c wedge dif lambda_j_k),
+  )_(L^2) \
+  &= k!^2 sum_(l,m) (-)^(l+m) innerlines(
+    dif lambda_i_0 wedge dots.c wedge hat(dif lambda)_i_l wedge dots.c wedge dif lambda_i_k,
+    dif lambda_j_0 wedge dots.c wedge hat(dif lambda)_j_m wedge dots.c wedge dif lambda_j_k,
+  )
+  integral_K lambda_i_l lambda_j_m vol \
+$
+
+In Rust this is implemented as the following element matrix provider
+```rust
+pub struct HodgeMassElmat(pub ExteriorGrade);
+impl ElMatProvider for HodgeMassElmat {
+  fn row_grade(&self) -> ExteriorGrade { self.0 }
+  fn col_grade(&self) -> ExteriorGrade { self.0 }
+  fn eval(&self, geometry: &SimplexGeometry) -> na::DMatrix<f64> {
+    let dim = geometry.dim();
+    let grade = self.0;
+
+    let nvertices = grade + 1;
+    let simplicies: Vec<_> = subsimplicies(dim, grade).collect();
+
+    let wedge_terms: Vec<_> = simplicies
+      .iter()
+      .cloned()
+      .map(|simp| WhitneyForm::new(SimplexCoords::standard(dim), simp).wedge_terms())
+      .collect();
+
+    let scalar_mass = ScalarMassElmat.eval(geometry);
+
+    let mut elmat = na::DMatrix::zeros(simplicies.len(), simplicies.len());
+    for (i, asimp) in simplicies.iter().enumerate() {
+      for (j, bsimp) in simplicies.iter().enumerate() {
+        let wedge_terms_a = &wedge_terms[i];
+        let wedge_terms_b = &wedge_terms[j];
+        let wedge_inners = geometry
+          .metric()
+          .multi_form_inner_product_mat(wedge_terms_a, wedge_terms_b);
+
+        let mut sum = 0.0;
+        for avertex in 0..nvertices {
+          for bvertex in 0..nvertices {
+            let sign = Sign::from_parity(avertex + bvertex);
+
+            let inner = wedge_inners[(avertex, bvertex)];
+
+            sum += sign.as_f64()
+              * inner
+              * scalar_mass[(asimp.vertices[avertex], bsimp.vertices[bvertex])];
+          }
+        }
+
+        elmat[(i, j)] = sum;
+      }
+    }
+
+    (factorial(grade) as f64).powi(2) * elmat
+  }
+}
+```
+
+
+= Hodge-Laplacian
 
 The Hodge-Laplacian operator generalizes the ordinary scalar Laplacian operator.
 
@@ -1360,253 +1734,14 @@ that can be solved by an iterative eigensolver such as Krylov-Schur.
 This is also called a GHIEP problem.
 
 
-== Barycentric Coordinates
-
-Barycentric coordinates exist for all $k$-simplicies.\
-They are a coordinate system relative to the simplex.\
-Where the barycenter of the simplex has coordinates $(1/k)^k$.\
-
-$
-  x = sum_(i=0)^k lambda^i (x) space v_i
-$
-with $sum_(i=0)^k lambda_i(x) = 1$ and inside the simplex $lambda_i (x) in [0,1]$ (partition of unity).
-
-$
-  lambda^i (x) = det[v_0,dots,v_(i-1),x,v_(i+1),dots,v_k] / det[x_0,dots,v_k]
-$
-
-Linear functions on simplicies can be expressed as
-$
-  u(x) = sum_(i=0)^k lambda^i (x) space u(v_i)
-$
-
-The following integral formula for powers of barycentric coordinate functions holds (NUMPDE):
-$
-  integral_K lambda_0^(alpha_0) dots.c lambda_n^(alpha_n) vol
-  =
-  n! abs(K) (alpha_0 ! space dots.c space alpha_n !)/(alpha_0 + dots.c + alpha_n + n)!
-$
-where $K in Delta_n, avec(alpha) in NN^(n+1)$.\
-The formula treats all barycoords symmetrically.
-
-For piecewise linear FE, the only relevant results are:
-$
-  integral_K lambda_i lambda_j vol
-  = abs(K)/((n+2)(n+1)) (1 + delta_(i j))
-$
-
-$
-  integral_K lambda_i vol = abs(K)/(n+1)
-$
-
-== Lagrange Basis
-#v(1cm)
-
-If we have a triangulation $mesh$, then the barycentric coordinate functions
-can be collected to form the lagrange basis.
-
-We can represent piecewiese-linear (over simplicial cells) functions on the mesh.
-$
-  u(x) = sum_(i=0)^N b^i (x) space u(v_i)
-$
 
 
-Fullfills Lagrange basis property basis.
-$
-  b^i (v_j) = delta_(i j)
-$
-
-== Whitney Forms and Whitney Basis
-#v(1cm)
-
-Whitney $k$-forms $cal(W) Lambda^k (mesh)$ are piecewise-constant (over cells $Delta_k (mesh)$)
-differential $k$-forms.
-
-The defining property of the Whitney basis is a from pointwise to integral
-generalized Lagrange basis property (from interpolation):\
-For any two $k$-simplicies $sigma, tau in Delta_k (mesh)$, we have
-$
-  integral_sigma lambda_tau = cases(
-    +&1 quad &"if" sigma = +tau,
-    -&1 quad &"if" sigma = -tau,
-     &0 quad &"if" sigma != plus.minus tau,
-  )
-$
-
-The Whitney $k$-form basis function live on all $k$-simplicies of the mesh $mesh$.
-$
-  cal(W) Lambda^k (mesh) = "span" {lambda_sigma : sigma in Delta_k (mesh)}
-$
-
-There is a isomorphism between Whitney $k$-forms and cochains.\
-Represented through the de Rham map (discretization) and Whitney interpolation:\
-- The integration of each Whitney $k$-form over its associated $k$-simplex yields a $k$-cochain.
-- The interpolation of a $k$-cochain yields a Whitney $k$-form.\
 
 
-Whitney forms are affine invariant. \
-Let $sigma = [x_0 dots x_n]$ and $tau = [y_0 dots y_n]$ and $phi: sigma -> tau$
-affine map, such that $phi(x_i) = y_i$, then
-$
-  cal(W)[x_0 dots x_n] = phi^* (cal(W)[y_0 dots y_n])
-$
+// Probably move this to post-face
+= Conclusion and Outlook
 
-The Whitney basis ${lambda_sigma}$ is constructed from barycentric coordinate functions ${lambda_i}$.
-
-$
-  lambda_(i_0 dots i_k) =
-  k! sum_(l=0)^k (-1)^l lambda_i_l
-  (dif lambda_i_0 wedge dots.c wedge hat(dif lambda)_i_l wedge dots.c wedge dif lambda_i_k)
-$
-
-#align(center)[#grid(
-  columns: 2,
-  gutter: 10%,
-  $
-    cal(W)[v_0 v_1] =
-    &-lambda_1 dif lambda_0
-     + lambda_0 dif lambda_1 
-    \
-    cal(W)[v_0 v_1 v_2] =
-    &+2 lambda_2 (dif lambda_0 wedge dif lambda_1) \
-    &-2 lambda_1 (dif lambda_0 wedge dif lambda_2) \
-    &+2 lambda_0 (dif lambda_1 wedge dif lambda_2) \
-  $,
-  $
-    cal(W)[v_0 v_1 v_2 v_3] =
-    - &6 lambda_3 (dif lambda_0 wedge dif lambda_1 wedge dif lambda_2) \
-    + &6 lambda_2 (dif lambda_0 wedge dif lambda_1 wedge dif lambda_3) \
-    - &6 lambda_1 (dif lambda_0 wedge dif lambda_2 wedge dif lambda_3) \
-      &6 lambda_0 (dif lambda_1 wedge dif lambda_2 wedge dif lambda_3) \
-  $
-)]
-
-From this definition we can easily derive the constant exterior derivative
-of a whitney form!
-
-$
-  dif lambda_(i_0 dots i_k)
-  &= k! sum_(l=0)^k (-1)^l dif lambda_i_l wedge
-  (dif lambda_i_0 wedge dots.c wedge hat(dif lambda)_i_l wedge dots.c wedge dif lambda_i_k)
-  \
-  &= k! sum_(l=0)^k (-1)^l (-1)^l
-  (dif lambda_i_0 wedge dots.c wedge dif lambda_i_l wedge dots.c wedge dif lambda_i_k)
-  \
-  &= (k+1)! dif lambda_i_0 wedge dots.c wedge dif lambda_i_k
-$
-
-
-== Mass Bilinear Form
-
-All bilinear forms that occur in the mixed weak formulation of Hodge-Laplacian
-are just a variant of the inner product on Whitney forms.
-
-$
-  c(u, v) &= inner(delta u, v)_(L^2 Lambda^k (Omega)) = inner(u, dif v)_(L^2 Lambda^k (Omega)) \
-$
-
-$
-  m^k (u, v) &= inner(u, v)_(L^2 Lambda^k (Omega)) \
-  d^k (u, v) &= inner(dif u, v)_(L^2 Lambda^k (Omega)) \
-  c^k (u, v) &= inner(u, dif v)_(L^2 Lambda^k (Omega)) \
-  l^k (u, v) &= inner(dif u, dif v)_(L^2 Lambda^k (Omega)) \
-$
-
-After Galerkin discretization we arrive at these Galerkin matrices for our
-four weak operators.
-$
-  amat(M)^k &= [inner(phi^k_i, phi^k_j)]_(i j) \
-  amat(D)^k &= [inner(phi^k_i, dif phi^(k-1)_j)]_(i j) \
-  amat(C)^k &= [inner(dif phi^(k-1)_i, phi^k_j)]_(i j) \
-  amat(L)^k &= [inner(dif phi^k_i, dif phi^k_j)]_(i j) \
-$
-
-
-As we can see all bilinear forms are just inner product with a potential exterior derivative
-on either argument. Since the exterior derivative is purely topological it only involves a
-signed incidende matrix.
-
-$
-  amat(D)^k &= amat(M)^k amat(dif)^(k-1) \
-  amat(C)^k &= (amat(dif)^(k-1))^transp amat(M)^k \
-  amat(L)^k &= (amat(dif)^(k-1))^transp amat(M)^k amat(dif)^(k-1) \
-$
-
-
-For this reason we really just need a formula for the element matrix
-of this inner product. This galerkin matrix is called the mass matrix
-and the inner product could also be called the mass bilinear form.
-
-$
-  M = [inner(lambda_tau, lambda_sigma)_(L^2 Lambda^k (K))]_(sigma,tau in Delta_k (K))
-$
-
-$
-  inner(lambda_(i_0 dots i_k), lambda_(j_0 dots j_k))_(L^2)
-  &= k!^2 sum_(l=0)^k sum_(m=0)^k (-)^(l+m) innerlines(
-    lambda_i_l (dif lambda_i_0 wedge dots.c wedge hat(dif lambda)_i_l wedge dots.c wedge dif lambda_i_k),
-    lambda_j_m (dif lambda_j_0 wedge dots.c wedge hat(dif lambda)_j_m wedge dots.c wedge dif lambda_j_k),
-  )_(L^2) \
-  &= k!^2 sum_(l,m) (-)^(l+m) innerlines(
-    dif lambda_i_0 wedge dots.c wedge hat(dif lambda)_i_l wedge dots.c wedge dif lambda_i_k,
-    dif lambda_j_0 wedge dots.c wedge hat(dif lambda)_j_m wedge dots.c wedge dif lambda_j_k,
-  )
-  integral_K lambda_i_l lambda_j_m vol \
-$
-
-In Rust this is implemented as the following element matrix provider
-```rust
-pub struct HodgeMassElmat(pub ExteriorGrade);
-impl ElMatProvider for HodgeMassElmat {
-  fn row_grade(&self) -> ExteriorGrade {
-    self.0
-  }
-  fn col_grade(&self) -> ExteriorGrade {
-    self.0
-  }
-
-  fn eval(&self, geometry: &SimplexGeometry) -> na::DMatrix<f64> {
-    let dim = geometry.dim();
-    let grade = self.0;
-
-    let nvertices = grade + 1;
-    let simplicies: Vec<_> = subsimplicies(dim, grade).collect();
-
-    let wedge_terms: Vec<_> = simplicies
-      .iter()
-      .cloned()
-      .map(|simp| WhitneyForm::new(SimplexCoords::standard(dim), simp).wedge_terms())
-      .collect();
-
-    let scalar_mass = ScalarMassElmat.eval(geometry);
-
-    let mut elmat = na::DMatrix::zeros(simplicies.len(), simplicies.len());
-    for (i, asimp) in simplicies.iter().enumerate() {
-      for (j, bsimp) in simplicies.iter().enumerate() {
-        let wedge_terms_a = &wedge_terms[i];
-        let wedge_terms_b = &wedge_terms[j];
-        let wedge_inners = geometry
-          .metric()
-          .multi_form_inner_product_mat(wedge_terms_a, wedge_terms_b);
-
-        let mut sum = 0.0;
-        for avertex in 0..nvertices {
-          for bvertex in 0..nvertices {
-            let sign = Sign::from_parity(avertex + bvertex);
-
-            let inner = wedge_inners[(avertex, bvertex)];
-
-            sum += sign.as_f64()
-              * inner
-              * scalar_mass[(asimp.vertices[avertex], bsimp.vertices[bvertex])];
-          }
-        }
-
-        elmat[(i, j)] = sum;
-      }
-    }
-
-    (factorial(grade) as f64).powi(2) * elmat
-  }
-}
-```
+- Summary of key contributions
+- Possible improvements and future work (e.g., efficiency, higher-order elements, more general manifolds)
+- Broader impact (e.g., Rust in scientific computing, FEEC extensions)
+- Discarded ideas and failed apporaches (generic dimensionality à la nalgebra/eigen)
