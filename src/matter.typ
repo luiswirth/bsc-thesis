@@ -138,18 +138,19 @@ every $n$-dimensional topological manifold can be embedded in $RR^(2n)$.
 An easy example for a manifold would be the unit sphere $SS^2$ inside of $RR^3$.
 It's the set of points ${ xv in RR^3 mid(|) norm(xv) = 1 }$, distance 1 from the origin.
 So it's just the surface and not the ball, that has it's volume filled in.
-This perspective is called the extrinsic view of a manifold.
-$RR^3$ plays the role of an ambient space, in which the actual manifold lives in.
-We can study this manifold using the tools from euclidean geometry.
-This extrinsic perspective studies the manifold through it's embedding $Phi: Omega -> RR^N$.
-The ambient space is usually higher dimensional than the manifold itself. For our example
-the ambient space is 3 dimensional, while the dimension of the manifold is just
+This perspective is called the extrinsic view of a manifold, since
+we study the manifold from the ambient space $RR^3$.
+The manifold is placed into it through an embedding $Phi: Omega -> RR^N$.
+Using it, we can study this manifold with the tools from extrinsic euclidean geometry.
+If the manifold is curved the ambient space must be higher dimensional than the manifold itself.
+For our example the ambient space is 3 dimensional, while the dimension of the manifold is just
 2D, since the sphere is just a surface.
 
 But the manifold is an object in it's own right, that exists independent from the ambient space.
 We can take an intrinsic view and study the manifold without ever referring to the surroundings.
-This is the perspective that differential geometry takes and is the one we will be using.
+This is the perspective that differential geometry takes and is the one we will be mainly using.
 Here we forget about the embedding $Phi$ and study the manifold as an abstract mathematical object.
+
 This is also the way in which Einstein's Theory of General Relativity describe the spacetime continuum.
 Spacetime is a manifold of intrinsic dimension 4 and the theory doesn't say anything about
 the ambient space in which the manifold is embeddable into. It might as well not exist!
@@ -248,6 +249,24 @@ $
   lambda_0 = 1 - sum_(i=1)^n lambda_i
 $
 To obtain what are called the *barycentric coordinates* ${lambda_i}_(i=0)^n$.
+
+Barycentric coordinates exist for all $k$-simplicies.\
+They are a coordinate system relative to the simplex.\
+Where the barycenter of the simplex has coordinates $(1/k)^k$.\
+$
+  x = sum_(i=0)^k lambda^i (x) space v_i
+$
+with $sum_(i=0)^k lambda_i(x) = 1$ and inside the simplex $lambda_i (x) in [0,1]$ (partition of unity).
+
+$
+  lambda^i (x) = det[v_0,dots,v_(i-1),x,v_(i+1),dots,v_k] / det[x_0,dots,v_k]
+$
+
+Linear functions on simplicies can be expressed as
+$
+  u(x) = sum_(i=0)^k lambda^i (x) space u(v_i)
+$
+
 
 By applying an affine linear transformation to the reference simplex, we can obtain
 any other coordinate realization simplex.
@@ -861,58 +880,16 @@ and the cotangent space $T_p^* M$ and it's basis ${dif x^i}_(i=1)^n$ at some spe
 
 == Exterior Algebra as Generalization of Vector Algebra
 
+
 Vectors are a fundamental algebraic object thought at a high-school level.
 They are very geometric in their nature and represent oriented magnitudes.
-They can be both of as vectors. They specify a direction and a magnitude.
-The direction defines a unique line in the space, together with the magnitude,
-we get a line element.
-This line element has a one dimensional nature, as does the line. It lives
-in a higher dimensional space $V =^~ RR^n$, but itself is just one direction.
+They represent oriented line segments and are in this sense 1 dimensional objects.
 
-But in 3D for instance one can have higher dimensional geometric objects, that
-go beyond a line. One could for instance have a 2D plane. One could imagine
-defining a plane element in a sense analogous to a vectors.
-
-This motivates the introducing of what is known as a *bivector* or 2-vector.
-Given two vectors $u$ and $v$ they define a plane by their span.
-However we only want a plane element, meaning we once again want a notion
-of magnitude. For the vector this was the length of the line element.
-For the plane element this is the area. We consider the parallelogram
-that is crated by the two vectors.
-
-This construction can be extended to arbitrary dimensions.
-One can obtain a $n$-vector (multivector) from the exterior product
-of $n$ linear independent 1-vectors.
-
-In 3D the following $n$-vectors exist:
+The idea can be generalized to oriented $k$-dimensional segments of a $n$-dimensional space.
+In 3D for instance we have
 - Vector
-- Bivector
-- Trivector
-
-== Tensorial Definition
-
-Given a vector space $V$ over a field $KK$.\
-We define the tensor algebra
-$
-  T(V) = plus.circle.big_(k=0)^oo V^(times.circle k)
-  = K plus.circle V plus.circle (V times.circle V) plus.circle dots.c
-$
-
-Now we define the two-sides ideal $I = { x times.circle x : x in V }$.\
-The exterior algebra is now the quotient algebra of the tensor algebra by the ideal
-$
-  wedgespace(V) = T(V)\/I
-  = wedgespace^0(V) plus.circle wedgespace^1(V) plus.circle dots.c plus.circle wedgespace^n (V)
-$
-The exterior product $wedge$ of two element in $wedgespace(V)$ is then
-$
-  alpha wedge beta = alpha times.circle beta quad (mod I)
-$
-
-We have dimensionality given by the binomial coefficent.
-$
-  dim wedgespace^k (V) = binom(n,k)
-$
+- Bivectors
+- Trivectors
 
 The $k$-th exterior algebra $wedgespace^k V$ over the vector space $V$ is
 called the space of $k$-vectors.\
@@ -928,6 +905,13 @@ We can now just store a list of coefficents for each exterior basis element
 and represent in this way an element of an exterior algebra with just real numbers,
 which is computationally easily represented.
 
+
+We have dimensionality given by the binomial coefficent.
+$
+  dim wedgespace^k (V) = binom(n,k)
+$
+
+
 ```rust
 pub struct ExteriorElement<V: VarianceMarker> {
   coeffs: na::DVector<f64>,
@@ -937,9 +921,70 @@ pub struct ExteriorElement<V: VarianceMarker> {
 }
 ```
 
+We can implement an iterator yielding a wedge term together with it's coefficent.
+```rust
+pub fn basis_iter(&self) -> impl Iterator<Item = (f64, ExteriorBase<V>)> + use<'_, V> {
+  let dim = self.dim;
+  let grade = self.grade;
+  self
+    .coeffs
+    .iter()
+    .copied()
+    .enumerate()
+    .map(move |(i, coeff)| {
+      let basis = IndexSet::from_lex_rank(dim, grade, i).ext(dim);
+      (coeff, basis)
+    })
+```
+
+All standard vector space operations, such
+as multivector addition and scalar multiplication have been implemented as well.
+
 == Exterior Product
 
-Also known as wedge product.
+```rust
+pub fn wedge(&self, other: &Self) -> Self {
+  assert_eq!(self.dim, other.dim);
+  let dim = self.dim;
+
+  let new_grade = self.grade + other.grade;
+  assert!(new_grade <= dim);
+
+  let new_basis_size = binomial(self.dim, new_grade);
+  let mut new_coeffs = na::DVector::zeros(new_basis_size);
+
+  for (self_coeff, self_basis) in self.basis_iter() {
+    for (other_coeff, other_basis) in other.basis_iter() {
+      if self_basis == other_basis {
+        continue;
+      }
+      if self_coeff == 0.0 || other_coeff == 0.0 {
+        continue;
+      }
+
+      if let Some(merged_basis) = self_basis
+        .indices()
+        .clone()
+        .union(other_basis.indices().clone())
+        .try_into_sorted_signed()
+      {
+        let sign = merged_basis.sign;
+        let merged_basis = merged_basis.set.lex_rank(dim);
+        new_coeffs[merged_basis] += sign.as_f64() * self_coeff * other_coeff;
+      }
+    }
+  }
+
+  Self::new(new_coeffs, self.dim, new_grade)
+}
+
+pub fn wedge_big(factors: impl IntoIterator<Item = Self>) -> Option<Self> {
+  let mut factors = factors.into_iter();
+  let first = factors.next()?;
+  let prod = factors.fold(first, |acc, factor| acc.wedge(&factor));
+  Some(prod)
+}
+```
 
 
 == Multivectors vs Multiforms
@@ -964,6 +1009,41 @@ $
   \
   omega^sharp = ?
 $
+
+== Inner product
+
+```rust
+impl RiemannianMetricExt for RiemannianMetric {
+  fn multi_form_gramian(&self, k: ExteriorGrade) -> na::DMatrix<f64> {
+    let n = self.dim();
+    let combinations: Vec<_> = IndexSubsets::canonical(n, k).collect();
+    let covector_gramian = self.covector_gramian();
+
+    let mut multi_form_gramian = na::DMatrix::zeros(combinations.len(), combinations.len());
+    let mut multi_basis_mat = na::DMatrix::zeros(k, k);
+
+    for icomb in 0..combinations.len() {
+      let combi = &combinations[icomb];
+      for jcomb in icomb..combinations.len() {
+        let combj = &combinations[jcomb];
+
+        for iicomb in 0..k {
+          let combii = combi[iicomb];
+          for jjcomb in 0..k {
+            let combjj = combj[jjcomb];
+            multi_basis_mat[(iicomb, jjcomb)] = covector_gramian[(combii, combjj)];
+          }
+        }
+        let det = multi_basis_mat.determinant();
+        multi_form_gramian[(icomb, jcomb)] = det;
+        multi_form_gramian[(jcomb, icomb)] = det;
+      }
+    }
+    multi_form_gramian
+  }
+}
+```
+
 
 == Hodge star operator
 
@@ -1104,26 +1184,6 @@ $
   
 
 Purely topological, no geometry.
-
-In discrete settings defined as coboundary operator, through Stokes' theorem.\
-So the discrete exterior derivative is just the transpose of the boundary operator / incidence matrix.
-
-There is a discrete theory on exterior calculus
-that is related to FEEC, called DEC.
-
-We make use of some of the ideas from DEC.
-
-The discrete exterior derivative is defined using the boundary
-operator. Stokes' Theorem is fullfilled by definition.
-$
-  dif^k = diff_(k+1)^transp
-
-$
-
-The exterior derivative is closed in the space of Whitney forms, because of the de Rham complex.
-
-The local (on a single cell) exterior derivative is always the same for any cell.
-Therefore we can compute it on the reference cell.
 
 == Stokes' Theorem
 
@@ -1381,68 +1441,156 @@ $
 
 == Discrete Exterior Derivative via Stokes' Theorem
 
+The continuous exterior derivative does not reference the metric, which
+makes it purely topological. The same should hold true for the discrete exterior derivative.
+
+In discrete settings defined as coboundary operator, through Stokes' theorem.\
+So the discrete exterior derivative is just the transpose of the boundary operator / incidence matrix.
+
+$
+  dif^k = diff_(k+1)^transp
+$
+Stokes' Theorem is fullfilled by definition.
+
+
+Extension Trait in whitney crate.
+```rust
+pub trait ManifoldComplexExt {
+  fn exterior_derivative_operator(&self, grade: ExteriorGrade) -> SparseMatrix;
+}
+impl ManifoldComplexExt for Complex {
+  /// $dif^k: cal(W) Lambda^k -> cal(W) Lambda^(k+1)$
+  fn exterior_derivative_operator(&self, grade: ExteriorGrade) -> SparseMatrix {
+    self.boundary_operator(grade + 1).transpose()
+  }
+}
+```
+
+The exterior derivative is closed in the space of Whitney forms, because of the de Rham complex.
+
+The local (on a single cell) exterior derivative is always the same for any cell.
+Therefore we can compute it on the reference cell.
+
+
 == Cochain-Projection & Discretization
+
+
+```rust
+/// Discretize continuous coordinate-based differential k-form into
+/// discrete k-cochain on CoordComplex via de Rham map (integration over k-simplex).
+pub fn discretize_form_on_mesh(
+  form: &impl DifferentialMultiForm,
+  topology: &Complex,
+  coords: &MeshVertexCoords,
+) -> Cochain<Dim> {
+  let cochain = topology
+    .skeleton(form.grade())
+    .handle_iter()
+    .map(|simp| SimplexCoords::from_simplex_and_coords(simp.simplex_set(), coords))
+    .map(|simp| discretize_form_on_simplex(form, &simp))
+    .collect::<Vec<_>>()
+    .into();
+  Cochain::new(form.grade(), cochain)
+}
+
+/// Approximates the integral of a differential k-form over a k-simplex,
+/// by means of barycentric quadrature.
+pub fn discretize_form_on_simplex(
+  differential_form: &impl DifferentialMultiForm,
+  simplex: &SimplexCoords,
+) -> f64 {
+  let multivector = simplex.spanning_multivector();
+  let f = |coord: CoordRef| {
+    differential_form
+      .at_point(simplex.local_to_global_coord(coord).as_view())
+      .on_multivector(&multivector)
+  };
+  let std_simp = SimplexCoords::standard(simplex.dim_intrinsic());
+  barycentric_quadrature(&f, &std_simp)
+}
+```
+
 
 == Whitney-Interpolation & Reconstruction
 
-== Whitney Forms
+```rust
+/// Whitney Form on a coordinate complex.
+///
+/// Can be evaluated on local coordinates.
+pub struct WhitneyForm<O: SetOrder> {
+  cell_coords: SimplexCoords,
+  associated_subsimp: Simplex<O>,
+  difbarys: Vec<MultiForm>,
+}
+impl<O: SetOrder> WhitneyForm<O> {
+  pub fn new(cell_coords: SimplexCoords, associated_subsimp: Simplex<O>) -> Self {
+    let difbarys = associated_subsimp
+      .vertices
+      .iter()
+      .map(|vertex| cell_coords.difbary(vertex))
+      .collect();
 
+    Self {
+      cell_coords,
+      associated_subsimp,
+      difbarys,
+    }
+  }
 
-== Barycentric Coordinates
+  pub fn wedge_term(&self, iterm: usize) -> MultiForm {
+    let wedge_terms = self
+      .difbarys
+      .iter()
+      .enumerate()
+      // leave off i'th difbary
+      .filter_map(|(ipos, bary)| (ipos != iterm).then_some(bary.clone()));
+    MultiForm::wedge_big(wedge_terms).unwrap_or(MultiForm::one(self.dim()))
+  }
 
-Barycentric coordinates exist for all $k$-simplicies.\
-They are a coordinate system relative to the simplex.\
-Where the barycenter of the simplex has coordinates $(1/k)^k$.\
+  pub fn wedge_terms(&self) -> MultiFormList {
+    (0..self.difbarys.len())
+      .map(|i| self.wedge_term(i))
+      .collect()
+  }
 
-$
-  x = sum_(i=0)^k lambda^i (x) space v_i
-$
-with $sum_(i=0)^k lambda_i(x) = 1$ and inside the simplex $lambda_i (x) in [0,1]$ (partition of unity).
+  /// The constant exterior derivative of the Whitney form.
+  pub fn dif(&self) -> MultiForm {
+    if self.grade() == self.dim() {
+      return MultiForm::zero(self.dim(), self.grade() + 1);
+    }
+    let factorial = factorial(self.grade() + 1) as f64;
+    let difbarys = self.difbarys.clone();
+    factorial * MultiForm::wedge_big(difbarys).unwrap()
+  }
+}
+impl<O: SetOrder> ExteriorField for WhitneyForm<O> {
+  type Variance = variance::Co;
+  fn dim(&self) -> Dim {
+    self.cell_coords.dim_embedded()
+  }
+  fn grade(&self) -> ExteriorGrade {
+    self.associated_subsimp.dim()
+  }
+  fn at_point<'a>(&self, coord_global: impl Into<CoordRef<'a>>) -> ExteriorElement<Self::Variance> {
+    let coord_global = coord_global.into();
+    assert_eq!(coord_global.len(), self.dim());
+    let barys = self.cell_coords.global_to_bary_coord(coord_global);
 
-$
-  lambda^i (x) = det[v_0,dots,v_(i-1),x,v_(i+1),dots,v_k] / det[x_0,dots,v_k]
-$
+    let dim = self.dim();
+    let grade = self.grade();
+    let mut form = MultiForm::zero(dim, grade);
+    for (i, vertex) in self.associated_subsimp.vertices.iter().enumerate() {
+      let sign = Sign::from_parity(i);
+      let wedge = self.wedge_term(i);
 
-Linear functions on simplicies can be expressed as
-$
-  u(x) = sum_(i=0)^k lambda^i (x) space u(v_i)
-$
+      let bary = barys[vertex];
+      form += sign.as_f64() * bary * wedge;
+    }
+    factorial(grade) as f64 * form
+  }
+}
+```
 
-The following integral formula for powers of barycentric coordinate functions holds (NUMPDE):
-$
-  integral_K lambda_0^(alpha_0) dots.c lambda_n^(alpha_n) vol
-  =
-  n! abs(K) (alpha_0 ! space dots.c space alpha_n !)/(alpha_0 + dots.c + alpha_n + n)!
-$
-where $K in Delta_n, avec(alpha) in NN^(n+1)$.\
-The formula treats all barycoords symmetrically.
-
-For piecewise linear FE, the only relevant results are:
-$
-  integral_K lambda_i lambda_j vol
-  = abs(K)/((n+2)(n+1)) (1 + delta_(i j))
-$
-
-$
-  integral_K lambda_i vol = abs(K)/(n+1)
-$
-
-== Lagrange Basis
-#v(1cm)
-
-If we have a triangulation $mesh$, then the barycentric coordinate functions
-can be collected to form the lagrange basis.
-
-We can represent piecewiese-linear (over simplicial cells) functions on the mesh.
-$
-  u(x) = sum_(i=0)^N b^i (x) space u(v_i)
-$
-
-
-Fullfills Lagrange basis property basis.
-$
-  b^i (v_j) = delta_(i j)
-$
 
 == Whitney Forms and Whitney Basis
 #v(1cm)
@@ -1465,6 +1613,24 @@ The Whitney $k$-form basis function live on all $k$-simplicies of the mesh $mesh
 $
   cal(W) Lambda^k (mesh) = "span" {lambda_sigma : sigma in Delta_k (mesh)}
 $
+
+This is a true generalization of the Lagrange Space and it's Basis.
+
+If we have a triangulation $mesh$, then the barycentric coordinate functions
+can be collected to form the lagrange basis.
+
+We can represent piecewiese-linear (over simplicial cells) functions on the mesh.
+$
+  u(x) = sum_(i=0)^N b^i (x) space u(v_i)
+$
+
+
+Fullfills Lagrange basis property basis.
+$
+  b^i (v_j) = delta_(i j)
+$
+
+
 
 There is a isomorphism between Whitney $k$-forms and cochains.\
 Represented through the de Rham map (discretization) and Whitney interpolation:\
@@ -1550,6 +1716,13 @@ $
 
 
 = Finite Element Methods for Differential Forms
+
+We have now arrived at the chapter talking about the
+actual finite element library formoniq. \
+Here we will derive and implement the formulas for computing the element matrices
+of the various weak differential operators in FEEC.
+Furthermore we implement the assembly algorithm that will give us the
+final galerkin matrices.
 
 == Sobolev Space of Differential Forms
 
@@ -1649,6 +1822,59 @@ $
   amat(C)^k &= (amat(dif)^(k-1))^transp amat(M)^k \
   amat(L)^k &= (amat(dif)^(k-1))^transp amat(M)^k amat(dif)^(k-1) \
 $
+
+We first define a element matrix provider trait
+```rust
+pub type ElMat = na::DMatrix<f64>;
+pub trait ElMatProvider {
+  fn row_grade(&self) -> ExteriorGrade;
+  fn col_grade(&self) -> ExteriorGrade;
+  fn eval(&self, geometry: &SimplexGeometry) -> ElMat;
+}
+```
+
+```rust
+pub struct DifElmat(pub ExteriorGrade);
+impl ElMatProvider for DifElmat {
+  fn row_grade(&self) -> ExteriorGrade { self.0 }
+  fn col_grade(&self) -> ExteriorGrade { self.0 - 1 }
+  fn eval(&self, geometry: &SimplexGeometry) -> na::DMatrix<f64> {
+    let dim = geometry.dim();
+    let grade = self.0;
+    let dif = &LOCAL_DIFFERENTIAL_OPERATORS[dim][grade - 1];
+    let mass = HodgeMassElmat(grade).eval(geometry);
+    mass * dif
+  }
+}
+
+pub struct CodifElmat(pub ExteriorGrade);
+impl ElMatProvider for CodifElmat {
+  fn row_grade(&self) -> ExteriorGrade { self.0 - 1 }
+  fn col_grade(&self) -> ExteriorGrade { self.0 }
+  fn eval(&self, geometry: &SimplexGeometry) -> na::DMatrix<f64> {
+    let dim = geometry.dim();
+    let grade = self.0;
+    let dif = &LOCAL_DIFFERENTIAL_OPERATORS[dim][grade - 1];
+    let codif = dif.transpose();
+    let mass = HodgeMassElmat(grade).eval(geometry);
+    codif * mass
+  }
+}
+
+pub struct CodifDifElmat(pub ExteriorGrade);
+impl ElMatProvider for CodifDifElmat {
+  fn row_grade(&self) -> ExteriorGrade { self.0 }
+  fn col_grade(&self) -> ExteriorGrade { self.0 }
+  fn eval(&self, geometry: &SimplexGeometry) -> na::DMatrix<f64> {
+    let dim = geometry.dim();
+    let grade = self.0;
+    let dif = &LOCAL_DIFFERENTIAL_OPERATORS[dim][grade];
+    let codif = dif.transpose();
+    let mass = HodgeMassElmat(grade + 1).eval(geometry);
+    codif * mass * dif
+  }
+}
+```
 
 
 For this reason we really just need a formula for the element matrix
@@ -1764,13 +1990,81 @@ impl ElMatProvider for HodgeMassElmat {
 }
 ```
 
+Here we make use of the scalar mass element matrix
+
+
+The following integral formula for powers of barycentric coordinate functions holds (NUMPDE):
+$
+  integral_K lambda_0^(alpha_0) dots.c lambda_n^(alpha_n) vol
+  =
+  n! abs(K) (alpha_0 ! space dots.c space alpha_n !)/(alpha_0 + dots.c + alpha_n + n)!
+$
+where $K in Delta_n, avec(alpha) in NN^(n+1)$.\
+The formula treats all barycoords symmetrically.
+
+For piecewise linear FE, the only relevant results are:
+$
+  integral_K lambda_i lambda_j vol
+  = abs(K)/((n+2)(n+1)) (1 + delta_(i j))
+$
+
+$
+  integral_K lambda_i vol = abs(K)/(n+1)
+$
+
+
+
+```rust
+pub struct ScalarMassElmat;
+impl ElMatProvider for ScalarMassElmat {
+  fn row_grade(&self) -> ExteriorGrade { 0 }
+  fn col_grade(&self) -> ExteriorGrade { 0 }
+  fn eval(&self, geometry: &SimplexGeometry) -> ElMat {
+    let ndofs = geometry.nvertices();
+    let dim = geometry.dim();
+    let v = geometry.vol() / ((dim + 1) * (dim + 2)) as f64;
+    let mut elmat = na::DMatrix::from_element(ndofs, ndofs, v);
+    elmat.fill_diagonal(2.0 * v);
+    elmat
+  }
+}
+```
+
 
 == Assembly
 
-Thanks to the "fearless concurrency" feature of the Rust programming language,
-we are able to implement a parallelized assembly algorithm with unparalleled
-certainty in it's correctness.
+The element matrix provider tells the assembly routine,
+what the exterior grade is of the arguments into the bilinear forms,
+based on this the right dimension of simplicies are used to assemble.
 
+```rust
+pub fn assemble_galmat(
+  topology: &Complex,
+  geometry: &MeshEdgeLengths,
+  elmat: impl ElMatProvider,
+) -> GalMat {
+  let row_grade = elmat.row_grade();
+  let col_grade = elmat.col_grade();
+
+  let nsimps_row = topology.skeleton(row_grade).len();
+  let nsimps_col = topology.skeleton(col_grade).len();
+
+  let mut galmat = SparseMatrix::zeros(nsimps_row, nsimps_col);
+  for cell in topology.cells().handle_iter() {
+    let geo = geometry.simplex_geometry(cell);
+    let elmat = elmat.eval(&geo);
+
+    let row_subs: Vec<_> = cell.subsimps(row_grade).collect();
+    let col_subs: Vec<_> = cell.subsimps(col_grade).collect();
+    for (ilocal, &iglobal) in row_subs.iter().enumerate() {
+      for (jlocal, &jglobal) in col_subs.iter().enumerate() {
+        galmat.push(iglobal.kidx(), jglobal.kidx(), elmat[(ilocal, jlocal)]);
+      }
+    }
+  }
+  galmat
+}
+```
 
 = Hodge-Laplacian
 
@@ -1798,87 +2092,6 @@ $
 
 The primal weak form cannot be implemented. It lacks the necessary regularity
 to give a meaningful codifferential.
-
-Form the $L^2$-inner product with a test "function" $v in Lambda^k (Omega)$.
-$
-  Delta u = f
-$
-
-We obtain the variational equation
-$
-  u in H Lambda^k (Omega): quad quad
-  inner(Delta u, v) = inner(f, v)
-  quad quad forall v in H Lambda^k (Omega)
-$
-
-Or in integral form
-$
-  integral_Omega ((dif delta + delta dif) u) wedge hodge v = integral_Omega f wedge hodge v
-$
-
-
-If $omega$ or $eta$ vanishes on the boundary, then
-$delta$ is the formal adjoint of $dif$ w.r.t. the $L^2$-inner product.
-$
-  inner(dif omega, eta) = inner(omega, delta eta)
-$
-
-$
-  inner(Delta u, v) = inner(f, v)
-  \
-  inner((dif delta + delta dif) u, v) = inner(f, v)
-  \
-  inner((dif delta + delta dif) u, v) = inner(f, v)
-  \
-  inner(dif delta u, v) + inner(delta dif u, v) = inner(f, v)
-  \
-  inner(delta u, delta v) + inner(dif u, dif v) = inner(f, v)
-$
-
-#v(1cm)
-
-$
-  u in H Lambda^k (Omega): quad quad
-  inner(delta u, delta v) + inner(dif u, dif v) = inner(f, v)
-  quad
-  forall v in H Lambda^k (Omega)
-$
-
-$
-  u in H Lambda^k (Omega): quad
-  integral_Omega (delta u) wedge hodge (delta v) + integral_Omega (dif u) wedge hodge (dif v) = integral_Omega f wedge hodge v
-  quad
-  forall v in H Lambda^k (Omega)
-$
-
-=== Galerkin Primal Weak Form
-
-$
-  u_h = sum_(i=1)^N mu_i phi_i
-  quad quad
-  v_h = phi_j
-  \
-  u in H Lambda^k (Omega): quad quad
-  inner(delta u, delta v) + inner(dif u, dif v) = inner(f, v)
-  quad quad forall v in H Lambda^k (Omega)
-  \
-  vvec(mu) in RR^N: quad
-  sum_(i=1)^N mu_i (integral_Omega (delta phi_i) wedge hodge (delta phi_j) + integral_Omega (dif phi_i) wedge hodge (dif phi_j))
-  =
-  sum_(i=1)^N mu_i integral_Omega f wedge hodge phi_j
-  quad forall j in {1,dots,N}
-$
-
-$
-  amat(A) vvec(mu) = 0
-  \
-  A =
-  [integral_Omega (delta phi_i) wedge hodge (delta phi_j)]_(i,j=1)^N
-  +
-  [integral_Omega (dif phi_i) wedge hodge (dif phi_j)]_(i,j=1)^N
-  \
-  vvec(phi) = [integral_Omega f wedge hodge phi_j]_(j=1)^N
-$
 
 
 === Mixed Strong Formulation
@@ -2005,34 +2218,9 @@ $
 $
 
 
-
-$
-  hodge sigma - dif^transp hodge u &= 0
-  \
-  hodge dif sigma + dif^transp hodge dif u &= lambda hodge u
-$
-
-$
-  mat(
-    hodge, -dif^transp hodge;
-    hodge dif, dif^transp hodge dif;
-  )
-  vec(sigma, u)
-  =
-  lambda
-  mat(
-    0,0;
-    0,hodge
-  )
-  vec(sigma, u)
-$
-
 This is a symmetric indefinite sparse generalized matrix eigenvalue problem,
 that can be solved by an iterative eigensolver such as Krylov-Schur.
 This is also called a GHIEP problem.
-
-
-
 
 
 
