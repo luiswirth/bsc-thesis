@@ -3,10 +3,10 @@
 #import "setup-math.typ": *
 #import "setup-code.typ": *
 
-//#let fgcolor = white
-//#let bgcolor = black
-#let fgcolor = black
-#let bgcolor = white
+#let fgcolor = white
+#let bgcolor = black
+//#let fgcolor = black
+//#let bgcolor = white
 
 #let thesis-template(doc) = {
   show: math-template

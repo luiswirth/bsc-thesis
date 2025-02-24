@@ -4,17 +4,42 @@
 
 = Software Design & Implementation Choices
 
-== Why Rust? Safety, performance, and parallelism!
+The product of this thesis is the implementation of a FEEC library, which
+has the name formoniq.
+Formoniq is a suite of multiple libraries that have a focus on modularity.
+
+== Why Rust? Safety, performance, and expressiveness!
+
+- Modern programming language.
+- Amazing Build System and Package Manager: Cargo
+- Official Tooling: rustdoc, rustfmt, cargo
+- Expressive language -> Strong type system, Traits, Enums
+- Memory-Safety Proof-checker -> Ownership system and Borrowchecker
+- fearless concurrency
+
 == External libraries
 === nalgebra (linear algebra)
 
 nalgebra and nalgebra-sparse
 
-=== PETSc (solvers)
+Unfortunatly the rust sparse linear algebra ecosystem is rather immature.
 
-Sparse matrix direct solvers and eigensolvers
+=== PETSc & SLEPc (solvers)
+
+Sparse matrix direct solvers
+
+eigensolvers
 
 == General software architecture
+
+We aim to model mathematical concepts as faithfully as possible, ensuring both
+mathematical accuracy and code clarity.
+This renders the code mathematically expressive and self-documenting for those
+with the necessary background.
+While we do not shy away from mathematical complexity or oversimplify for
+the sake of accessibility, we recognize the importance of good API design and
+HPC principles. Our goal is to strike a balance between mathematical rigor,
+usability, and performance.
 
 === Modularity
 
@@ -30,12 +55,44 @@ We have multiple crates (libraries):
 - formoniq
 
 ===  Type safety
+
+The implementation has a big emphasis on providing safety through the introduction
+of many types that uphold gurantees regarding the contained data.
+Constructed instances of types should always be valid.
+
 === Performance considerations
+
+All datastructures are written with performance in mind.
+
+We are also always focused on a memory-economic representation of information.
 
 = Arbitrary Dimensions & Multi-Index Combinatorics
 
-== The nature of Arbitrary Dimensions
+== Programming in Arbitrary Dimensions
+
+Supporting arbitrary dimensions requires a special style of programming.
+One way in which this manifests is how we work with for-loops.
+Usually if one would work in fixed 3D, then one would iterate over
+3D arrays using 3 nested for-loops. But in arbitrary dimensions one would need
+a number of for loops that is determined by a variable at run-time. This is not possible.
+So we cannot rely on nested for-loops to iterate over $n$-dimensional data.
+Instead we will rely on a arbitrary dimensional multi-index implementation.
+
+A multi-index is a dimensional generalization of a index.
+It looks like this
+$ I = (i_0,i_1,dots,i_n) $
+It's a tuple of single indices, grouping them together.
+We can write a for loop over all variants of valid multi indices and
+then use the multi-index to index into our multi-dimensional data structure.
+
+
+This motivates the creation of a small library that supports multi-indices.
+There are two main flavors of multi-indices that concern us.
+
 == Cartesian Multi-Index
+
+A cartesian multi-index is pretty simple. It's an element of a cartesian product
+of various single-index sets.
 
 - Cartesian product style for-loops
 - Reference simplex style for-loops
@@ -43,7 +100,7 @@ We have multiple crates (libraries):
 == Anti-symmetric multi-indices
 Applications in simplices and exterior algebra
 
-= Algebraic Topology & Riemannian Geometry of our Simplicial Riemannian Manifold Mesh
+= Topology & Geometry of Simplicial Riemannian Manifolds
 
 In this chapter we will develop a mesh data structure for our finite element library.
 It will store the topological and geometrical properties of our discrete PDE domain.
@@ -51,12 +108,14 @@ This will be in the form of a discretized Riemannian manifold, which will be rep
 as a simplicial complex (with manifold topology) equipped with the Regge metric.
 Our data structure will be special in two senses:
 - It will support arbitrary dimensions.
-- It will use intrinsic Riemannian geometry, instead of an embedding providing global coordinates.
-We will restrict ourselves to simplicial meshes.
+- It will not only support extrinsinc euclidean geometry (based on some
+  embedding, providing global coordinates), but also intrinsic Riemannian
+  geometry.
+We will restrict ourselves to simplicial piecewise-flat meshes.
 
 
 Our mesh data structure needs to provide the following functionality:
-- Container for mesh entities (simplicies).
+- Container for mesh entities: Simplicies.
 - Global numbering for unique identification of the entities.
 - Entity iteration.
 - Topological Information: Incidence and Adjacency.
@@ -168,20 +227,27 @@ that lives in $n$ dimensions. It's the simplest $n$-polytope there is.
 A $n$-simplex always has $n+1$ vertices and the simplex is the patch of space
 bounded by the convex hull of the vertices.
 
+=== The Reference Simplex
 
 The most natural simplex to consider is the orthogonal simplex, basically a corner of a n-cube.
 This simplex can be defined as it's own coordindate realisation as an actual convex hull of
 some points.
 $
-  Delta_perp^n = {(t_1,dots,t_n) in RR^n mid(|) sum_i t_i <= 1 "and" t_i >= 0}
+  Delta_"ref"^n = {(lambda_1,dots,lambda_n) in RR^n mid(|) lambda_i >= 0, quad sum_(i=1)^n lambda_i <= 1 }
 $
 
 This is the reference simplex.
-It has vertices $v_0 = avec(0)$ and $v_i = avec(e)_(i-1)$.
+It has vertices $v_0 = avec(0)$ and $v_i = v_0 + avec(e)_(i-1)$.
 Vertex 0 is special because it's the origin. The edges that include the origin
 are the spanning edges. They are the standard basis vectors.
 They give rise to an euclidean orthonormal tangent space basis. Which manifests
 as a metric tensor that is equal to the identity matrix $amat(G) = amat(I)_n$.
+
+One can extend these coordinates by one more
+$
+  lambda_0 = 1 - sum_(i=1)^n lambda_i
+$
+To obtain what are called the *barycentric coordinates* ${lambda_i}_(i=0)^n$.
 
 By applying an affine linear transformation to the reference simplex, we can obtain
 any other coordinate realization simplex.
@@ -194,7 +260,9 @@ information for the full geometry of the simplex,
 the edge lengths of a simplex are sufficent information for the full information of
 a coordinate-free simplex.
 
-== Simplicial Topology
+== Simplicial Manifold Topology
+
+We now construct a topological manifold that consists of simplicies.
 
 In our coordinate-independent framework, we consider abstract simplicies,
 which are just finite ordered sets of vertex indicies.
@@ -282,7 +350,7 @@ $
 All $n!$ simplicies will be based on this vertex base set. To generate the list
 of vertices of the simplex, we start at the origin vertex $v_0 = 0 = (0)^n$.
 From there we walk along on axis directions from vertex to vertex.
-For this we consider all $n!$ permutations of the basis directions $vvec(e_1),dots,vvec(e)_n$.
+For this we consider all $n!$ permutations of the basis directions $vvec(e)_1,dots,vvec(e)_n$.
 A permutation $sigma$ tells in which axis direction we need to walk next.
 This gives us the vertices $v_0,dots,v_n$ that forms a simplex.
 $
@@ -478,9 +546,103 @@ $
   diff^2 = diff compose diff = 0
 $
 
-== Riemannian Geometry
+== Atlas and Differential Structure
 
-Okay so much for the topology of our mesh, now we want to focus on the geometry of it.
+Until now we only studied the manifold as a topological space.
+We now start studying additional structure.
+We start with coordinate charts and the atlas.
+
+Since simplicies are flat, our manifold is piecewise-flat.
+
+We define a reference chart, a homeomorphism between the reference simplex
+$Delta_"ref"^n subset.eq RR^n$ and the real simplex $sigma_i$.
+
+$
+  phi_i: Delta_"ref"^n -> sigma_i
+$
+
+$
+  phi_i (lambda_1,dots,lambda_n)
+  &= v_0 +
+  mat(
+    |,  , |;
+    v_1,dots.c,v_n;
+    |,  , |;
+  ) avec(lambda)
+$
+
+These reference charts define the local coordinate systems we will be working
+in on each cell.
+
+The collection of all local coordinate charts for each cell
+covers the whole manifold, giving us an atlas.
+
+This is a very useful atlas, but it is not helpful to establish a differential
+structure on the manifold, as the overlapping regions are only $(n-1)$-dimensional
+facets and therefore not facilitate a proper $n$-dimensional open neighboorhood.
+Therefore we cannot investigate the smoothness of the transition maps.
+
+Without constructing an another atlas to establish this, we just state here
+that this is a piecewise $C^oo$-smooth manifold. Where the cells are the pieces.
+
+=== Tangent space
+
+Now that we've established the existance of a differentiable structure, we
+can now talk about the tangent bundle and the tangent spaces.
+
+The tangent space $T_p M$ is the linear space of vectors $v in T_p M$,
+that are tangent to the manifold $M$ in some point $p$. Since a manifold
+is curved in general the space of tangent vectors changes from point to point.
+
+Since our manifold is piecewise-flat the tangent space remains the same
+over each cell. So instead of a tangent space $T_p M$ at each point $p$,
+we have a tangent space $T_sigma M$ at each cell $sigma$.
+
+Our refrence charts induce a natural basis on each tangent space.
+$
+  (diff phi_i)/(diff lambda_j) = v_j - v_0 = e_j
+$
+
+So the edge vectors $e_j$ eminating from the origin vertex $v_0$
+form a basis of the tangent space. This is very intuitive.
+
+By lucky coincidence, the notation for edge vectors and basis vectors
+just happens to be the same. Both times denoted by a $e_i$.
+
+The element of the tangent space are the vectors with which we can do
+vector calculus or in our case the more general exterior calculus.
+
+Vectors are *contravariant* tensors.
+In exterior algebra we will extend them to multivectors that
+are rank $k$ fully contravariant tensors.
+
+=== Cotangent space
+
+There is a dual space to the tangent space, called the cotangent space.
+The element of which are called covectors. Covectors are basically just
+linear forms on the tangent space.
+$
+  T^*_p M = { alpha mid(|) alpha: T_p M -> RR }
+$
+
+You can think of covectors as measuring (in a sense different from measure theory)
+tangent vectors.
+
+The cotangent space also demands a basis, for which there is once again a very natural choice.
+We use the dual basis defined by
+$
+  dif x^i (diff/(diff x^j)) = delta^i_j
+$
+
+So for our edge basis, we only need to specify how each edge gets measure and by linearity (only scaling)
+this tells us how each vector is measured.
+
+Covectors are *covariant* tensors.
+In exterior algebra we will extend them to multiforms that are rank $k$ fully
+covariant tensors. We will then consider fields of these multiforms that
+vary over the manifold, which we will then call differential forms.
+
+== Simplicial Manifold Geometry
 
 Our PDE domain is a curved manifold, it's curvature is not represented in the topology,
 but in the geometry. Curvature is a infintesimal notion, but for our discrete mesh
@@ -505,6 +667,8 @@ it is helpful to first construct a coordinate representation and then compute
 the intrinsic geometry and to forget about the coordinates then.
 We will see how this works in formoniq.
 
+=== Extrinsic Euclidean Geometry
+
 Extrinsic geometry, is the typical euclidean geometry
 everybody knows, where the manifold is embedded in an ambient space, for example the
 unit sphere inside of $RR^3$. The euclidean ambient space allows one to measure
@@ -522,6 +686,9 @@ Specifying the $k+1$ vertex coordinates $v_i in RR^N$ of a $k$-simplex defines a
 of the ambient euclidean space $RR^N$. This is because $k+1$ points always define a $k$-dimensional plane
 uniquely. This makes the geometry piecewise-flat.
 
+
+=== Intrinsic Riemannian Geometry
+
 In contrast to this we have intrinsic Riemannian geometry that souly relies
 on a structure over the manifold called a *Riemannian metric* $g$.
 It is a continuous function over the whole manifold, which at each point $p$
@@ -536,13 +703,34 @@ by plugging in all combinations of basis vectors into the two arguments of the b
 $
   amat(G) = [g(diff/(diff x^i),diff/(diff x^j))]_(i,j=1)^(n times n)
 $
+
+$
+  g_(i j) = g(diff/(diff x^i),diff/(diff x^j))
+$
+
+
 This is called a gramian matrix and can be used to represent any inner product
 of a vector space, given a basis. We will use gramians to computationally represent
 the metric at a point.
 
+The inverse metric tensor gives an inner product on the cotangent space (covectors).
+When using the dual basis the inverse metric tensor represented as a gramian in this basis is
+just the matrix inverse of the metric gramian.
+$
+  amat(G)^(-1) = [g(dif x^i,dif x^j)]_(i,j=1)^(n times n)
+$
+
+$
+  g^(i j) = g(dif x^i,dif x^j)
+$
+
+$
+  g^(i k) g_(k j)​= delta_j^i
+$
+
 One can easily derive the Riemannian metric from
 an embedding (or even an immersion) $f: M -> RR^N$. It's differential is a
-function $dif f: T_p M -> T_p RR^n$, also called the push-forward and tells
+function $dif f_p: T_p M -> T_p RR^n$, also called the push-forward and tells
 us how our intrinsic tangential vectors are being stretched when viewed
 geometrically.
 The differential tells us also how to take an inner product of our tangent
@@ -552,10 +740,10 @@ $
 $
 
 Computationally this differential $dif f$ can be represented, since it is a
-linear map, by a Jacobi Matrix $J$.
+linear map, by a Jacobi Matrix $amat(J)$.
 The metric gramian can then be obtained by a simple matrix product.
 $
-  G = J^transp J
+  amat(G) = amat(J)^transp amat(J)
 $
 
 
@@ -656,24 +844,55 @@ manifold/src
     └── vtk.rs
 ```
 
-= Exterior Algebra & Lexicographical Basis Representation
-
-== Exterior Algebra as Generalization of Vector Algebra
-
-Multivectors
-
-// Section with most math compared to code
-= Exterior Calculus of Differential Forms
-
-== Exterior Calculus as Generalization of Vector Calculus
+= Exterior Algebra & Basis Representation
 
 FEEC makes use of Exterior Calculus and Differential Forms. To develop
 these notions a good starting point is exterior algebra.
 This is just like how one first needs to learn about vector algebra, before
 one can do vector calculus.
 
-We have an vector space $V$ over a field $KK$.\
-We first define the tensor algebra
+An Exterior Algebra is a construction over a vector space.
+In this section we will consider this vector space $V$ to be fixed
+together with some ordered basis ${e_i}_(i=1)^n$ and it's dual
+space $V^*$ with the dual basis ${epsilon^i}_(i=1)^n$.
+They are the representatives of the tangent space $T_p M$
+and it's basis ${diff/(diff x^i)}_(i=1)^n$
+and the cotangent space $T_p^* M$ and it's basis ${dif x^i}_(i=1)^n$ at some specific point $p$.
+
+== Exterior Algebra as Generalization of Vector Algebra
+
+Vectors are a fundamental algebraic object thought at a high-school level.
+They are very geometric in their nature and represent oriented magnitudes.
+They can be both of as vectors. They specify a direction and a magnitude.
+The direction defines a unique line in the space, together with the magnitude,
+we get a line element.
+This line element has a one dimensional nature, as does the line. It lives
+in a higher dimensional space $V =^~ RR^n$, but itself is just one direction.
+
+But in 3D for instance one can have higher dimensional geometric objects, that
+go beyond a line. One could for instance have a 2D plane. One could imagine
+defining a plane element in a sense analogous to a vectors.
+
+This motivates the introducing of what is known as a *bivector* or 2-vector.
+Given two vectors $u$ and $v$ they define a plane by their span.
+However we only want a plane element, meaning we once again want a notion
+of magnitude. For the vector this was the length of the line element.
+For the plane element this is the area. We consider the parallelogram
+that is crated by the two vectors.
+
+This construction can be extended to arbitrary dimensions.
+One can obtain a $n$-vector (multivector) from the exterior product
+of $n$ linear independent 1-vectors.
+
+In 3D the following $n$-vectors exist:
+- Vector
+- Bivector
+- Trivector
+
+== Tensorial Definition
+
+Given a vector space $V$ over a field $KK$.\
+We define the tensor algebra
 $
   T(V) = plus.circle.big_(k=0)^oo V^(times.circle k)
   = K plus.circle V plus.circle (V times.circle V) plus.circle dots.c
@@ -697,9 +916,42 @@ $
 
 The $k$-th exterior algebra $wedgespace^k V$ over the vector space $V$ is
 called the space of $k$-vectors.\
+
+== Basis Representation
+
+To do computations involving exterior algebras we want to create a datastructure.
+
+If we choose an ordered basis $e_1,dots,e_n$ for our vector space $V$, this directly
+induces a lexicographically ordered basis for each exterior power $wedgespace^k V$.
+E.g. for $n=3,k=2$ we get an exterior basis $e_1 wedge e_2, e_1 wedge e_3, e_2, wedge e_3$.
+We can now just store a list of coefficents for each exterior basis element
+and represent in this way an element of an exterior algebra with just real numbers,
+which is computationally easily represented.
+
+```rust
+pub struct ExteriorElement<V: VarianceMarker> {
+  coeffs: na::DVector<f64>,
+  dim: Dim,
+  grade: ExteriorGrade,
+  variance: PhantomData<V>,
+}
+```
+
+== Exterior Product
+
+Also known as wedge product.
+
+
+== Multivectors vs Multiforms
+
+Space of alternating multilinear forms is an exterior algebra.
+It's the dual exterior algebra.
+
 The $k$-th exterior algebra $wedgespace^k (V^*)$ over the dual space $V^*$ of $V$ is
 called the space of $k$-forms.\
 
+
+== Musical Isomorphism
 
 There is a geometric connection between $k$-vectors and $k$-forms, through the
 musical isomorphisms.
@@ -713,12 +965,14 @@ $
   omega^sharp = ?
 $
 
-== Hodge Star operator
+== Hodge star operator
 
 Computationally we are working in some basis. The following
 formulas are relevant for the implementation.
 They are written in tensor index notation and make
 use of the einstein sum convention.
+
+For multivectors we use the metric tensor. For multiforms we use the inverse metric tensor.
 
 This is the formula for the hodge star of basis k-forms.
 $
@@ -749,11 +1003,61 @@ $
 
 
 
+Given a Riemannian metric $g$, we get an inner product on each fiber
+$wedge.big^k T^*_p (Omega)$.
 
-== Differential Forms
+
+Computationally this is done using the basis and we compute an extended
+gramian matrix for the inner product on $k$-forms using the determinant.
+This can be further extended to an inner product on #strike[differential] $k$-forms
+with basis $dif x_i_1 wedge dots wedge dif x_i_k$.
+$
+  inner(dif x_I, dif x_J) = det [inner(dif x_I_i, dif x_I_j)]_(i,j)^k
+$
+
+// Section with most math compared to code
+= Exterior Calculus of Differential Forms
+
+
+
+== Exterior Calculus as Generalization of Vector Calculus
+
+
 
 You can think of $k$-vector field as a *density* of infinitesimal oriented $k$-dimensional.
 The differential $k$-form is just a $k$-form field, which is the dual measuring object.
+
+Exterior Calculus exclusively cares about multiform-fields and not really about
+multivector-fields. This is because multiforms can naturally be defined as integrands.
+
+
+An arbitrary differential form can be written as (with Einstein sum convention)
+$
+  alpha = 1/k!
+  alpha_(i_1 dots i_k) dif x^(i_1) wedge dots.c wedge dif x^(i_k)
+  = sum_(i_1 < dots < i_k) 
+  alpha_(i_1 dots i_k) dif x^(i_1) wedge dots.c wedge dif x^(i_k)
+$
+
+
+Differential Forms are sections of the exterior cotangent bundle.
+$
+  Lambda^k (Omega) = Gamma (wedge.big^k T^* (Omega))
+$
+
+== Integration
+
+WIKIPEDIA:
+A differential k-form can be integrated over an oriented k-dimensional manifold.
+When the k-form is defined on an n-dimensional manifold with n > k, then the
+k-form can be integrated over oriented k-dimensional submanifolds. If k = 0,
+integration over oriented 0-dimensional submanifolds is just the summation
+of the integrand evaluated at points, according to the orientation of those
+points. Other values of k = 1, 2, 3, ... correspond to line integrals, surface
+integrals, volume integrals, and so on. There are several equivalent ways to
+formally define the integral of a differential form, all of which depend on
+reducing to the case of Euclidean space.
+
 
 - $k$-dimensional ruler $omega in Lambda^k (Omega)$
 - ruler $omega: p in Omega |-> omega_p$ varies continuously  across manifold according to coefficent functions.
@@ -771,65 +1075,6 @@ $
   ((diff avec(phi))/(diff t_1) wedge dots.c wedge (diff avec(phi))/(diff t_k))
   dif t_1 dots dif t_k
 $
-
-An arbitrary differential form can be written as (with Einstein sum convention)
-$
-  alpha = 1/k!
-  alpha_(i_1 dots i_k) dif x^(i_1) wedge dots.c wedge dif x^(i_k)
-  = sum_(i_1 < dots < i_k) 
-  alpha_(i_1 dots i_k) dif x^(i_1) wedge dots.c wedge dif x^(i_k)
-$
-
-
-$
-  Lambda^k (Omega) = Gamma (wedge.big^k T^* (Omega))
-$
-
-Given a Riemannian metric $g$, we get an inner product on each fiber
-$wedge.big^k T^*_p (Omega)$.
-
-
-Computationally this is done using the basis and we compute an extended
-gramian matrix for the inner product on $k$-forms using the determinant.
-This can be further extended to an inner product on #strike[differential] $k$-forms
-with basis $dif x_i_1 wedge dots wedge dif x_i_k$.
-$
-  inner(dif x_I, dif x_J) = det [inner(dif x_I_i, dif x_I_j)]_(i,j)^k
-$
-
-This can be extended to an $L^2$-inner product on $Lambda^k (Omega)$
-by integrating the pointwise inner product with respect to the volume
-from $vol$ associated to $g$.
-
-$
-  (omega, tau) |-> inner(omega, tau)_(L^2 Lambda^k) :=
-  integral_M inner(omega(p), tau(p))_p vol
-  = integral_M omega wedge hodge tau
-$
-
-== Hodge Star on Differential Forms
-
-
-The Hodge star operator is a linear operator
-$
-  hodge: Lambda^k (Omega) -> Lambda^(n-k) (Omega)
-$
-s.t.
-$
-  alpha wedge (hodge beta) = inner(alpha, beta)_(Lambda^k) vol
-  quad forall alpha in Lambda^k (Omega)
-$
-where $inner(alpha, beta)$ is the pointwise inner product on #strike[differential] $k$-forms
-meaning it's a scalar function on $Omega$.\
-$vol = sqrt(abs(g)) dif x^1 dots dif x^n$ is the volume form (top-level form $k=n$).
-
-Given a basis for $Lambda^k (Omega)$, we can get an LSE by replacing $alpha$ with each basis element.\
-This allows us to solve for $hodge beta$.\
-For a inner product on an orthonormal basis on euclidean space, the solution is explicit and doesn't involve solving an LSE.
-
-In general:\
-- $hodge 1 = vol$
-- $hodge vol = 1$
 
 == Exterior Derivative
 
@@ -880,6 +1125,119 @@ The exterior derivative is closed in the space of Whitney forms, because of the 
 The local (on a single cell) exterior derivative is always the same for any cell.
 Therefore we can compute it on the reference cell.
 
+== Stokes' Theorem
+
+Stokes' theorem unifies the main theorems from vector calculus.
+
+Gradient Theorem
+$
+  integral_C grad f dot dif avec(s) =
+  phi(avec(b)) - phi(avec(a))
+$
+
+Curl Theorem (Ordinary Stokes' Theorem)
+$
+  integral.double_S curl avec(F) dot dif avec(S) =
+  integral.cont_(diff S) avec(F) dot dif avec(s)
+$
+
+Divergence Theorem (Gauss theorem)
+$
+  integral.triple_V "div" avec(F) dif V =
+  integral.surf_(diff V) avec(F) dot nvec(n) dif A
+$
+
+
+$
+  integral_Omega dif omega = integral_(diff Omega) trace omega
+$
+for all $omega in Lambda^l_1 (Omega)$
+
+
+== Leibniz Product rule
+$
+  dif (alpha wedge beta) = dif alpha wedge beta + (-1)^abs(alpha) alpha wedge dif beta
+$
+
+Using the Leibniz Rule we can derive what the exterior derivative of a 1-form
+term $alpha_j dif x^j$ must be, if we interpret this term as a wedge $alpha_j
+wedge dif x^j$ between a 0-form $alpha_j$ and a 1-form $dif x^j$.
+$
+  dif (alpha_j dif x^j)
+  = dif (alpha_j wedge dif x^j)
+  = (dif alpha_j) wedge dif x^j + alpha_j wedge (dif dif x^j)
+  = (diff alpha_j)/(diff x^i) dif x^i wedge dif x^j
+$
+
+== Integration by parts
+$
+  integral_Omega dif omega wedge eta
+  + (-1)^l integral_Omega omega wedge dif eta
+  = integral_(diff Omega) omega wedge eta
+$
+for $omega in Lambda^l (Omega), eta in Lambda^k (Omega), 0 <= l, k < n − 1, l + k = n − 1$.
+
+
+$
+  integral_Omega dif omega wedge eta
+  =
+  (-1)^(k-1)
+  integral_Omega omega wedge dif eta
+  +
+  integral_(diff Omega) "Tr" omega wedge "Tr" eta
+$
+
+$
+  inner(dif omega, eta) = inner(omega, delta eta) + integral_(diff Omega) "Tr" omega wedge "Tr" hodge eta
+$
+
+
+== Hodge Star operator and $L^2$-inner product
+
+This can be extended to an $L^2$-inner product on $Lambda^k (Omega)$
+by integrating the pointwise inner product with respect to the volume
+from $vol$ associated to $g$.
+
+$
+  (omega, tau) |-> inner(omega, tau)_(L^2 Lambda^k) :=
+  integral_M inner(omega(p), tau(p))_p vol
+  = integral_M omega wedge hodge tau
+$
+
+The Hodge star operator is a linear operator
+$
+  hodge: Lambda^k (Omega) -> Lambda^(n-k) (Omega)
+$
+s.t.
+$
+  alpha wedge (hodge beta) = inner(alpha, beta)_(Lambda^k) vol
+  quad forall alpha in Lambda^k (Omega)
+$
+where $inner(alpha, beta)$ is the pointwise inner product on #strike[differential] $k$-forms
+meaning it's a scalar function on $Omega$.\
+$vol = sqrt(abs(g)) dif x^1 dots dif x^n$ is the volume form (top-level form $k=n$).
+
+Given a basis for $Lambda^k (Omega)$, we can get an LSE by replacing $alpha$ with each basis element.\
+This allows us to solve for $hodge beta$.\
+For a inner product on an orthonormal basis on euclidean space, the solution is explicit and doesn't involve solving an LSE.
+
+In general:\
+- $hodge 1 = vol$
+- $hodge vol = 1$
+
+== Codifferential
+
+
+Coderivative operator $delta: Lambda^k (Omega) -> Lambda^(k-1) (Omega)$
+defined such that
+$
+  hodge delta omega = (-1)^k dif hodge omega
+  \
+  delta_k := (dif_(k-1))^* = (-1)^k space (hodge_(k-1))^(-1) compose dif_(n-k) compose hodge_k
+$
+
+For vanishing boundary it's the formal $L^2$-adjoint of the exterior derivative.
+
 
 == Exact vs Closed
 
@@ -911,10 +1269,14 @@ $
 $
 
 == Poincaré's lemma
+
 For a contractible domain $Omega subset.eq RR^n$ every
 $omega in Lambda^l_1 (Omega), l >= 1$, with $dif omega = 0$ is the exterior
 derivative of an ($l − 1$)–form over $Omega$.
 
+- Constant vector field has zero gradient
+- Curlfree vector field has a scalar potential
+- divergencefree vector field has a vector potential (take curl of it)
 
 == De Rham Cohomology
 
@@ -988,86 +1350,6 @@ The de Rham map is important for us as discretization of differential forms.
 It is the projection of differential $k$-forms onto $k$-cochains,
 which are functions defined on the $k$-simplicies of the mesh.
 
-== Stokes' Theorem
-
-Stokes' theorem unifies the main theorems from vector calculus.
-
-Gradient Theorem
-$
-  integral_C grad f dot dif avec(s) =
-  phi(avec(b)) - phi(avec(a))
-$
-
-Curl Theorem (Ordinary Stokes' Theorem)
-$
-  integral.double_S curl avec(F) dot dif avec(S) =
-  integral.cont_(diff S) avec(F) dot dif avec(s)
-$
-
-Divergence Theorem (Gauss theorem)
-$
-  integral.triple_V "div" avec(F) dif V =
-  integral.surf_(diff V) avec(F) dot nvec(n) dif A
-$
-
-
-$
-  integral_Omega dif omega = integral_(diff Omega) trace omega
-$
-for all $omega in Lambda^l_1 (Omega)$
-
-
-== Leibniz Product rule
-$
-  dif (alpha wedge beta) = dif alpha wedge beta + (-1)^abs(alpha) alpha wedge dif beta
-$
-
-Using the Leibniz Rule we can derive what the exterior derivative of a 1-form
-term $alpha_j dif x^j$ must be, if we interpret this term as a wedge $alpha_j
-wedge dif x^j$ between a 0-form $alpha_j$ and a 1-form $dif x^j$.
-$
-  dif (alpha_j dif x^j)
-  = dif (alpha_j wedge dif x^j)
-  = (dif alpha_j) wedge dif x^j + alpha_j wedge (dif dif x^j)
-  = (diff alpha_j)/(diff x^i) dif x^i wedge dif x^j
-$
-
-== Integration by parts
-$
-  integral_Omega dif omega wedge eta
-  + (-1)^l integral_Omega omega wedge dif eta
-  = integral_(diff Omega) omega wedge eta
-$
-for $omega in Lambda^l (Omega), eta in Lambda^k (Omega), 0 <= l, k < n − 1, l + k = n − 1$.
-
-
-$
-  integral_Omega dif omega wedge eta
-  =
-  (-1)^(k-1)
-  integral_Omega omega wedge dif eta
-  +
-  integral_(diff Omega) "Tr" omega wedge "Tr" eta
-$
-
-$
-  inner(dif omega, eta) = inner(omega, delta eta) + integral_(diff Omega) "Tr" omega wedge "Tr" hodge eta
-$
-
-
-== Codifferential
-
-
-Coderivative operator $delta: Lambda^k (Omega) -> Lambda^(k-1) (Omega)$
-defined such that
-$
-  hodge delta omega = (-1)^k dif hodge omega
-  \
-  delta_k := (dif_(k-1))^* = (-1)^k space (hodge_(k-1))^(-1) compose dif_(n-k) compose hodge_k
-$
-
-For vanishing boundary it's the formal $L^2$-adjoint of the exterior derivative.
-
 = Discrete Differential Forms: Simplicial Cochains and Whitney Forms
 
 Cochains are isomorphic to our 1st order FEEC basis functions.
@@ -1096,6 +1378,8 @@ $
   omega_sigma = integral_sigma omega
   quad forall sigma in Delta_k (mesh)
 $
+
+== Discrete Exterior Derivative via Stokes' Theorem
 
 == Cochain-Projection & Discretization
 
@@ -1265,7 +1549,7 @@ $
 $
 
 
-= Finite Element Exterior Calculus
+= Finite Element Methods for Differential Forms
 
 == Sobolev Space of Differential Forms
 
@@ -1325,48 +1609,12 @@ $
   div compose curl = 0
 $
 
-== Assembly
+== Variational Formulation & Element Matrix Computation
 
-== Mass bilinear form
+There are only a few variational differential operators that
+exist in FEEC. These are all just variants of the exterior derivative and
+the codifferential.
 
-Integrating the equation over $Omega$ we get
-$
-  integral_Omega alpha wedge (hodge beta)
-  = integral_Omega inner(alpha, beta)_(Lambda^k) vol
-  = inner(alpha, beta)_(L^2 Lambda^k)
-  quad forall alpha in Lambda^k (Omega)
-$
-
-This equation can be used to find the discretized weak Hodge star operator.\
-The weak variational form of our hodge star operator is the mass bilinear form
-$
-  m(u, v) = integral_Omega hodge u wedge v
-$
-After Galerkin discretization we get the mass matrix for our discretized weak Hodge star operator
-as the $L^2$-inner product on differential $k$-forms.
-$
-  amat(M)_(i j) = integral_Omega phi_j wedge hodge phi_i = inner(phi_j, phi_i)_(L^2 Lambda^k)
-$
-
-This is called the mass bilinear form / matrix, since for 0-forms, it really coincides with
-the mass matrix from Lagrangian FEM.
-
-The Hodge star operator captures geometry of problem through this inner product,
-which depends on Riemannian metric.\
-Let's see what this dependence looks like.
-
-For (1st order) FEEC we have piecewise-linear differential $k$-forms with the
-Whitney basis $lambda_sigma$.\
-Therefore our discretized weak hodge star operator is the mass matrix, which is the Gramian matrix
-on all Whitney $k$-forms.
-
-$
-  amat(M)^k = [inner(lambda_sigma_j, lambda_sigma_i)_(L^2 Lambda^k)]_(0 <= i,j < binom(n,k))
-  = [inner(lambda_I, lambda_J)_(L^2 Lambda^k)]_(I,J in hat(cal(I))^n_k)
-$
-
-
-== Mass Bilinear Form
 
 All bilinear forms that occur in the mixed weak formulation of Hodge-Laplacian
 are just a variant of the inner product on Whitney forms.
@@ -1410,6 +1658,46 @@ and the inner product could also be called the mass bilinear form.
 $
   M = [inner(lambda_tau, lambda_sigma)_(L^2 Lambda^k (K))]_(sigma,tau in Delta_k (K))
 $
+
+
+=== Mass bilinear form
+
+Integrating the equation over $Omega$ we get
+$
+  integral_Omega alpha wedge (hodge beta)
+  = integral_Omega inner(alpha, beta)_(Lambda^k) vol
+  = inner(alpha, beta)_(L^2 Lambda^k)
+  quad forall alpha in Lambda^k (Omega)
+$
+
+This equation can be used to find the discretized weak Hodge star operator.\
+The weak variational form of our hodge star operator is the mass bilinear form
+$
+  m(u, v) = integral_Omega hodge u wedge v
+$
+After Galerkin discretization we get the mass matrix for our discretized weak Hodge star operator
+as the $L^2$-inner product on differential $k$-forms.
+$
+  amat(M)_(i j) = integral_Omega phi_j wedge hodge phi_i = inner(phi_j, phi_i)_(L^2 Lambda^k)
+$
+
+This is called the mass bilinear form / matrix, since for 0-forms, it really coincides with
+the mass matrix from Lagrangian FEM.
+
+The Hodge star operator captures geometry of problem through this inner product,
+which depends on Riemannian metric.\
+Let's see what this dependence looks like.
+
+For (1st order) FEEC we have piecewise-linear differential $k$-forms with the
+Whitney basis $lambda_sigma$.\
+Therefore our discretized weak hodge star operator is the mass matrix, which is the Gramian matrix
+on all Whitney $k$-forms.
+
+$
+  amat(M)^k = [inner(lambda_sigma_j, lambda_sigma_i)_(L^2 Lambda^k)]_(0 <= i,j < binom(n,k))
+  = [inner(lambda_I, lambda_J)_(L^2 Lambda^k)]_(I,J in hat(cal(I))^n_k)
+$
+
 
 $
   inner(lambda_(i_0 dots i_k), lambda_(j_0 dots j_k))_(L^2)
@@ -1477,6 +1765,13 @@ impl ElMatProvider for HodgeMassElmat {
 ```
 
 
+== Assembly
+
+Thanks to the "fearless concurrency" feature of the Rust programming language,
+we are able to implement a parallelized assembly algorithm with unparalleled
+certainty in it's correctness.
+
+
 = Hodge-Laplacian
 
 The Hodge-Laplacian operator generalizes the ordinary scalar Laplacian operator.
@@ -1500,6 +1795,9 @@ $
 
 
 === Primal Weak Form
+
+The primal weak form cannot be implemented. It lacks the necessary regularity
+to give a meaningful codifferential.
 
 Form the $L^2$-inner product with a test "function" $v in Lambda^k (Omega)$.
 $
