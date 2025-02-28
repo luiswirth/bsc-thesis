@@ -4,31 +4,184 @@
 
 = Software Design & Implementation Choices
 
-The product of this thesis is the implementation of a FEEC library, which
-has the name formoniq.
-Formoniq is a suite of multiple libraries that have a focus on modularity.
+In this chapter we want to briefly mention and explain
+some software engineering decisions we made.
 
-== Why Rust? Safety, performance, and expressiveness!
+== Why Rust?
 
-- Modern programming language.
-- Amazing Build System and Package Manager: Cargo
-- Official Tooling: rustdoc, rustfmt, cargo
-- Expressive language -> Strong type system, Traits, Enums
-- Memory-Safety Proof-checker -> Ownership system and Borrowchecker
-- fearless concurrency
+We have chosen Rust as the main programming language for the implementation of
+our finite element library.
+There are various reasons for this choice, some of which we briefly outline
+here.
+
+=== Memory Safety + Performance
+
+Rust is a strongly-typed, modern systems programming language that combines
+performance on par with `C/C++` with strong memory safety guarantees.
+Unlike traditional memory-safe languages that rely on garbage collection,
+Rust achieves memory safety through a unique approach inspired by formal
+software verification and static analysis techniques, ensuring safety
+at compile-time therefore not compromising performance.
+
+The Rust compiler acts as a proof checker, requiring the programmer to provide
+sufficient evidence for the safety of their code.
+This is accomplished by extending Rust's strong type system with an
+ownership and borrowing model that enforces clear semantics regarding
+memory responsibility.
+This system completely eliminates an entire class of memory-related bugs, making
+software significantly more reliable.
+
+Not only does this model guarantee the absence of bugs such as dangling
+pointers, use-after-free, memory-aliasing violations, and null-pointer
+dereferences, but it also extends to concurrent and parallel programming,
+ensuring that data races can never occur.
+This "fearless concurrency" feature allows developers to be fully confident that
+any parallel code written in Rust that compiles will behave as expected.
+
+=== Expressiveness and Abstraction
+
+Rust is a highly expressive language that enables powerful abstractions
+without sacrificing performance, often referred to as zero-cost abstractions.
+This allows for a more direct realization of ideas and concepts, making Rust
+particularly well-suited for capturing precise mathematical structures and
+expressing complex logic in a natural way. Below, we highlight some of the
+features that the author finds particularly valuable.
+
+- *Powerful Type System*: Rust features a strong, static type system that
+  enables encoding invariants and constraints directly into the type system. This
+  ensures contract violations are caught at compile time, significantly reducing
+  runtime errors and proving correctness. Through techniques like type-level
+  state, one can represent the state of the program using types instead of
+  runtime variables, allowing a compile-time style of programming.
+
+- *Traits and Generics*: Rust's trait system facilitates powerful
+  polymorphism, enabling code reuse and extensibility without the drawbacks of
+  traditional object-oriented inheritance. Unlike classical inheritance-based
+  approaches, traits define shared behavior without enforcing a rigid hierarchy.
+  Rust’s generics are monomorphized at compile time, ensuring zero-cost
+  abstraction while allowing for highly flexible and reusable code structures.
+  This approach eliminates the notorious template-related complexities of `C++`,
+  as trait bounds explicitly state required behaviors within function and struct
+  signatures.
+
+- *Enums, Option, and Result*: Rust provides algebraic data types,
+  particularly the sum type `enum`, which acts as a tagged union. This simple
+  yet powerful form of polymorphism allows developers to express complex state
+  transitions in a type-safe manner. The standard library includes two widely
+  used enums: `Option` and `Result`. The `Option` type eliminates null-pointer
+  exceptions entirely by enforcing explicit handling of absence. The `Result` type
+  enables structured error handling without introducing exceptional control flow,
+  leveraging standard function returns for working with errors in a predictable
+  way.
+
+- *Expression-Based Language and Pattern Matching*: Unlike many imperative
+  languages, Rust is expression-based, meaning that most constructs return
+  values rather than merely executing statements. For example, an `if` expression
+  evaluates to the value of its selected branch, eliminating redundant variable
+  assignments. Combined with Rust’s powerful pattern matching system, which allows
+  destructuring of composite types like enums, this leads to concise and readable
+  code while enabling functional-style composition.
+
+- *Functional Programming and Iterators*: Rust embraces functional programming
+  principles such as higher-order functions, closures (lambdas), and iterators.
+  The iterator pattern allows for efficient, lazy evaluation of collections,
+  reducing unnecessary memory allocations and improving performance. Functional
+  constructs such as `map`, `filter`, and `fold` are available as standard methods
+  on iterators, promoting declarative and expressive coding styles.
+
+
+Together, these features make Rust an expressive language, providing developers
+with the tools to write concise, maintainable, and high-performance software. By
+combining modern programming paradigms with low-level control, Rust ensures both
+safety and efficiency, making it an excellent choice for scientific computing
+and systems programming.
+
+
+
+=== Infrastructure and Tooling
+
+Beyond its language features, Rust also stands out due to its exceptional
+infrastructure and tooling ecosystem, which greatly enhances the development
+workflow.
+
+A key advantage is the official nature of all tooling, which reduces
+fragmentation and prevents competing tools from creating confusion over choices,
+in contrast to the `C++` ecosystem. This consistency fosters a more streamlined
+and productive development experience.
+
+- *Cargo* is Rust's offical package manager and build system, which is one of
+  the most impressive pieces of tooling. It eliminates the need for traditional
+  build tools like Makefiles and CMake, which are often complex and difficult
+  to maintain—not to mention the dozens of other build systems for `C++`.
+  Cargo simplifies dependency management through its seamless integration with
+  `crates.io`, Rust’s central package repository. Developers can effortlessly
+  include third-party libraries by specifying them in the `Cargo.toml` file, with
+  Cargo automatically handling downloading, compiling, and dependency resolution
+  while enforcing semantic versioning. Publishing a crate is equally simple via
+  `cargo publish`, which we have also used to distribute the libraries developed
+  for this thesis.
+- *Rust Analyzer* is Rust's official Language Server Protocol (LSP)
+  implementation, providing advanced IDE support, including real-time feedback,
+  type hints, and code completion. This significantly enhances the ergonomics of
+  Rust development.
+- *Clippy* is Rust's official linter, offering valuable suggestions for
+  improving code quality, adhering to best practices, and catching common
+  mistakes. Our codebase does not produce a single warning or lint, passing all
+  default checks for code quality.
+- *Rustdoc* is Rust's official documentation tool, allowing developers to
+  write inline documentation using Markdown, seamlessly integrated with code
+  comments. This documentation can be compiled into a browsable website with
+  `cargo doc` and is automatically published to `docs.rs` when a crate is uploaded
+  to `crates.io`. The documentation for our libraries is also available there.
+- *Rusttest* is the testing functionality built into Cargo for running unit
+  and integration tests. Unit tests can be placed alongside the normal source code
+  with a simple `#[test]` attribute, and the `cargo test` command will execute
+  all test functions, verifying correctness. This command also ensures that all
+  code snippets in the documentation are compiled and checked for runtime errors,
+  keeping documentation up-to-date without requiring external test frameworks like
+  Google Test.
+- *Rustfmt* standardizes code formatting, eliminating debates about code style
+  and ensuring consistency across projects. Our codebase fully adheres to Rustfmt's
+  formatting guidelines. For conciseness however we will be breaking
+  the formatting style when putting code inline into this document.
+
+Together, Rust’s comprehensive tooling ecosystem ensures a smooth, efficient,
+and reliable development experience, reinforcing its position as a robust choice
+for scientific computing and large-scale software development.
+
+
+There are many more good reasons to choose Rust, such as it's great ecosystem
+of libraries, which are some of the most impressive libraries the author has ever seen.
+
 
 == External libraries
+
+We want to quickly discuss here the major external libraries,
+we will be using in our project.
+
 === nalgebra (linear algebra)
 
-nalgebra and nalgebra-sparse
+For implementing numerical algorithms linear algebra libraries are invaluable.
+`C++` has set a high standard with `Eigen` as it's major linear algebra library.
+Rust offers a very direct euivalent called `nalgebra`, which just as Eigen
+relies heavily on generics to represent both statically and dynamically know
+matrix dimensions.
+All basic matrix and vector operations are available.
+We will be using nalgebra all over the place, pretty much always we have to deal
+with numerical values.
 
-Unfortunatly the rust sparse linear algebra ecosystem is rather immature.
+Sparse matrices will also be relevant in our library.
+For this we will be using `nalgebra-sparse`.
+
 
 === PETSc & SLEPc (solvers)
 
-Sparse matrix direct solvers
+Unfortunatly the rust sparse linear algebra ecosystem is rather immature.
+Only very few sparse solvers are available in Rust.
+For this reason we will be using one of the big `C/C++` sparse matrix libraries
+called PETSc. We will be using direct solvers.
 
-eigensolvers
+For eigensolvers we will be using SLEPc, which builds on top of PETSc.
 
 == General software architecture
 
@@ -43,16 +196,22 @@ usability, and performance.
 
 === Modularity
 
-Thanks to Rust's amazing build system package manager cargo, (in stark contrast to Make and CMake)
-the setup of a rather complicated project such as ours, is extremly simple.
+As is the nature with most FEM libraries, they are rather big pieces
+of software. They consists of many parts with different responsibilities.
+So of which are useable standalone, for instance the mesh could also be used
+for a different application. For this reason we split up our FEM library
+into multiple libraries than built on top of each other.
+
 We rely on a Cargo workspace to organize the various parts of our library ecosystem.
 
-We have multiple crates (libraries):
+We have the following crates:
 - multi-index
 - manifold
 - exterior
 - whitney
 - formoniq
+
+All of which have been published to `crates.io`.
 
 ===  Type safety
 
@@ -65,6 +224,10 @@ Constructed instances of types should always be valid.
 All datastructures are written with performance in mind.
 
 We are also always focused on a memory-economic representation of information.
+
+
+
+
 
 = Arbitrary Dimensions & Multi-Index Combinatorics
 
@@ -98,21 +261,172 @@ of various single-index sets.
 - Reference simplex style for-loops
 
 == Anti-symmetric multi-indices
-Applications in simplices and exterior algebra
+
+Anti-Symmetric Mutli-Indices play a huge role in the combinatorics
+of simplicies and exterior algebras.
+
+These are multi-indicies with are ordered sets (no duplicates)
+of indices. They are governed by various rules surrounding
+permutations and sign.
+
+=== Sign
+
+Swapping any two indicies results in a sign change of the multi-index.
+We represent the sign of such a multi-index using a `Sign` enum.
+
+```rust
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+pub enum Sign {
+  #[default]
+  Pos = 1,
+  Neg = -1,
+}
+```
+
+It comes with some basic convenience functions
+```rust
+pub fn from_bool(b: bool) -> Self {
+  match b {
+    true => Self::Pos,
+    false => Self::Neg,
+  }
+}
+pub fn from_f64(f: f64) -> Option<Self> {
+  if f == 0.0 { return None; }
+  Some(Self::from_bool(f > 0.0))
+}
+
+/// useful for permutation parity
+pub fn from_parity(n: usize) -> Self {
+  match n % 2 {
+    0 => Self::Pos,
+    1 => Self::Neg,
+    _ => unreachable!(),
+  }
+}
+
+pub fn other(self) -> Self {
+  match self {
+    Sign::Pos => Sign::Neg,
+    Sign::Neg => Sign::Pos,
+  }
+}
+pub fn flip(&mut self) {
+  *self = self.other()
+}
+```
+
+We implement some basic arithmetic for this struct, such
+as negation and multiplication.
+```rust
+impl std::ops::Neg for Sign {
+  type Output = Self;
+  fn neg(self) -> Self::Output {
+    match self {
+      Self::Pos => Self::Neg,
+      Self::Neg => Self::Pos,
+    }
+  }
+}
+impl std::ops::Mul for Sign {
+  type Output = Self;
+  fn mul(self, other: Self) -> Self::Output {
+    match self == other {
+      true => Self::Pos,
+      false => Self::Neg,
+    }
+  }
+}
+```
+
+The main use of this `Sign` type is representing the sign of a permutation.
+For this we implement a basic bubble sort that counts the number of swaps,
+based on which we can compute the sign of the sorted permutation relative
+to the original permutation.
+```rust
+/// Returns the sorted permutation of `a` and the sign of the permutation.
+pub fn sort_signed<T: Ord>(a: &mut [T]) -> Sign {
+  Sign::from_parity(sort_count_swaps(a))
+}
+
+/// Returns the sorted permutation of `a` and the number of swaps.
+pub fn sort_count_swaps<T: Ord>(a: &mut [T]) -> usize {
+  let mut nswaps = 0;
+
+  let mut n = a.len();
+  if n > 0 {
+    let mut swapped = true;
+    while swapped {
+      swapped = false;
+      for i in 1..n {
+        if a[i - 1] > a[i] {
+          a.swap(i - 1, i);
+          swapped = true;
+          nswaps += 1;
+        }
+      }
+      n -= 1;
+    }
+  }
+  nswaps
+}
+```
+
+=== IndexSet
+
+This is our antisym multi-index struct.
+```rust
+#[derive(Debug, Default, Clone, PartialEq, Eq, Hash)]
+pub struct MultiIndex<O: IndexKind> {
+  indices: Vec<usize>,
+  _order: PhantomData<O>,
+}
+```
+
+Through the generic type parameter `O: IndexKind` we introduce
+a marker type that represents the kind of index we are dealing with.
+There are two kinds: `ArbitraryList`, with no constraints on
+the indices and `IncreasingSet`. These are represent using marker types
+(zero-sized) and a marker trait (no associated methods).
+```rust
+pub trait IndexKind: Debug + Default + Clone + Copy + PartialEq + Eq + Hash {}
+
+/// Arbitrary order of elements. May contain duplicates.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct ArbitraryList;
+impl IndexKind for ArbitraryList {}
+
+/// Strictly increasing elements! No duplicates allowed.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct IncreasingSet;
+impl IndexKind for IncreasingSet {}
+```
+
+The `IncreasingSet` kind represents the antisymmetric index.
+
+This crate is rather convoluted due to the type state.
+The design is not optimal, even though much time was spent
+refactoring this module. It has been a difficult design challenge.
+We will keep it as is.
+
+Many operations are possible on the two kinds of multi indices.
+Such as computing all permutations or all subsets of indices.
+Or computing the "boundary" of a IncreasingSet. Which
+is the same operation as for a simplex.
+
+
+
+
 
 = Topology & Geometry of Simplicial Riemannian Manifolds
 
-In this chapter we will develop a mesh data structure for our finite element library.
+In this chapter we will develop various data structure to represent our finite
+element mesh.
 It will store the topological and geometrical properties of our discrete PDE domain.
-This will be in the form of a discretized Riemannian manifold, which will be represented
-as a simplicial complex (with manifold topology) equipped with the Regge metric.
-Our data structure will be special in two senses:
-- It will support arbitrary dimensions.
-- It will not only support extrinsinc euclidean geometry (based on some
-  embedding, providing global coordinates), but also intrinsic Riemannian
-  geometry.
-We will restrict ourselves to simplicial piecewise-flat meshes.
-
+It will support arbitrary dimensions.
+Topology will be reprented using a simplicial complex.
+Geometry will be represented using the Regge metric or equivalently edge lengths and
+optionally through an embedding providing global coordinates.
 
 Our mesh data structure needs to provide the following functionality:
 - Container for mesh entities: Simplicies.
@@ -130,73 +444,9 @@ Usually one thinks of this domain as just being a subset of euclidean space,
 but the more general way is to describe the domain as a manifold.
 This is the first way in which differential geometry enters our theory.
 
-One can intuitively think of a manifold $Omega$ just as a subspace of euclidean space $RR^N$.
-#footnote[
-This is a valid perspective thanks to the Whitney Embedding Theorem, telling us that
-every $n$-dimensional topological manifold can be embedded in $RR^(2n)$.
-]
-An easy example for a manifold would be the unit sphere $SS^2$ inside of $RR^3$.
-It's the set of points ${ xv in RR^3 mid(|) norm(xv) = 1 }$, distance 1 from the origin.
-So it's just the surface and not the ball, that has it's volume filled in.
-This perspective is called the extrinsic view of a manifold, since
-we study the manifold from the ambient space $RR^3$.
-The manifold is placed into it through an embedding $Phi: Omega -> RR^N$.
-Using it, we can study this manifold with the tools from extrinsic euclidean geometry.
-If the manifold is curved the ambient space must be higher dimensional than the manifold itself.
-For our example the ambient space is 3 dimensional, while the dimension of the manifold is just
-2D, since the sphere is just a surface.
-
-But the manifold is an object in it's own right, that exists independent from the ambient space.
-We can take an intrinsic view and study the manifold without ever referring to the surroundings.
-This is the perspective that differential geometry takes and is the one we will be mainly using.
-Here we forget about the embedding $Phi$ and study the manifold as an abstract mathematical object.
-
-This is also the way in which Einstein's Theory of General Relativity describe the spacetime continuum.
-Spacetime is a manifold of intrinsic dimension 4 and the theory doesn't say anything about
-the ambient space in which the manifold is embeddable into. It might as well not exist!
-Spacetime is purely intrinsic and there is no outside.
-
-Let's dive into the intrinsic description of manifolds.
-A manifold is a type of topological space. Topology tells us how our space is
-connected and gives us a notion of closeness.
-The topology being manifold, tells us that our space is at each point locally
-homeomorphic to $n$-dimensional euclidean space. Here $n$ is the intrinsic dimension.
-In the case of $SS^2$, we have $n=2$.
-Intuitively this means that if you zoom close enough the space looks just like flat space.
-
-Differentiable/Smooth structure?
-Topology gives us a notion of continuity and makes our manifold have $C^0$ regualarity,
-but in order to solve PDEs on manifolds, we need them to be differentiable.
-For this we need an additional differentiable/smooth structure. Given this we are able
-to do calculus on the manifold. This is done on the tangent spaces of the manifold.
-These are vector spaces at each point of the manifold, which make the curvy manifold
-look like a flat linear vector space locally.
-
-Next to topological and differentiable structures, we also need geometrical information.
-Geometry lets us measure angles, lengths, areas, volumes and so on.
-This is not possible with differential topology alone.
-In the extrinsic view, we do geometry using the global coordinates
-$(x_1,dots,x_N)$ of the manifold, provided by the embedding $Phi: p |-> (x_1,dots,x_N)$.
-These coordinates describe the position of the manifold in the ambient space.
-Using coordinates all geometrical properties can easily be calculated, using euclidean geometry.
-
-The intrinsic way to describe the geometry of the manifold is called Riemannian geometry.
-For this we need to equipe our toplogical manifold with an additional structure called
-a Riemannian metric. It allows us to measure angles, lengths, areas, etc in a fashion
-that is completly independent of the ambient space and the embedding.
-The Riemannian metric is an inner product on the tangent spaces that continuously varies
-across the manifold. This inner product induces a norm on the tangent vectors, that
-let's us measure their lengths and the inner product gives us angles. Using the metric
-we can compute all geometric properties that one could compute with an embedding.
-This turns our differentiable manifold into a Riemannian manifold.
-
 In the most general sense our PDE domain is a piecewise smooth oriented and
 bounded $n$-dimensional (pseudo) Riemannian manifold, $n in NN$ with a piecewise
 smooth boundary.
-
-Orientability is the property of a manifold that we can choose a consistent
-orientation. Famous examples of manifolds that are not orientable are the möbius strip and the
-klein bottle, both of which only have one side. So they are lacking a backside.
 
 == The mesh as a discretized Riemannian manifold
 
@@ -227,6 +477,11 @@ The idea here is that an $n$-simplex is the polytope with the fewest vertices
 that lives in $n$ dimensions. It's the simplest $n$-polytope there is.
 A $n$-simplex always has $n+1$ vertices and the simplex is the patch of space
 bounded by the convex hull of the vertices.
+
+Geometric Simplex
+$
+  Delta = {sum_(i=0)^n lambda_i p_i mid(|) lambda_i in [0,1], quad sum_(i=0)^n lambda_i = 1}
+$
 
 === The Reference Simplex
 
@@ -488,7 +743,6 @@ every $k$-subsimplex is contained in some cell.
 
 Simplicial complexes are objects that are studied in algebraic topology.
 
-
 One of the major theories relevant to FEEC is homology theory,
 which is rooted in algebraic topology.
 Informally speaking homology is all about identifying holes
@@ -498,72 +752,6 @@ represented as a simplicial complex.
 The presence of holes has influence on the existance and uniqueness of
 PDE solutions and therefore is relevant and needs to be studied.
 
-Let's start with an informal outline of how homology works.
-
-A topological space can have various holes of different dimensions.
-A 1-dimensional hole (circular hole) is the kind of hole a circle has.
-A sphere has a 2D hole (void).
-The number of 0 dimensional holes, is just the number of connected components.
-
-We want to count the numbers of these holes in a space.
-
-The $k$-th Betti number $beta_k (X)$ is the number of $k$ dimensional holes of a topological space $X$.
-So for the circle, we have $beta_0 (SS^1) = 1, beta_1 (SS^1) = 1$
-and the sphere has $beta_0 (SS^2)=1, beta_1 (SS^2)=0, beta_2 (SS^2)=1$.
-The torus has $beta_0 (TT^2) = 1, beta_1 (TT^2) = 2, beta_2 (TT^2) = 1$.
-
-Homology is all about computing these numbers of any topological space.
-There are various different homology theories, such as
-singular homology and cellular homolgy, but the one relevant to us
-is simplicial homology, since we are working with simplicial complexes.
-So we study the connectivity of our simplicial complex.
-
-
-More algebra is possible with simplicies.
-For this we take the free albelian group generated by taking
-a collection of simplicies as basis.
-This allows us to express formal $ZZ$-linear combinations of simplicies,
-such as $[0,1] - [1,2] + [2,3]$
-
-We first define what a $k$-chain is.
-A $k$-chain is a formal $ZZ$-linear combination of $k$-simplicies in the simplicial complex.
-We have a linear structure over $ZZ$, which is a ring but not a field.
-Therefore this is not a vector space, but a free albelian group generated by the $k$-simplicies.
-This is also gives rise to a space of $k$-chains. If we take all of these spaces together
-for all $k<=n$, we obtain a graded algebraic strucuture containing all chains of the simplicial complex.
-
-On this graded structure we can now introduce the boundary operator $diff$.
-It is a graded $ZZ$-linear operator $diff = plus.big.circle_k diff_k$ of order -1 with each individual
-$diff_k: Delta_k -> Delta_(k-1)$, being defined by
-$
-  diff_k: sigma = [sigma_0,dots,sigma_n] |-> sum_i (-1)^i [sigma_0,dots,hat(sigma)_i,dots,sigma_n]
-$
-where the hat $hat(sigma)_i$ indicates that vertex $sigma_i$ is omitted.
-
-This is the standard textbook definition of the boundary opertator and we will also be
-using it, but the sum sign here suggests an order for the boundary simplicies that
-gives a reversed lexicographical ordering, relative to the input, which is not optimal
-for implementation. So instead we reverse this order.
-
-The boundary operator has the important property that $diff^2$ = $diff compose diff = 0$.
-This can be easily shown with some algebra.
-$
-  diff^2 sigma &= diff_(n-1) diff_n sigma
-  \ &= diff (sum_i (-1)^i [sigma_0,dots,hat(sigma)_i,dots,sigma_n])
-  \ &= sum_i (-1)^i diff [sigma_0,dots,hat(sigma)_i,dots,sigma_n]
-  \ &= sum_i (-1)^i sum_j (-1)^j [sigma_0,dots,hat(sigma)_i,dots,hat(sigma)_j,dots,sigma_n]
-  \ &= sum_(i,j) (-1)^i (-1)^j [sigma_0,dots,hat(sigma)_i,dots,hat(sigma)_j,dots,sigma_n]
-  \ &= sum_(i<j) (-1)^i (-1)^(j-1) [sigma_0,dots,hat(sigma)_i,dots,hat(sigma)_j,dots,sigma_n]
-   + sum_(i>j) (-1)^i (-1)^j [sigma_0,dots,hat(sigma)_j,dots,hat(sigma)_i,dots,sigma_n]
-  \ &= 0
-$
-
-Simplicial Chain Complex
-$
-  0 limits(<-) Delta_0 (mesh) limits(<-)^diff dots.c limits(<-)^diff Delta_n (mesh) limits(<-) 0
-  \
-  diff^2 = diff compose diff = 0
-$
 
 == Atlas and Differential Structure
 
@@ -878,22 +1066,6 @@ They are the representatives of the tangent space $T_p M$
 and it's basis ${diff/(diff x^i)}_(i=1)^n$
 and the cotangent space $T_p^* M$ and it's basis ${dif x^i}_(i=1)^n$ at some specific point $p$.
 
-== Exterior Algebra as Generalization of Vector Algebra
-
-
-Vectors are a fundamental algebraic object thought at a high-school level.
-They are very geometric in their nature and represent oriented magnitudes.
-They represent oriented line segments and are in this sense 1 dimensional objects.
-
-The idea can be generalized to oriented $k$-dimensional segments of a $n$-dimensional space.
-In 3D for instance we have
-- Vector
-- Bivectors
-- Trivectors
-
-The $k$-th exterior algebra $wedgespace^k V$ over the vector space $V$ is
-called the space of $k$-vectors.\
-
 == Basis Representation
 
 To do computations involving exterior algebras we want to create a datastructure.
@@ -995,22 +1167,19 @@ It's the dual exterior algebra.
 The $k$-th exterior algebra $wedgespace^k (V^*)$ over the dual space $V^*$ of $V$ is
 called the space of $k$-forms.\
 
-
-== Musical Isomorphism
-
-There is a geometric connection between $k$-vectors and $k$-forms, through the
-musical isomorphisms.
-This defines two unary operators.
-- Flat #flat to move from $k$-vector to $k$-form.
-- Sharp #sharp to move from $k$-form to $k$-vector.
-This is inspired by musical notation. It moves the tensor index down (#flat) and up (#sharp).
-$
-  v^flat = w |-> g(v, w)
-  \
-  omega^sharp = ?
-$
-
 == Inner product
+
+
+Given a Riemannian metric $g$, we get an inner product on each fiber
+$wedge.big^k T^*_p (Omega)$.
+
+Computationally this is done using the basis and we compute an extended
+gramian matrix for the inner product on $k$-forms using the determinant.
+This can be further extended to an inner product on #strike[differential] $k$-forms
+with basis $dif x_i_1 wedge dots wedge dif x_i_k$.
+$
+  inner(dif x_I, dif x_J) = det [inner(dif x_I_i, dif x_I_j)]_(i,j)^k
+$
 
 ```rust
 impl RiemannianMetricExt for RiemannianMetric {
@@ -1045,379 +1214,17 @@ impl RiemannianMetricExt for RiemannianMetric {
 ```
 
 
-== Hodge star operator
-
-Computationally we are working in some basis. The following
-formulas are relevant for the implementation.
-They are written in tensor index notation and make
-use of the einstein sum convention.
-
-For multivectors we use the metric tensor. For multiforms we use the inverse metric tensor.
-
-This is the formula for the hodge star of basis k-forms.
-$
-  hodge (dif x^(i_1) wedge dots.c wedge dif x^(i_k))
-  = sqrt(abs(det[g_(a b)])) / (n-k)! g^(i_1 j_1) dots.c g^(i_k j_k)
-  epsilon_(j_1 dots j_n) dif x^(j_(k+1)) wedge dots.c wedge dif x^(j_n)
-$
-
-Here with restricted to increasing indices $j_(k+1) < dots < j_n$
-$
-  hodge (dif x^(i_1) wedge dots.c wedge dif x^(i_k))
-  = sqrt(abs(det[g_(a b)])) sum_(j_(k+1) < dots < j_n)
-  g^(i_1 j_1) dots.c g^(i_k j_k)
-  epsilon_(j_1 dots j_n) dif x^(j_(k+1)) wedge dots.c wedge dif x^(j_n)
-$
-
-For an arbitrary differential k-form $alpha$, we have
-$
-  hodge alpha = sum_(j_(k+1) < dots < j_n)
-  (hodge alpha)_(j_(k+1) dots j_n) dif x^(j_(k+1)) wedge dots.c wedge dif x^(j_n)
-$
-
-$
-  (hodge alpha)_(j_(k+1) dots j_n)
-  = sqrt(det[g_(a b)]) / k!
-  alpha_(i_1 dots i_k) g^(i_1 j_1) dots.c g^(i_k j_k) epsilon_(j_1 dots j_n)
-$
-
-
-
-Given a Riemannian metric $g$, we get an inner product on each fiber
-$wedge.big^k T^*_p (Omega)$.
-
-
-Computationally this is done using the basis and we compute an extended
-gramian matrix for the inner product on $k$-forms using the determinant.
-This can be further extended to an inner product on #strike[differential] $k$-forms
-with basis $dif x_i_1 wedge dots wedge dif x_i_k$.
-$
-  inner(dif x_I, dif x_J) = det [inner(dif x_I_i, dif x_I_j)]_(i,j)^k
-$
-
-// Section with most math compared to code
-= Exterior Calculus of Differential Forms
-
-
-
-== Exterior Calculus as Generalization of Vector Calculus
-
-
-
-You can think of $k$-vector field as a *density* of infinitesimal oriented $k$-dimensional.
-The differential $k$-form is just a $k$-form field, which is the dual measuring object.
-
-Exterior Calculus exclusively cares about multiform-fields and not really about
-multivector-fields. This is because multiforms can naturally be defined as integrands.
-
-
-An arbitrary differential form can be written as (with Einstein sum convention)
-$
-  alpha = 1/k!
-  alpha_(i_1 dots i_k) dif x^(i_1) wedge dots.c wedge dif x^(i_k)
-  = sum_(i_1 < dots < i_k) 
-  alpha_(i_1 dots i_k) dif x^(i_1) wedge dots.c wedge dif x^(i_k)
-$
-
-
-Differential Forms are sections of the exterior cotangent bundle.
-$
-  Lambda^k (Omega) = Gamma (wedge.big^k T^* (Omega))
-$
-
-== Integration
-
-WIKIPEDIA:
-A differential k-form can be integrated over an oriented k-dimensional manifold.
-When the k-form is defined on an n-dimensional manifold with n > k, then the
-k-form can be integrated over oriented k-dimensional submanifolds. If k = 0,
-integration over oriented 0-dimensional submanifolds is just the summation
-of the integrand evaluated at points, according to the orientation of those
-points. Other values of k = 1, 2, 3, ... correspond to line integrals, surface
-integrals, volume integrals, and so on. There are several equivalent ways to
-formally define the integral of a differential form, all of which depend on
-reducing to the case of Euclidean space.
-
-
-- $k$-dimensional ruler $omega in Lambda^k (Omega)$
-- ruler $omega: p in Omega |-> omega_p$ varies continuously  across manifold according to coefficent functions.
-- locally measures tangential $k$-vectors $omega_p: (T_p M)^k -> RR$
-- globally measures $k$-dimensional submanifold $integral_M omega in RR$
-
-$
-  phi: [0,1]^k -> Omega
-  quad quad
-  M = "Image" phi
-  \
-  integral_M omega =
-  limits(integral dots.c integral)_([0,1]^k) quad
-  omega_(avec(phi)(t))
-  ((diff avec(phi))/(diff t_1) wedge dots.c wedge (diff avec(phi))/(diff t_k))
-  dif t_1 dots dif t_k
-$
-
-== Exterior Derivative
-
-The exterior derivative unifies all the derivatives from vector calculus.
-In 3D we have:
-
-$
-  grad &=^~ dif_0
-  quad quad
-  &&grad f = (dif f)^sharp
-  \
-  curl &=^~ dif_1
-  quad quad
-  &&curl avec(F) = (hodge dif avec(F)^flat)^sharp
-  \
-  div &=^~ dif_2
-  quad quad
-  &&"div" avec(F) = hodge dif hodge avec(F)^flat
-$
-
-- $dif_0$: Measures how much a 0-form (scalar field) changes linearly,
-  producing a 1-form (line field).
-- $dif_1$: Measures how much a 1-form (line field) circulates areally,
-  producing a 2-form (areal field).
-- $dif_2$: Measures how much a 2-form (areal flux field) diverges volumetrically,
-  producing a 3-form (volume field).
-  
-
-Purely topological, no geometry.
-
-== Stokes' Theorem
-
-Stokes' theorem unifies the main theorems from vector calculus.
-
-Gradient Theorem
-$
-  integral_C grad f dot dif avec(s) =
-  phi(avec(b)) - phi(avec(a))
-$
-
-Curl Theorem (Ordinary Stokes' Theorem)
-$
-  integral.double_S curl avec(F) dot dif avec(S) =
-  integral.cont_(diff S) avec(F) dot dif avec(s)
-$
-
-Divergence Theorem (Gauss theorem)
-$
-  integral.triple_V "div" avec(F) dif V =
-  integral.surf_(diff V) avec(F) dot nvec(n) dif A
-$
-
-
-$
-  integral_Omega dif omega = integral_(diff Omega) trace omega
-$
-for all $omega in Lambda^l_1 (Omega)$
-
-
-== Leibniz Product rule
-$
-  dif (alpha wedge beta) = dif alpha wedge beta + (-1)^abs(alpha) alpha wedge dif beta
-$
-
-Using the Leibniz Rule we can derive what the exterior derivative of a 1-form
-term $alpha_j dif x^j$ must be, if we interpret this term as a wedge $alpha_j
-wedge dif x^j$ between a 0-form $alpha_j$ and a 1-form $dif x^j$.
-$
-  dif (alpha_j dif x^j)
-  = dif (alpha_j wedge dif x^j)
-  = (dif alpha_j) wedge dif x^j + alpha_j wedge (dif dif x^j)
-  = (diff alpha_j)/(diff x^i) dif x^i wedge dif x^j
-$
-
-== Integration by parts
-$
-  integral_Omega dif omega wedge eta
-  + (-1)^l integral_Omega omega wedge dif eta
-  = integral_(diff Omega) omega wedge eta
-$
-for $omega in Lambda^l (Omega), eta in Lambda^k (Omega), 0 <= l, k < n − 1, l + k = n − 1$.
-
-
-$
-  integral_Omega dif omega wedge eta
-  =
-  (-1)^(k-1)
-  integral_Omega omega wedge dif eta
-  +
-  integral_(diff Omega) "Tr" omega wedge "Tr" eta
-$
-
-$
-  inner(dif omega, eta) = inner(omega, delta eta) + integral_(diff Omega) "Tr" omega wedge "Tr" hodge eta
-$
-
-
-== Hodge Star operator and $L^2$-inner product
-
-This can be extended to an $L^2$-inner product on $Lambda^k (Omega)$
-by integrating the pointwise inner product with respect to the volume
-from $vol$ associated to $g$.
-
-$
-  (omega, tau) |-> inner(omega, tau)_(L^2 Lambda^k) :=
-  integral_M inner(omega(p), tau(p))_p vol
-  = integral_M omega wedge hodge tau
-$
-
-The Hodge star operator is a linear operator
-$
-  hodge: Lambda^k (Omega) -> Lambda^(n-k) (Omega)
-$
-s.t.
-$
-  alpha wedge (hodge beta) = inner(alpha, beta)_(Lambda^k) vol
-  quad forall alpha in Lambda^k (Omega)
-$
-where $inner(alpha, beta)$ is the pointwise inner product on #strike[differential] $k$-forms
-meaning it's a scalar function on $Omega$.\
-$vol = sqrt(abs(g)) dif x^1 dots dif x^n$ is the volume form (top-level form $k=n$).
-
-Given a basis for $Lambda^k (Omega)$, we can get an LSE by replacing $alpha$ with each basis element.\
-This allows us to solve for $hodge beta$.\
-For a inner product on an orthonormal basis on euclidean space, the solution is explicit and doesn't involve solving an LSE.
-
-In general:\
-- $hodge 1 = vol$
-- $hodge vol = 1$
-
-== Codifferential
-
-
-Coderivative operator $delta: Lambda^k (Omega) -> Lambda^(k-1) (Omega)$
-defined such that
-$
-  hodge delta omega = (-1)^k dif hodge omega
-  \
-  delta_k := (dif_(k-1))^* = (-1)^k space (hodge_(k-1))^(-1) compose dif_(n-k) compose hodge_k
-$
-
-For vanishing boundary it's the formal $L^2$-adjoint of the exterior derivative.
-
-
-== Exact vs Closed
-
-A fundamental fact about exterior differentiation is that $dif(dif omega) = 0$
-for any sufficiently smooth differential form $omega$.
-
-Under some restrictions on the topology of $Omega$ the converse is
-also true, which is called the exact sequence property:
-
-$
-  omega in Lambda^k: quad
-  dif omega = 0 => omega = dif eta
-  quad beta_k = 0
-$
-
-$
-  grad F = 0 &=> F = "const"
-  quad beta_0 = 0
-  \
-  curl F = 0 &=> F = grad f
-  quad beta_1 = 0
-  \
-  div F = 0  &=> F = curl A
-  quad beta_2 = 0
-$
-
-$
-  frak(H)^k = {omega | dif omega = 0}/{omega | dif eta = omega}
-$
-
-== Poincaré's lemma
-
-For a contractible domain $Omega subset.eq RR^n$ every
-$omega in Lambda^l_1 (Omega), l >= 1$, with $dif omega = 0$ is the exterior
-derivative of an ($l − 1$)–form over $Omega$.
-
-- Constant vector field has zero gradient
-- Curlfree vector field has a scalar potential
-- divergencefree vector field has a vector potential (take curl of it)
-
-== De Rham Cohomology
-
-There is a dual notion to homology, called cohomology.
-The most important of which is going to be de Rham cohomology.
-Which makes statements about the existance of the existance of anti-derivaties of
-differential forms and differential forms that have derivative 0.
-It will turn out that the homology of PDE domain and the cohomology
-of the differential forms is isomorphic.
-
-Okay let's formally define what homology is.
-The main object of study is a chain complex.
-
-
-
-This gives us a cell complex.
-
-Chain Complex: Sequence of algebras and linear maps
-
-$
-  dots.c -> V_(k+1) ->^(diff_(k+1)) V_k ->^(diff_k) V_(k-1) -> dots.c
-  quad "with" quad
-  diff_k compose diff_(k+1) = 0
-$
-
-Graded algebra $V = plus.big.circle_k V_k$ with graded linear operator $diff = plus.big.circle_k diff_k$ of degree -1,
-such that $diff compose diff = 0$.
-
-$V_k$: $k$-chains \
-$diff_k$: $k$-th boundary operator \
-$frak(Z)_k = ker diff_k$: $k$-cycles \
-$frak(B)_k = im diff_(k+1)$: $k$-boundaries \
-$frak(H)_k = frak(Z)_k \/ frak(B)_k$: $k$-th homology space \
-
-The main star of the show is the homology space $frak(H)_k$, which is a quotient
-space of the $k$-cycles divided by the $k$-boundaries.
-
-The dimension of the $k$-th homology space is equal to the $k$-th Betti numbers.
-$
-  dim frak(H)_k = B_k
-$
-
-Therefore knowing the homology space of a topological space gives us the information
-about all the holes of the space.
-
-Dual to homology there is also cohomology, which is basically just homology
-on the dual space of $k$-chains, which are the $k$-cochains. These are functions
-on the simplicies to the integeres $ZZ$.
-
-The homology and cohomology are isomorphic.
-
-Homology and Cohomology will be very important to the proper treatment of FEEC.
-
-== De Rham Complex
-== De Rham Cohomology
-== Hodge Theory
-
-Wikipedia:\
-A method for studying the cohomology groups of a smooth manifold M using partial
-differential equations. The key observation is that, given a Riemannian metric
-on M, every cohomology class has a canonical representative, a differential form
-that vanishes under the Laplacian operator of the metric. Such forms are called
-harmonic.
-built on the work of Georges de Rham on de Rham cohomology.
-
-== De Rham Theorem
-
-Singular cohomology with real coefficients is isomorphic to de Rham cohomology.
-
-The de Rham map is important for us as discretization of differential forms.
-It is the projection of differential $k$-forms onto $k$-cochains,
-which are functions defined on the $k$-simplicies of the mesh.
-
 = Discrete Differential Forms: Simplicial Cochains and Whitney Forms
 
-Cochains are isomorphic to our 1st order FEEC basis functions.
-The basis we will be working with is called the Whitney basis.
-The Whitney space is the space of piecewise-linear (over the cells)
-differential forms.
+In this chapter we will introduce discrete differential forms, which we will
+represent as simplicial cochains. We will discuss projection of arbitrary continuous
+differential forms expressed in a global coordinate basis onto cochains and
+the 
+finite element space of whitney forms and it's basis.
 
-== Discrete Differential Forms
+This chapter corresponds exactly to the `whitney` crate.
+
+== Cochains
 
 The discretization of differential forms on a mesh is of outmost importance.
 Luckily the discretization is really simple in the case of 1st order FEEC, which
@@ -1439,7 +1246,14 @@ $
   quad forall sigma in Delta_k (mesh)
 $
 
-== Discrete Exterior Derivative via Stokes' Theorem
+
+Cochains are isomorphic to our 1st order FEEC basis functions.
+The basis we will be working with is called the Whitney basis.
+The Whitney space is the space of piecewise-linear (over the cells)
+differential forms.
+
+
+=== Discrete Exterior Derivative via Stokes' Theorem
 
 The continuous exterior derivative does not reference the metric, which
 makes it purely topological. The same should hold true for the discrete exterior derivative.
@@ -1472,7 +1286,9 @@ The local (on a single cell) exterior derivative is always the same for any cell
 Therefore we can compute it on the reference cell.
 
 
-== Cochain-Projection & Discretization
+=== Cochain-Projection & Discretization
+
+de Rham map.
 
 
 ```rust
@@ -1510,18 +1326,58 @@ pub fn discretize_form_on_simplex(
 }
 ```
 
+== Whitney Forms
 
-== Whitney-Interpolation & Reconstruction
 
+
+
+
+Whitney forms are the piecewise-linear (over the cells) differential forms
+that can be uniquely reconstructed from cochains. This reconstruction
+is achieved by the so called *Whitney map*. It can be seen as a
+generalized interpolation (in an integral sense instead of a pointwise sense)
+operator.
+
+They are our finite element differential forms. Our finite element function space
+is the space $cal(W) Lambda^k (mesh)$ of Whitney forms over our mesh $mesh$.
+
+The Whitney $k$-form basis function live on all $k$-simplicies of the mesh $mesh$.
+$
+  cal(W) Lambda^k (mesh) = "span" {lambda_sigma : sigma in Delta_k (mesh)}
+$
+
+Each Whitney $k$-form is associated with a particular $k$-simplex.
+This simplex is the DOF and it's coefficent is the cochain value
+on this simplex.
+
+There is a isomorphism between Whitney $k$-forms and cochains.\
+Represented through the de Rham map (discretization) and Whitney interpolation:\
+- The integration of each Whitney $k$-form over its associated $k$-simplex yields a $k$-cochain.
+- The interpolation of a $k$-cochain yields a Whitney $k$-form.\
+
+
+Whitney forms are essential for us to compute our element matrices.
+For this we just need to express Whitney forms locally on a cell
+in the barycentric coordinate basis.
+
+Another important use for Whitney forms is the reconstruction
+of the global solution once we have computed the basis expansion--
+which is the cochain-- into a point-evaluatable differential form.
+For this we will express Whitney forms in a global coordinate basis.
+
+For this we have a simple struct that represents a particular Whitney form
+inside of a coordinatized cell associated with it's DOF subsimplex.
 ```rust
-/// Whitney Form on a coordinate complex.
-///
-/// Can be evaluated on local coordinates.
 pub struct WhitneyForm<O: SetOrder> {
   cell_coords: SimplexCoords,
   associated_subsimp: Simplex<O>,
   difbarys: Vec<MultiForm>,
 }
+```
+We store the the vertex coordiantes of the cell, the local subsimplex
+and additionaly store the precomputed constant exterior derivatives of the
+barycentric coordinate functions.
+```rust
 impl<O: SetOrder> WhitneyForm<O> {
   pub fn new(cell_coords: SimplexCoords, associated_subsimp: Simplex<O>) -> Self {
     let difbarys = associated_subsimp
@@ -1536,42 +1392,52 @@ impl<O: SetOrder> WhitneyForm<O> {
       difbarys,
     }
   }
-
-  pub fn wedge_term(&self, iterm: usize) -> MultiForm {
-    let wedge_terms = self
-      .difbarys
-      .iter()
-      .enumerate()
-      // leave off i'th difbary
-      .filter_map(|(ipos, bary)| (ipos != iterm).then_some(bary.clone()));
-    MultiForm::wedge_big(wedge_terms).unwrap_or(MultiForm::one(self.dim()))
-  }
-
-  pub fn wedge_terms(&self) -> MultiFormList {
-    (0..self.difbarys.len())
-      .map(|i| self.wedge_term(i))
-      .collect()
-  }
-
-  /// The constant exterior derivative of the Whitney form.
-  pub fn dif(&self) -> MultiForm {
-    if self.grade() == self.dim() {
-      return MultiForm::zero(self.dim(), self.grade() + 1);
-    }
-    let factorial = factorial(self.grade() + 1) as f64;
-    let difbarys = self.difbarys.clone();
-    factorial * MultiForm::wedge_big(difbarys).unwrap()
-  }
 }
+
+```
+
+The local Whitney form $lambda_(i_0 dots i_k)$ associated with the DOF simplex
+$sigma = [i_0 dots i_k] subset.eq tau$ on the cell $tau = [j_0 dots j_n]$ is
+defined using the barycentric coordinate functions $lambda_i_s$ of the cell.
+$
+  lambda_(i_0 dots i_k) =
+  k! sum_(l=0)^k (-1)^l lambda_i_l
+  (dif lambda_i_0 wedge dots.c wedge hat(dif lambda)_i_l wedge dots.c wedge dif lambda_i_k)
+$
+
+We can observe that the big wedge terms
+$dif lambda_i_0 wedge dots.c wedge hat(dif lambda)_i_l wedge dots.c wedge dif lambda_i_k$
+are constant. We write a method any of these terms.
+```rust
+pub fn wedge_term(&self, iterm: usize) -> MultiForm {
+  let wedge_terms = self
+    .difbarys
+    .iter()
+    .enumerate()
+    // leave off i'th difbary
+    .filter_map(|(ipos, bary)| (ipos != iterm).then_some(bary.clone()));
+  MultiForm::wedge_big(wedge_terms).unwrap_or(MultiForm::one(self.dim()))
+}
+pub fn wedge_terms(&self) -> MultiFormList {
+  (0..self.difbarys.len())
+    .map(|i| self.wedge_term(i))
+    .collect()
+}
+```
+The Whitney forms as a whole however is not constant but varies over the cell.
+We write a function to evaluate the Whitney form at any coordinate.
+For this we implement the `ExteriorField` trait from our `exterior` crate
+for `WhitneyForm`.
+```rust
 impl<O: SetOrder> ExteriorField for WhitneyForm<O> {
   type Variance = variance::Co;
-  fn dim(&self) -> Dim {
-    self.cell_coords.dim_embedded()
-  }
-  fn grade(&self) -> ExteriorGrade {
-    self.associated_subsimp.dim()
-  }
-  fn at_point<'a>(&self, coord_global: impl Into<CoordRef<'a>>) -> ExteriorElement<Self::Variance> {
+  fn dim(&self) -> Dim { self.cell_coords.dim_embedded() }
+  fn grade(&self) -> ExteriorGrade { self.associated_subsimp.dim() }
+
+  fn at_point<'a>(
+    &self,
+    coord_global: impl Into<CoordRef<'a>>
+  ) -> ExteriorElement<Self::Variance> {
     let coord_global = coord_global.into();
     assert_eq!(coord_global.len(), self.dim());
     let barys = self.cell_coords.global_to_bary_coord(coord_global);
@@ -1591,93 +1457,9 @@ impl<O: SetOrder> ExteriorField for WhitneyForm<O> {
 }
 ```
 
-
-== Whitney Forms and Whitney Basis
-#v(1cm)
-
-Whitney $k$-forms $cal(W) Lambda^k (mesh)$ are piecewise-constant (over cells $Delta_k (mesh)$)
-differential $k$-forms.
-
-The defining property of the Whitney basis is a from pointwise to integral
-generalized Lagrange basis property (from interpolation):\
-For any two $k$-simplicies $sigma, tau in Delta_k (mesh)$, we have
-$
-  integral_sigma lambda_tau = cases(
-    +&1 quad &"if" sigma = +tau,
-    -&1 quad &"if" sigma = -tau,
-     &0 quad &"if" sigma != plus.minus tau,
-  )
-$
-
-The Whitney $k$-form basis function live on all $k$-simplicies of the mesh $mesh$.
-$
-  cal(W) Lambda^k (mesh) = "span" {lambda_sigma : sigma in Delta_k (mesh)}
-$
-
-This is a true generalization of the Lagrange Space and it's Basis.
-
-If we have a triangulation $mesh$, then the barycentric coordinate functions
-can be collected to form the lagrange basis.
-
-We can represent piecewiese-linear (over simplicial cells) functions on the mesh.
-$
-  u(x) = sum_(i=0)^N b^i (x) space u(v_i)
-$
-
-
-Fullfills Lagrange basis property basis.
-$
-  b^i (v_j) = delta_(i j)
-$
-
-
-
-There is a isomorphism between Whitney $k$-forms and cochains.\
-Represented through the de Rham map (discretization) and Whitney interpolation:\
-- The integration of each Whitney $k$-form over its associated $k$-simplex yields a $k$-cochain.
-- The interpolation of a $k$-cochain yields a Whitney $k$-form.\
-
-
-Whitney forms are affine invariant. \
-Let $sigma = [x_0 dots x_n]$ and $tau = [y_0 dots y_n]$ and $phi: sigma -> tau$
-affine map, such that $phi(x_i) = y_i$, then
-$
-  cal(W)[x_0 dots x_n] = phi^* (cal(W)[y_0 dots y_n])
-$
-
-The Whitney basis ${lambda_sigma}$ is constructed from barycentric coordinate functions ${lambda_i}$.
-
-$
-  lambda_(i_0 dots i_k) =
-  k! sum_(l=0)^k (-1)^l lambda_i_l
-  (dif lambda_i_0 wedge dots.c wedge hat(dif lambda)_i_l wedge dots.c wedge dif lambda_i_k)
-$
-
-#align(center)[#grid(
-  columns: 2,
-  gutter: 10%,
-  $
-    cal(W)[v_0 v_1] =
-    &-lambda_1 dif lambda_0
-     + lambda_0 dif lambda_1 
-    \
-    cal(W)[v_0 v_1 v_2] =
-    &+2 lambda_2 (dif lambda_0 wedge dif lambda_1) \
-    &-2 lambda_1 (dif lambda_0 wedge dif lambda_2) \
-    &+2 lambda_0 (dif lambda_1 wedge dif lambda_2) \
-  $,
-  $
-    cal(W)[v_0 v_1 v_2 v_3] =
-    - &6 lambda_3 (dif lambda_0 wedge dif lambda_1 wedge dif lambda_2) \
-    + &6 lambda_2 (dif lambda_0 wedge dif lambda_1 wedge dif lambda_3) \
-    - &6 lambda_1 (dif lambda_0 wedge dif lambda_2 wedge dif lambda_3) \
-      &6 lambda_0 (dif lambda_1 wedge dif lambda_2 wedge dif lambda_3) \
-  $
-)]
-
-From this definition we can easily derive the constant exterior derivative
-of a whitney form!
-
+Since the Whitney form is a linear differential form over the cell,
+it's exterior derivative must be a constant multiform.
+We can easily derive it's value.
 $
   dif lambda_(i_0 dots i_k)
   &= k! sum_(l=0)^k (-1)^l dif lambda_i_l wedge
@@ -1689,30 +1471,30 @@ $
   &= (k+1)! dif lambda_i_0 wedge dots.c wedge dif lambda_i_k
 $
 
+We implement another function to compute it as well.
+```rust
+pub fn dif(&self) -> MultiForm {
+  if self.grade() == self.dim() {
+    return MultiForm::zero(self.dim(), self.grade() + 1);
+  }
+  let factorial = factorial(self.grade() + 1) as f64;
+  let difbarys = self.difbarys.clone();
+  factorial * MultiForm::wedge_big(difbarys).unwrap()
+}
+```
 
-== Whitney Forms
-
-The DOFs of an element of the Whitney $k$-form space are the $k$-simplicies of the mesh.
-
-$omega in cal(W) Lambda^k (mesh)$ has DOFs on $Delta_k (mesh)$
-
-The Whitney space unifies and generalizes the Lagrangian, Raviart-Thomas and Nédélec
-Finite Element spaces.
+The defining property of the Whitney basis is a from pointwise to integral
+generalized Lagrange basis property:\
+For any two $k$-simplicies $sigma, tau in Delta_k (mesh)$, we have
 $
-  cal(W) Lambda^0 (mesh) &=^~ cal(S)^0_1 (mesh) \
-  cal(W) Lambda^1 (mesh) &=^~ bold(cal(N)) (mesh) \
-  cal(W) Lambda^2 (mesh) &=^~ bold(cal(R T)) (mesh) \
+  integral_sigma lambda_tau = cases(
+    +&1 quad &"if" sigma = +tau,
+    -&1 quad &"if" sigma = -tau,
+     &0 quad &"if" sigma != plus.minus tau,
+  )
 $
 
-The Whitney Subcomplex
-$
-  0 -> cal(W) Lambda^0 (mesh) limits(->)^dif dots.c limits(->)^dif cal(W) Lambda^n (mesh) -> 0
-$
-
-It generalizes the discrete subcomplex from vector calculus.
-$
-  0 -> cal(S)^0_1 (mesh) limits(->)^grad bold(cal(N)) (mesh) limits(->)^curl bold(cal(R T)) (mesh) limits(->)^div cal(S)^(-1)_0 (mesh) -> 0
-$
+We can write a test that verifies our implementation by checking this property.
 
 
 = Finite Element Methods for Differential Forms
@@ -1724,86 +1506,50 @@ of the various weak differential operators in FEEC.
 Furthermore we implement the assembly algorithm that will give us the
 final galerkin matrices.
 
-== Sobolev Space of Differential Forms
-
-$H Lambda^k (Omega)$ is the sobolev space of differential forms.
-It is defined as the space of differential forms that have a square integrable
-exterior derivative.
-
-$
-  H Lambda^k (Omega) = { omega in L^2 Lambda^k (Omega) mid(|) dif omega in L^2 Lambda^(k+1) (Omega) }
-$
-
-This is a very general definition that unifies the sobolev spaces known
-from vector calculus.
-In $RR^3$ we have the following isomorphisms.
-
-$
-  H Lambda^0 (Omega)
-  &=^~
-  H (grad; Omega)
-  \
-  H Lambda^1 (Omega)
-  &=^~
-  Hvec (curl; Omega)
-  \
-  H Lambda^2 (Omega)
-  &=^~
-  Hvec (div ; Omega)
-$
-
-
-== De Rham Complex of Differential Forms
-
-These sobolev space together with their respective exterior derivatives
-form a cochain complex, called the de Rham complex of differential forms.
-$
-  0 -> H Lambda^0 (Omega) limits(->)^dif dots.c limits(->)^dif H Lambda^n (Omega) -> 0
-  \
-  dif^2 = dif compose dif = 0
-$
-
-
-//#diagram(
-//  edge-stroke: fgcolor,
-//  cell-size: 15mm,
-//  $
-//    0 edge(->) &H(grad; Omega) edge(grad, ->) &Hvec (curl; Omega) edge(curl, ->) &Hvec (div; Omega) edge(div, ->) &L^2(Omega) edge(->) &0
-//  $
-//)
-
-It generalizes the 3D vector calculus de Rham complex.
-
-$
-  0 -> H (grad; Omega) limits(->)^grad Hvec (curl; Omega) limits(->)^curl Hvec (div; Omega) limits(->)^div L^2(Omega) -> 0
-  \
-  curl compose grad = 0
-  quad quad
-  div compose curl = 0
-$
-
 == Variational Formulation & Element Matrix Computation
 
-There are only a few variational differential operators that
-exist in FEEC. These are all just variants of the exterior derivative and
-the codifferential.
+There are only 4 types of variational operators that
+are relevant to the mixed weak formulation of the Hodge-Laplace operator.
+All of them are based on the inner product on Whitney forms.
 
-
-All bilinear forms that occur in the mixed weak formulation of Hodge-Laplacian
-are just a variant of the inner product on Whitney forms.
-
+Above all is the mass bilinear form, which really is just
+the inner product.
 $
-  c(u, v) &= inner(delta u, v)_(L^2 Lambda^k (Omega)) = inner(u, dif v)_(L^2 Lambda^k (Omega)) \
-$
-
-$
-  m^k (u, v) &= inner(u, v)_(L^2 Lambda^k (Omega)) \
-  d^k (u, v) &= inner(dif u, v)_(L^2 Lambda^k (Omega)) \
-  c^k (u, v) &= inner(u, dif v)_(L^2 Lambda^k (Omega)) \
-  l^k (u, v) &= inner(dif u, dif v)_(L^2 Lambda^k (Omega)) \
+  m^k (u, v) &= inner(u, v)_(L^2 Lambda^k (Omega))
+  quad
+  u in L^2 Lambda^k, v in L^2 Lambda^k
 $
 
-After Galerkin discretization we arrive at these Galerkin matrices for our
+The next bilinear form is the one for the exterior derivative
+$
+  d^k (u, v) &= inner(dif u, v)_(L^2 Lambda^k (Omega))
+  quad
+  u in H Lambda^(k-1), v in L^2 Lambda^k
+$
+
+Also relevant is the bilinear form of the codifferential
+$
+  c(u, v) &= inner(delta u, v)_(L^2 Lambda^k (Omega))
+$
+Using the adjoint property we can rewrite it using the exterior derivative
+applied to the test function.
+$
+  c^k (u, v) &= inner(u, dif v)_(L^2 Lambda^k (Omega))
+  quad
+  u in L^2 Lambda^k, v in H Lambda^(k-1)
+$
+
+Lastly there is the bilinear form in the style of the scalar Laplacian, with
+exterior derivatives on both arguments. It's $delta dif u$, which for a 0-form
+is $div grad u = Delta u$.
+$
+  l^k (u, v) &= inner(dif u, dif v)_(L^2 Lambda^(k+1) (Omega))
+  quad
+  u in H Lambda^k, v in H Lambda^k
+$
+
+After Galerkin discretization, by means of the Whitney finite element space
+with the Whitney basis, we arrive at the following Galerkin matrices for our
 four weak operators.
 $
   amat(M)^k &= [inner(phi^k_i, phi^k_j)]_(i j) \
@@ -1812,16 +1558,17 @@ $
   amat(L)^k &= [inner(dif phi^k_i, dif phi^k_j)]_(i j) \
 $
 
-
-As we can see all bilinear forms are just inner product with a potential exterior derivative
-on either argument. Since the exterior derivative is purely topological it only involves a
-signed incidende matrix.
-
+We can rewrite the 3 operators that involve the exterior derivative
+using the mass matrix and the discrete exterior derivative (incidence matrix).
 $
   amat(D)^k &= amat(M)^k amat(dif)^(k-1) \
   amat(C)^k &= (amat(dif)^(k-1))^transp amat(M)^k \
-  amat(L)^k &= (amat(dif)^(k-1))^transp amat(M)^k amat(dif)^(k-1) \
+  amat(L)^k &= (amat(dif)^k)^transp amat(M)^(k+1) amat(dif)^k \
 $
+
+As usual in a FEM library, we define element matrix providers,
+that compute the element matrices on each cell of mesh and later on
+assemble the full galerkin matrices.
 
 We first define a element matrix provider trait
 ```rust
@@ -1832,6 +1579,17 @@ pub trait ElMatProvider {
   fn eval(&self, geometry: &SimplexGeometry) -> ElMat;
 }
 ```
+The `eval` method provies us with the element matrix on a
+cell, given it's geometry. But we also need to know the exterior grade
+of the Whitney forms that correspond to the rows and columns.
+This information will be used by the assembly routine.
+
+We will now implement the 3 operators involving exterior derivatives
+based on the element matrix provider of the mass bilinear form.
+
+The local exterior derivative only depends on the local topology, which is the same
+for any simplex of the same dimension. So we use a global variable that stores
+the transposed incidence matrix for any $k$-skeleton of a $n$-complex.
 
 ```rust
 pub struct DifElmat(pub ExteriorGrade);
@@ -1876,54 +1634,27 @@ impl ElMatProvider for CodifDifElmat {
 }
 ```
 
-
-For this reason we really just need a formula for the element matrix
-of this inner product. This galerkin matrix is called the mass matrix
-and the inner product could also be called the mass bilinear form.
-
-$
-  M = [inner(lambda_tau, lambda_sigma)_(L^2 Lambda^k (K))]_(sigma,tau in Delta_k (K))
-$
+This was really easy.
 
 
 === Mass bilinear form
 
-Integrating the equation over $Omega$ we get
-$
-  integral_Omega alpha wedge (hodge beta)
-  = integral_Omega inner(alpha, beta)_(Lambda^k) vol
-  = inner(alpha, beta)_(L^2 Lambda^k)
-  quad forall alpha in Lambda^k (Omega)
-$
+Now we need to implement the element matrix provider to the mass bilinear form.
+Here is where the geometry of the domain comes in, through the inner product, which
+depends on the Riemannian metric.
 
-This equation can be used to find the discretized weak Hodge star operator.\
-The weak variational form of our hodge star operator is the mass bilinear form
-$
-  m(u, v) = integral_Omega hodge u wedge v
-$
-After Galerkin discretization we get the mass matrix for our discretized weak Hodge star operator
-as the $L^2$-inner product on differential $k$-forms.
+One could also understand the mass bilinear form as a weak hodge star operator.
 $
   amat(M)_(i j) = integral_Omega phi_j wedge hodge phi_i = inner(phi_j, phi_i)_(L^2 Lambda^k)
 $
 
-This is called the mass bilinear form / matrix, since for 0-forms, it really coincides with
-the mass matrix from Lagrangian FEM.
+We will not compute this using the hodge star operator, but instead directly
+using the inner product.
 
-The Hodge star operator captures geometry of problem through this inner product,
-which depends on Riemannian metric.\
-Let's see what this dependence looks like.
-
-For (1st order) FEEC we have piecewise-linear differential $k$-forms with the
-Whitney basis $lambda_sigma$.\
-Therefore our discretized weak hodge star operator is the mass matrix, which is the Gramian matrix
-on all Whitney $k$-forms.
-
-$
-  amat(M)^k = [inner(lambda_sigma_j, lambda_sigma_i)_(L^2 Lambda^k)]_(0 <= i,j < binom(n,k))
-  = [inner(lambda_I, lambda_J)_(L^2 Lambda^k)]_(I,J in hat(cal(I))^n_k)
-$
-
+We already have an inner product on constant multiforms. We now need to
+extend it to an $L^2$ inner product on Whitney forms.
+This can be done by inserting the defintion of a Whitney form (in terms of barycentric
+coordiante functions) into the inner product.
 
 $
   inner(lambda_(i_0 dots i_k), lambda_(j_0 dots j_k))_(L^2)
@@ -1938,7 +1669,17 @@ $
   integral_K lambda_i_l lambda_j_m vol \
 $
 
-In Rust this is implemented as the following element matrix provider
+We can now make use of the fact that the exterior derivative of the barycentric
+coordinate functions are constant. This makes the wedge big terms also constant.
+We acn therefore pull them out of the integral inside the $L^2$-inner product
+and now it's just an inner product on constant multiforms.
+What remains in the in the integral is the product of two barycentric
+coordinate functions. This integral is with respect to the metric and contains
+all geometric information.
+
+
+Using this we can now implement the element matrix provider
+to the mass bilinear form in Rust.
 ```rust
 pub struct HodgeMassElmat(pub ExteriorGrade);
 impl ElMatProvider for HodgeMassElmat {
@@ -1990,29 +1731,21 @@ impl ElMatProvider for HodgeMassElmat {
 }
 ```
 
-Here we make use of the scalar mass element matrix
-
-
-The following integral formula for powers of barycentric coordinate functions holds (NUMPDE):
+Now we are just missing an element matrix providre for the scalar mass
+bilinear form.
+Luckily there exists a closed form solution, for
+this integral, which only depends on the volume of the cell.
+$
+  integral_K lambda_i lambda_j vol
+  = abs(K)/((n+2)(n+1)) (1 + delta_(i j))
+$
+derived from this more general integral formula for powers of barycentric coordinate functions
 $
   integral_K lambda_0^(alpha_0) dots.c lambda_n^(alpha_n) vol
   =
   n! abs(K) (alpha_0 ! space dots.c space alpha_n !)/(alpha_0 + dots.c + alpha_n + n)!
 $
-where $K in Delta_n, avec(alpha) in NN^(n+1)$.\
-The formula treats all barycoords symmetrically.
-
-For piecewise linear FE, the only relevant results are:
-$
-  integral_K lambda_i lambda_j vol
-  = abs(K)/((n+2)(n+1)) (1 + delta_(i j))
-$
-
-$
-  integral_K lambda_i vol = abs(K)/(n+1)
-$
-
-
+$K in Delta_n, avec(alpha) in NN^(n+1)$
 
 ```rust
 pub struct ScalarMassElmat;
@@ -2029,7 +1762,6 @@ impl ElMatProvider for ScalarMassElmat {
   }
 }
 ```
-
 
 == Assembly
 
@@ -2068,25 +1800,96 @@ pub fn assemble_galmat(
 
 = Hodge-Laplacian
 
+In this chapter we now solve some PDEs based on the Hodge-Laplace operator.
+We consider the Hodge-Laplace source problem (analog of Poisson equation)
+and the Hodge-Laplace eigenvalue problem.
+
 The Hodge-Laplacian operator generalizes the ordinary scalar Laplacian operator.
+The 0-form Hodge-Laplacian is exactly the scalar Laplace-Beltrami operator.
+The negative scalar Laplacian expressed using exterior derivative and codifferential
+is
+$
+  Delta^0 f = -div grad f = -delta dif f
+$
 
+The Hodge-Laplacian is defined as
 $
-  Delta f = div grad f = hodge dif hodge dif f
-$
-
-=== Primal Strong form
-$
-  Delta u = f
-$
-with $u,f in Lambda^k (Omega)$
-
-Hodge-Laplace operator
-$
-  Delta: Lambda^k (Omega) -> Lambda^k (Omega)
+  Delta^k: Lambda^k (Omega) -> Lambda^k (Omega)
   \
-  Delta = dif delta + delta dif
+  Delta^k = dif^(k+1) delta^k + delta^(k-1) dif^k
 $
 
+== Eigenvalue Problem
+
+We first consider the Eigenvalue problem, because it's a bit simpler
+and the source problem, relies on the eigenvalue problem.
+
+=== Primal Strong Form
+$
+  (delta dif + dif delta) u = lambda u
+$
+
+=== Mixed Weak Form
+
+Find $lambda in RR$, $(sigma, u) in (H Lambda^(k-1) times H Lambda^k \\ {0})$, s.t.
+$
+  inner(sigma, tau) - inner(u, dif tau) &= 0
+  quad &&forall tau in H Lambda^(k-1)
+  \
+  inner(dif sigma, v) + inner(dif u, dif v) &= lambda inner(u,v)
+  quad &&forall v in H Lambda^k
+$
+
+
+=== Galerkin Mixed Weak Form
+$
+  sum_j sigma_j inner(phi^(k-1)_j, phi^(k-1)_i) - sum_j u_j inner(phi^k_j, dif phi^(k-1)_i) &= 0
+  \
+  sum_j sigma_j inner(dif phi^(k-1)_j, phi^k_i) + sum_j u_j inner(dif phi^k_j, dif phi^k_i) &= lambda sum_j u_j inner(phi^k_j,phi^k_i)
+$
+
+
+$
+  amat(M)^(k-1) vvec(sigma) - amat(C) vvec(u) = 0
+  \
+  amat(D) vvec(sigma) + amat(L) vvec(u) = lambda amat(M)^k vvec(u)
+$
+
+
+$
+  mat(
+    amat(M)^(k-1), -amat(C);
+    amat(D), amat(L);
+  )
+  vec(vvec(sigma), vvec(u))
+  =
+  lambda
+  mat(
+    0,0;
+    0,amat(M)^k
+  )
+  vec(vvec(sigma), vvec(u))
+$
+
+$
+  amat(M)^(k-1) = [inner(phi^(k-1)_i, phi^(k-1)_j)]_(i j)
+  quad
+  amat(C) = [inner(dif phi^(k-1)_i, phi^k_j)]_(i j)
+  \
+  amat(D) = [inner(phi^k_i, dif phi^(k-1)_j)]_(i j)
+  quad
+  amat(L) = [inner(dif phi^k_i, dif phi^k_j)]_(i j)
+  quad
+  amat(M)^k = [inner(phi^k_i, phi^k_j)]_(i j)
+$
+
+
+This is a symmetric indefinite sparse generalized matrix eigenvalue problem,
+that can be solved by an iterative eigensolver such as Krylov-Schur.
+This is also called a GHIEP problem.
+
+
+== Source Problem
 
 === Primal Weak Form
 
@@ -2156,71 +1959,6 @@ $
   vec(0, hodge f, 0)
 $
 
-== Hodge-Laplace Eigenvalue Problem
-
-=== Primal Strong Form
-$
-  (delta dif + dif delta) u = lambda u
-$
-
-=== Mixed Weak Form
-
-Find $lambda in RR$, $(sigma, u) in (H Lambda^(k-1) times H Lambda^k \\ {0})$, s.t.
-$
-  inner(sigma, tau) - inner(u, dif tau) &= 0
-  quad &&forall tau in H Lambda^(k-1)
-  \
-  inner(dif sigma, v) + inner(dif u, dif v) &= lambda inner(u,v)
-  quad &&forall v in H Lambda^k
-$
-
-
-=== Galerkin Mixed Weak Form
-$
-  sum_j sigma_j inner(phi^(k-1)_j, phi^(k-1)_i) - sum_j u_j inner(phi^k_j, dif phi^(k-1)_i) &= 0
-  \
-  sum_j sigma_j inner(dif phi^(k-1)_j, phi^k_i) + sum_j u_j inner(dif phi^k_j, dif phi^k_i) &= lambda sum_j u_j inner(phi^k_j,phi^k_i)
-$
-
-
-$
-  amat(M)^(k-1) vvec(sigma) - amat(C) vvec(u) = 0
-  \
-  amat(D) vvec(sigma) + amat(L) vvec(u) = lambda amat(M)^k vvec(u)
-$
-
-
-$
-  mat(
-    amat(M)^(k-1), -amat(C);
-    amat(D), amat(L);
-  )
-  vec(vvec(sigma), vvec(u))
-  =
-  lambda
-  mat(
-    0,0;
-    0,amat(M)^k
-  )
-  vec(vvec(sigma), vvec(u))
-$
-
-$
-  amat(M)^(k-1) = [inner(phi^(k-1)_i, phi^(k-1)_j)]_(i j)
-  quad
-  amat(C) = [inner(dif phi^(k-1)_i, phi^k_j)]_(i j)
-  \
-  amat(D) = [inner(phi^k_i, dif phi^(k-1)_j)]_(i j)
-  quad
-  amat(L) = [inner(dif phi^k_i, dif phi^k_j)]_(i j)
-  quad
-  amat(M)^k = [inner(phi^k_i, phi^k_j)]_(i j)
-$
-
-
-This is a symmetric indefinite sparse generalized matrix eigenvalue problem,
-that can be solved by an iterative eigensolver such as Krylov-Schur.
-This is also called a GHIEP problem.
 
 
 
