@@ -8,10 +8,9 @@ and fluid dynamics to electromagnetism and quantum mechanics, PDEs describe
 the fundamental systems that govern our universe. Because of this, solving PDEs
 efficiently and accurately is central to modern computational science.
 
-The Finite Element Method (FEM) has revolutionized PDE solving by discretizing
-domains into manageable pieces, enabling high-precision simulations of complex
-systems. FEM has become indispensable in structural mechanics, aerodynamics, and
-electromagnetics, where computational models drive innovation.
+The Finite Element Method (FEM) is one of the major methods employed to
+numerically solve PDEs on unstructured meshes inspired by ideas from functional
+analysis.
 
 While scalar-valued FEM is realtively easily constructed and studied
 using Lagrangian FE spaces, vector-valued FEM is far more involved.
@@ -29,47 +28,38 @@ This can be done for simplicial meshes in arbitrary dimension.
 ]
 
 Finite Element Exterior Calculus (FEEC) is this unified mathematical framework
-for scalar- and vector-valued FEM, making use of the far more general and elegant theory of differential
-geometry and the exterior calculus of differential forms instead of vector calculus to solve PDEs on curved
-Riemannian manifolds in arbitrary dimensions with any topology.
+for scalar- and vector-valued FEM, making use of the far more general
+and elegant theory of differential geometry and the exterior calculus of
+differential forms instead of vector calculus to solve PDEs.
 FEEC provides structure-preserving discretizations that ensure stability,
-accuracy, and convergence, particularly for problems involving differential
-forms.
+accuracy, and convergence.
 
-FEEC has mostly been used to analyze and construct standard vector-valued FEM
-that don't embrace differential geometry and exterior calculus in it's implementation.
-Meaning the implementations are constrained to at most 3 dimensions
-and no differential forms are used but instead only scalarfield and vectorfield (proxies).
-The manifolds are given global coordinates and therefore don't respect the
-intrinsic nature of differential geometry.
+FEEC and has been applied with great success to analyze and construct conforming FE spaces
+for arbitrary rank differential forms in arbitrary dimensions on arbitrary topologies, thanks
+to the embrace of differential geometry.
+This is in stark contrast to FEM software implementations, which are usually hard-coded
+to 3 dimensions and therefore rely on vector proxies instead of actual differential forms
+and exterior algebra data structures. Furthermore they make use of global coordinates
+of the manifolds for their computations, therefore relying on embeddings instead
+of the intrinisc nature of the manifold.
 
-This thesis takes a different approach. We want to fully embrace differential geometry
+This thesis takes a different approach to implementation of FEM. We want to fully embrace differential geometry
 and in this way provide a implementation of FEEC that works in arbitrary dimensions
 for arbitrary Riemannian manifolds without any global coordinates but only
-an intrinsic Riemannian metric.
+an intrinsic Riemannian metric. For the topology we will use simplicial complexes.
 
-We will restrict ourselves to 1st order piecewise linear FEM and therefore
-also just piecewise-flat approximations of the underlying manifold (admissable geometric variational crime).
-These approximations are in the forms of a simplicial complex.
+We will restrict ourselves to 1st order piecewise linear FE and therefore
+also just piecewise-flat approximations of the underlying manifold
+(an admissable geometric variational crime).
 
+The prototypical 2nd order elliptic differential operator in FEEC is the
+Hodge-Laplace operator, a generalization of the ordinary Laplace-Beltrami operator.
+We will work to solve the eigenvalue problem and source problem corresponding to
+this operator, which will guide our implementation.
+For both these problems we rely on a mixed weak formulation of Hodge-Laplacian.
 
-The prototypical PDE in FEEC is the elliptic Hodge-Laplace Source Problem.
-Which we will mainly focus on and will be guiding the implementation.
-
-A far more meaningful PDE system that has some really interesting applications in real-life
-are Maxwell's Equation describing Electromagnetism.
-FEEC is the perfect fit for Maxwell's equations, since the relativistic variant of them
-is also formulated in terms of differential geometry as is general relativity.
-This means that purely thanks to the generality of the library we are able to solve
-Maxwell's equations on the curved 4D spacetime manifold.
-
-
-Relevant mathematical theories to this thesis:
-- Algebraic Topology
-- Differential Geometry
-- Exterior Algebra and Calculus
-- Homology
-- Functional Analysis
+For the treatment of arbitrary topologies, a big theme is simplicial homology of the mesh
+and the isomorphic de Rham cohomology of differential forms.
 
 == Rust in scientific computing
 
@@ -89,19 +79,21 @@ theory and application.
 
 == Goals and Contributions
 
-The thesis aims to lower the bar of entry to the theory of FEEC by providing
-a beginner friendly exposition of the main concepts.
+The thesis aims to lower the bar of entry to the theory of FEEC by providing a
+beginner friendly exposition of the main concepts.
 Furthermore we provide a implementation of a FEEC library that should be useable
-for solving real-life PDEs. It should also guide as a reference for future implementations
-of FEEC in other programming languages with different paradigmes.
-We want to to lay out the necessary steps without relying too much on the vast and complicated mathematical framework
-that was created around FEEC. This thesis is more pragmatic and should appeal to a wider audiance
-than the original books and papers on FEEC.
+for solving real-life PDEs.
+It should also guide as a reference for future implementations of FEEC in other
+programming languages with different paradigmes.
+We want to to lay out the necessary steps without relying too much on the vast
+and complicated mathematical framework that was created around FEEC.
+This thesis is more pragmatic and should appeal to a wider audiance than the
+original books and papers on FEEC.
 
 == Outline of the thesis structure
 
-- Our library is the core of the thesis, so the structure should parallel its modularity.
-- The first two sections provide context: Rust choices and software architecture.
+Our library is the core of the thesis, so the structure should parallel its modularity.
+The first two sections provide context: Rust choices and software architecture.
 - The next sections introduce the mathematical foundations that your crates encapsulate.
 - The final sections describe how Formoniq ties everything together and its practical application.
 

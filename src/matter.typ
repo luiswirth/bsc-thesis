@@ -420,121 +420,321 @@ is the same operation as for a simplex.
 
 = Topology & Geometry of Simplicial Riemannian Manifolds
 
-In this chapter we will develop various data structure to represent our finite
+In this chapter we will develop various data structures to represent our finite
 element mesh.
-It will store the topological and geometrical properties of our discrete PDE domain.
-It will support arbitrary dimensions.
-Topology will be reprented using a simplicial complex.
-Geometry will be represented using the Regge metric or equivalently edge lengths and
-optionally through an embedding providing global coordinates.
+It will store the topological and geometrical properties of our arbitrary
+dimensional discrete PDE domain.
+A simplicial complex will be used to represent the topology (incidence and
+adjacency) of the mesh and double as the container for all the mesh entities,
+which are all simplicies. It will also provide a global numbering, unique
+identification and iteration of all these entities.
+For the geometry, all edge lengths of the mesh will be stored to compute the
+piecewise-flat (over the cells) Riemannian metric, known as the Regge metric.
+We also support the optional storage of global vertex coordinates, if an
+embedding were to be known.
 
-Our mesh data structure needs to provide the following functionality:
-- Container for mesh entities: Simplicies.
-- Global numbering for unique identification of the entities.
-- Entity iteration.
-- Topological Information: Incidence and Adjacency.
-- Geometric Information: Angles, Lengths and Volumes.
-
-
-== The PDE Domain as a Manifold
-
-PDEs are posed over a domain, a patch of space on which the solution, we are
-searching for, lives.
-Usually one thinks of this domain as just being a subset of euclidean space,
-but the more general way is to describe the domain as a manifold.
-This is the first way in which differential geometry enters our theory.
-
-In the most general sense our PDE domain is a piecewise smooth oriented and
-bounded $n$-dimensional (pseudo) Riemannian manifold, $n in NN$ with a piecewise
-smooth boundary.
-
-== The mesh as a discretized Riemannian manifold
-
-Finite Element Techniques heavily rely on the existance of a mesh, a
-discretization of the PDE domain. So our mesh is giong to be a discrete
-variant of a Riemannian manifold. Our implementation will embrace the intrinsic
-differential geometry view as much as possible. This will manifest in two specialities
-of our mesh data structure: Firstly our implementation is dimensionality independent.
-Instead of hardcoding the mesh to e.g. 3 dimensions the dimension will just be a property
-chosen at runtime. Secondly we will not assign any global coordiantes to the geometric entities
-of our mesh, but instead only rely on a discrete Riemannian metric, instead of an embedding.
-All finite element calculations will solely rely on this metric.
-
-== The Simplex
+== Coordinate Simplicies
 
 Finite Element methods benefit from their ability to work on unstructured meshes.
-So instead of subdividing a domain into a regular grid FEM works on potentially very non-uniform
-meshes. The simplest type of mesh that works for such non-uniform meshes are simplicial meshes.
-In 2D these are triangular and in 3D we have meshes made from tetrahedron. These building blocks
-need to be generalized to arbitrary dimensions for our implementation.
+So instead of subdividing a domain into a regular grid, FEM works on potentially
+very non-uniform meshes.
+The simplest type of mesh that works for such non-uniform meshes are simplicial
+meshes.
+In 2D these are triangular meshes as known from computer graphics.
+A 3D simplicial mesh is made up from tetrahedrons.
+These building blocks need to be generalized for our arbitrary dimensional
+implementation.
 
-The generalization of triangles in 2D and tetrahedron in 3D to arbitray dimensions
-is called a simplex.
-There is a type of simplex for every dimension:
-A 0-simplex is a vertex, a 1-simplex is an edge, a 2-simplex is a triangle and
-a 3-simplex is a tetrahedon.
+We begin the exposition of the mesh topic with a coordinate-based objects
+that rely on an embedding.
+Later on we will shed the coordinates and only rely on intrinsic geometry.
+For didactics it's however useful to start with coordinates.
+
+#v(0.5cm)
+
+The generalization of 2D triangles and 3D tetrahedra to $n$D
+is called a $n$-simplex.
+There is a type of simplex for every dimension.
+These are first 4 kinds:
+- A 0-simplex is a point,
+- a 1-simplex is a line segment,
+- a 2-simplex is a triangle, and
+- a 3-simplex is a tetrahedron.
 The idea here is that an $n$-simplex is the polytope with the fewest vertices
-that lives in $n$ dimensions. It's the simplest $n$-polytope there is.
-A $n$-simplex always has $n+1$ vertices and the simplex is the patch of space
+that spans a $n$-dimensional space. It's the simplest $n$-polytope there is.
+A $n$-simplex $sigma$ always has $n+1$ vertices $v_0,dots,v_n in RR^N$ in a possible higher dimensional
+space $RR^N, N >= n$ and the simplex is the patch of space
 bounded by the convex hull of the vertices.
-
-Geometric Simplex
 $
-  Delta = {sum_(i=0)^n lambda_i p_i mid(|) lambda_i in [0,1], quad sum_(i=0)^n lambda_i = 1}
+  Delta(RR^n) in.rev sigma =
+  "convex" {vvec(v)_0,dots,vvec(v)_n} =
+  {
+    sum_(i=0)^n lambda_i vvec(v)_i
+    mid(|)
+    quad lambda_i in [0,1],
+    quad sum_(i=0)^n lambda_i = 1
+  }
+$ <def-simplex>
+
+We call such an object a *coordinate simplex*, since it depends on global coordinates of
+the vertices and lives in a possible higher-dimensinal ambient space $RR^N$. It therefore
+relies on an embedding.
+This object is uniquely determined by the coordinates $vvec(v)_i$ of each vertex.
+Such a coordinate simplex object is uniquely defined by the coordinates of each vertex.
+This inspires a simple computational representation based on a struct, that
+stores the coordinates of each vertex in the columns of a matrix.
+```rust
+pub struct SimplexCoords {
+  pub vertices: na::DMatrix<f64>,
+}
+impl SimplexCoords {
+  pub fn nvertices(&self) -> usize { self.vertices.ncols() }
+  pub fn coord(&self, ivertex: usize) -> CoordRef { self.vertices.column(ivertex) }
+}
+```
+
+We implement two methods to compute both the  intrinsic dimension $n$, which
+is the number of vertices minus one and the ambient dimension $N$ of the global coordinates.
+A special and particulary simple case is when intrinsic dimension and ambient dimension
+match up $n=N$.
+```rust
+pub fn dim_intrinsic(&self) -> Dim { self.nvertices() - 1 }
+pub fn dim_embedded(&self) -> Dim { self.vertices.nrows() }
+pub fn is_same_dim(&self) -> bool { self.dim_intrinsic() == self.dim_embedded() }
+```
+
+#v(0.5cm)
+=== Barycentric Coordinates
+
+The coefficents $vvec(lambda) = [lambda_i]_(i=0)^n$ in @def-simplex are called
+*barycentric coordinates*.
+They appear inside the weighted average $sum_(i=0)^n lambda_i vvec(v)_i$
+as weights $lambda_i in [0,1]$ in front of each cartesian vertex coordinate
+$vvec(v)_i in RR^N$.
+They constitute an intrinsic local coordiante system inside any simplex.
+They are called barycentric, because the barycenter of the simplex always has
+the coordinate $vvec(lambda) = [1/n]^(n+1)$.
+
+The simplex definition gives rise to a very simple coordinate transformation
+$psi: vvec(lambda) |-> vvec(x)$ from intrinsic barycentric $vvec(lambda) in
+RR^n$ to ambient cartesian $vvec(x) in RR^N$.
+$
+  vvec(x) = psi (vvec(lambda))
+  = sum_(i=0)^n lambda_i vvec(v)_i
 $
 
-=== The Reference Simplex
+We can easily implement this as
+```rust
+pub fn bary2global<'a>(&self, bary: impl Into<BaryCoordRef<'a>>) -> EmbeddingCoord {
+  let bary = bary.into();
+  self
+    .vertices
+    .coord_iter()
+    .zip(bary.iter())
+    .map(|(vi, &baryi)| baryi * vi)
+    .sum()
+}
+```
 
-The most natural simplex to consider is the orthogonal simplex, basically a corner of a n-cube.
-This simplex can be defined as it's own coordindate realisation as an actual convex hull of
-some points.
+This coordinate system treats all vertices on equal footing and therefore
+there is a weight for each vertex.
+But as a consequence of this, there is some redundancy in this coordinate system,
+since we have $n+1$ vertices but only $n$ dimensions.
+
+We can instead single out a special vertex to remove this redundancy. We choose
+for this vertex $vvec(v)_0$ and call it the *base vertex*.
+```rust
+pub fn base_vertex(&self) -> CoordRef { self.coord(0) }
+```
+
+We can then leave off the redundant $lambda_0 = 1 - sum_(i=1)^n lambda_i$
+corresponding to $vvec(v)_0$.
+Then the reduced barycentric coordiantes $vvec(lambda)_- = [lambda_i]_(i=1)^n$
+constitutes a coordinate system without any reduandancy.
+
+#v(0.5cm)
+=== Spanning Vectors
+
+If we consider the edges eminating from the base vertex, we get the
+*spanning vectors* $[e_i]_(i=1)^n$ with $vvec(e)_i = vvec(v)_i - vvec(v)_0 in RR^N$.
+We can define a matrix $amat(E) in RR^(N times n)$ that has these
+spanning vectors as columns.
 $
-  Delta_"ref"^n = {(lambda_1,dots,lambda_n) in RR^n mid(|) lambda_i >= 0, quad sum_(i=1)^n lambda_i <= 1 }
+  amat(E) = 
+  mat(
+      |,  , |;
+      vvec(e)_1,dots.c,vvec(e)_n;
+      |,  , |;
+    )
 $
 
-This is the reference simplex.
-It has vertices $v_0 = avec(0)$ and $v_i = v_0 + avec(e)_(i-1)$.
-Vertex 0 is special because it's the origin. The edges that include the origin
-are the spanning edges. They are the standard basis vectors.
-They give rise to an euclidean orthonormal tangent space basis. Which manifests
-as a metric tensor that is equal to the identity matrix $amat(G) = amat(I)_n$.
+We implement a function to compute this matrix.
+```rust
+pub fn spanning_vectors(&self) -> na::DMatrix<f64> {
+  let mut mat = na::DMatrix::zeros(self.dim_embedded(), self.dim_intrinsic());
+  let v0 = self.base_vertex();
+  for (i, vi) in self.vertices.coord_iter().skip(1).enumerate() {
+    let v0i = vi - v0;
+    mat.set_column(i, &v0i);
+  }
+  mat
+}
+```
 
-One can extend these coordinates by one more
+These spanning vectors are very natural to the reduced barycentric coordinate system,
+since we can rewrite the coordinate transformation $psi$ as
 $
-  lambda_0 = 1 - sum_(i=1)^n lambda_i
+  vvec(x)
+  = sum_(i=0)^n lambda_i vvec(v)_i
+  = vvec(v)_0 + sum_(i=1)^n lambda_i (vvec(v)_i - vvec(v)_0)
+  = vvec(v)_0 + amat(E) vvec(lambda)
 $
-To obtain what are called the *barycentric coordinates* ${lambda_i}_(i=0)^n$.
+This makes it very apparant that this transformation is an affine map.
+```rust
+pub fn linear_transform(&self) -> na::DMatrix<f64> { self.spanning_vectors() }
+pub fn affine_transform(&self) -> AffineTransform {
+  let translation = self.base_vertex().into_owned();
+  let linear = self.linear_transform();
+  AffineTransform::new(translation, linear)
+}
+pub fn local2global<'a>(&self, local: impl Into<LocalCoordRef<'a>>) -> EmbeddingCoord {
+  let local = local.into();
+  self.affine_transform().apply_forward(local)
+}
+pub fn global2local<'a>(&self, global: impl Into<EmbeddingCoordRef<'a>>) -> LocalCoord {
+  let global = global.into();
+  self.affine_transform().apply_backward(global)
+}
+```
 
-Barycentric coordinates exist for all $k$-simplicies.\
-They are a coordinate system relative to the simplex.\
-Where the barycenter of the simplex has coordinates $(1/k)^k$.\
+By computing derivatives of the affine parametrization of the simplex, we
+find that the spanning vectors are a very natural frame/basis for the tangent space
+$T_p sigma$ of the simplex $sigma$ at each point $p in sigma$.
 $
-  x = sum_(i=0)^k lambda^i (x) space v_i
+  (diff vvec(x))/(diff lambda_i)
+  = vvec(e)_i
+  quad quad
+  (diff vvec(x))/(diff vvec(lambda))
+  = amat(E)
 $
-with $sum_(i=0)^k lambda_i(x) = 1$ and inside the simplex $lambda_i (x) in [0,1]$ (partition of unity).
-
+Using the euclidean geometry of the ambient space, we can compute the metric tensor
+expressed in this tangent space basis to do intrinsic Riemannian geometry.
 $
-  lambda^i (x) = det[v_0,dots,v_(i-1),x,v_(i+1),dots,v_k] / det[x_0,dots,v_k]
-$
-
-Linear functions on simplicies can be expressed as
-$
-  u(x) = sum_(i=0)^k lambda^i (x) space u(v_i)
+  amat(G) = amat(E)^transp amat(E)
 $
 
+```rust
+pub fn metric_tensor(&self) -> RiemannianMetric {
+  let metric = self.spanning_vectors().gramian();
+  RiemannianMetric::new(metric)
+}
+```
 
-By applying an affine linear transformation to the reference simplex, we can obtain
-any other coordinate realization simplex.
 
-If we forget about coordinates, we can obtain any metric simplex by applying
-a linear transformation to the standard simplex.
+Furthermore these spanning vectors span up the parallelepiped in whose corner the
+simplex is contained.
+This makes the spanning vectors a very natural frame/basis for the local tangent space
+inside the simplex.
+$T_sigma {sigma} subset.eq RR^N$ embedded in $RR^N$ with $dim T_sigma {sigma} = n$.
+This parallelipied can be used to compute the volume of the simplex, as a fraction $(n!)^(-1)$ of
+the volume of the parallelepiped, which is computed as the determinant of the
+spanning vectors in the case $n=N$ and otherwise using the square root of the
+gramian determinant
+$sqrt(det(amat(E)^transp amat(E)))$.
+```rust
+pub fn det(&self) -> f64 {
+  let det = if self.is_same_dim() {
+    self.spanning_vectors().determinant()
+  } else {
+    self.spanning_vectors().gram_det_sqrt()
+  };
+  ref_vol(self.dim_intrinsic()) * det
+}
+pub fn vol(&self) -> f64 { self.det().abs() }
+pub fn ref_vol(dim: Dim) -> f64 { (factorial(dim) as f64).recip() }
 
-Just as for a coordinate-based geometry the coordinates of the vertices are sufficent
-information for the full geometry of the simplex,
-the edge lengths of a simplex are sufficent information for the full information of
-a coordinate-free simplex.
+```
+Based on this we can also get the global orientation of the simplex
+```rust
+pub fn orientation(&self) -> Sign {
+  Sign::from_f64(self.det()).unwrap()
+}
+```
+Every simplex has two orientations positive and negative, just like the determinant
+always has only two signs.
+#table(
+  columns: 4,
+  stroke: fgcolor,
+  table.header(table.cell(colspan: 4, align: center)[*Simplex Orientation*]),
+  $n$, [Simplex], [Positive], [Negative],
+  $1$, [Line Segment], [left-to-right], [right-to-left],
+  $2$, [Triangle], [counterclockwise], [clockwise],
+  $3$, [Tetrahedron], [right-handed], [left-handed],
+)
 
-== Simplicial Manifold Topology
+#v(0.5cm)
+=== Reference Simplex
+
+There is a special simplex, called the *reference simplex*, which has exactly the
+barycentric coordinates also as global coordinates.
+$
+  sigma_"ref"^n = {(lambda_1,dots,lambda_n) in RR^n mid(|) lambda_i in [0,1], quad sum_(i=1)^n lambda_i <= 1 }
+$
+For each dimension $n in NN$ there is exactly one reference simplex $sigma_"ref"^n$,
+which has coinciding intrinsic and ambient dimension $N=n$.
+For this simplex the edge vectors are exactly the euclidean standard basis vectors
+$vvec(e)_i = nvec(e)_i$ with $(nvec(e)_i)_j = delta_i^j$.
+
+They give rise to an euclidean orthonormal tangent space basis. $amat(E) = amat(I)_n$
+Which manifests as a metric tensor that is equal to the identity matrix
+$amat(G) = amat(I)_n^transp amat(I)_n = amat(I)_n$.
+
+The base vertex is the origin $v_0 = vvec(0) in RR^n$ and the other vertices
+are $vvec(v)_i = vvec(0) + nvec(e)_i = nvec(e)_i$.
+The parametrization of the reference simplex is the identity map.
+$phi: vvec(lambda)_- |-> vvec(0) + amat(I) vvec(lambda)_-$
+
+Every (real) simplex is the image of the reference simplex under the affine parametrization
+map.
+$
+  sigma = phi(sigma_"ref"^n)
+$
+Affine-invariance.
+
+
+$
+  (diff vvec(x))/(diff vvec(lambda))
+  = amat(E)
+  quad quad
+  (diff vvec(x))/(diff lambda_i)
+  = vvec(e)_i
+  quad quad
+  (diff x_i)/(diff vvec(lambda))
+  = amat(E)_(i,:)
+$
+
+$
+  vvec(lambda) = phi(x_1,dots,x_n)
+  = amat(E)^dagger (vvec(x) - vvec(v)_0)
+$
+
+$
+  (diff vvec(lambda))/(diff vvec(x))
+  = amat(E)^dagger
+  quad quad
+  (diff vvec(lambda))/(diff x_i)
+  = (amat(E)^dagger)_(:,i)
+  quad quad
+  (diff lambda_i)/(diff vvec(x))
+  = (amat(E)^dagger)_(i,:)
+$
+
+This study of the properties of the coordinate simplex has hopefully
+painted an intuitive geometrical view of simplicies.
+We will now move on to full meshes consisting of multiple simplicies
+and shed the coordinates.
+
+== Simplicial Topology
 
 We now construct a topological manifold that consists of simplicies.
 
@@ -699,12 +899,12 @@ Every $n$-simplex $sigma$ contains $k$-subsimplicies $Delta_k (sigma)$ for all $
 For every subset of vertices there exists a subsimplex.
 
 Some useful terminology is
-- The $n$-simplicies are called cells.
-- The $(n-1)$-simplicies are called facets.
 - The $0$-simplicies are called vertices.
 - The $1$-simplicies are called edges.
-- The $2$-simplicies are called triangles.
-- The $3$-simplicies are called tetrahedrons.
+- The $2$-simplicies are called faces.
+- The $3$-simplicies are called tets.
+- The $(n-1)$-simplicies are called facets.
+- The $n$-simplicies are called cells.
 
 The skeleton only stores the top-level simplicies $Delta_n (mesh)$, but our FEM library
 also needs to reference the lower-level simplicies $Delta_k (mesh)$, since these are also
@@ -759,24 +959,6 @@ Until now we only studied the manifold as a topological space.
 We now start studying additional structure.
 We start with coordinate charts and the atlas.
 
-Since simplicies are flat, our manifold is piecewise-flat.
-
-We define a reference chart, a homeomorphism between the reference simplex
-$Delta_"ref"^n subset.eq RR^n$ and the real simplex $sigma_i$.
-
-$
-  phi_i: Delta_"ref"^n -> sigma_i
-$
-
-$
-  phi_i (lambda_1,dots,lambda_n)
-  &= v_0 +
-  mat(
-    |,  , |;
-    v_1,dots.c,v_n;
-    |,  , |;
-  ) avec(lambda)
-$
 
 These reference charts define the local coordinate systems we will be working
 in on each cell.
@@ -1217,22 +1399,35 @@ impl RiemannianMetricExt for RiemannianMetric {
 = Discrete Differential Forms: Simplicial Cochains and Whitney Forms
 
 In this chapter we will introduce discrete differential forms, which we will
-represent as simplicial cochains. We will discuss projection of arbitrary continuous
-differential forms expressed in a global coordinate basis onto cochains and
-the 
-finite element space of whitney forms and it's basis.
+represent as simplicial cochains.
+We will discuss projection of arbitrary continuum differential forms expressed
+in a global coordinate basis onto cochains and the finite element space of
+whitney forms and it's basis.
 
-This chapter corresponds exactly to the `whitney` crate.
+This chapter corresponds exactly to the functionality of the `whitney` crate.
 
 == Cochains
 
 The discretization of differential forms on a mesh is of outmost importance.
-Luckily the discretization is really simple in the case of 1st order FEEC, which
-gives us the same discretization as in DEC.
+For 1st order FEEC, as we are doing, the representation of discrete differential
+forms is the same as in *discrete exterior calculus* (DEC) and is a
+so called cochain. Cochains are isomorphic to the FE functions in 1st order FEEC.
 
-A discrete differential $k$-form on a mesh is a $k$-cochain on this mesh.
-So just a real-valued function $omega: Delta_k (mesh) -> RR$ defined on all
+A discrete differential $k$-form on a mesh is a $k$-cochain defined on this mesh.
+This is a real-valued function $omega: Delta_k (mesh) -> RR$ defined on all
 $k$-simplicies $Delta_k (mesh)$ of the mesh $mesh$.
+One can represent this function on the simplicies, using a list of real values
+that are ordered according to the global numbering of the simplicies.
+
+```rust
+pub struct Cochain {
+  pub coeffs: na::DVector<f64>,
+  pub dim: Dim,
+}
+```
+
+
+=== Discretiation: Cochain-Projection via de Rham's map
 
 The discretization of the continuous differential forms is then just a projection
 onto this cochain space. This projection is the very geometric step of
@@ -1245,51 +1440,6 @@ $
   omega_sigma = integral_sigma omega
   quad forall sigma in Delta_k (mesh)
 $
-
-
-Cochains are isomorphic to our 1st order FEEC basis functions.
-The basis we will be working with is called the Whitney basis.
-The Whitney space is the space of piecewise-linear (over the cells)
-differential forms.
-
-
-=== Discrete Exterior Derivative via Stokes' Theorem
-
-The continuous exterior derivative does not reference the metric, which
-makes it purely topological. The same should hold true for the discrete exterior derivative.
-
-In discrete settings defined as coboundary operator, through Stokes' theorem.\
-So the discrete exterior derivative is just the transpose of the boundary operator / incidence matrix.
-
-$
-  dif^k = diff_(k+1)^transp
-$
-Stokes' Theorem is fullfilled by definition.
-
-
-Extension Trait in whitney crate.
-```rust
-pub trait ManifoldComplexExt {
-  fn exterior_derivative_operator(&self, grade: ExteriorGrade) -> SparseMatrix;
-}
-impl ManifoldComplexExt for Complex {
-  /// $dif^k: cal(W) Lambda^k -> cal(W) Lambda^(k+1)$
-  fn exterior_derivative_operator(&self, grade: ExteriorGrade) -> SparseMatrix {
-    self.boundary_operator(grade + 1).transpose()
-  }
-}
-```
-
-The exterior derivative is closed in the space of Whitney forms, because of the de Rham complex.
-
-The local (on a single cell) exterior derivative is always the same for any cell.
-Therefore we can compute it on the reference cell.
-
-
-=== Cochain-Projection & Discretization
-
-de Rham map.
-
 
 ```rust
 /// Discretize continuous coordinate-based differential k-form into
@@ -1326,11 +1476,108 @@ pub fn discretize_form_on_simplex(
 }
 ```
 
+
+=== Discrete Exterior Derivative via Stokes' Theorem
+
+The exterior derivative is the derivative in exterior calculus.
+We want to define a discrete exterior derivative for our discrete differential forms.
+This is done with some really simple cochain calculus.
+We make us of the famous *Stokes' Theorem* for chains, that relates the exterior
+derivative to the boundary of the chain.
+$
+  integral_c dif omega = integral_(diff c) omega
+$
+We can express this rule using a dual pairing
+$
+  inner(dif omega, c) = inner(omega, diff c)
+$
+
+This inspires a defintion of the discrete exterior derivative as
+the opposite of the boundary operator, the *coboundary* operator.
+$
+  dif omega(c) = omega(diff c)
+$
+
+From a computational standpoint, the boundary operator is a signed incidence matrix
+and this definition makes the coboundary operator be the transpose of this
+signed incidence matrix.
+$
+  dif^k = diff_(k+1)^transp
+$
+```rust
+/// Extension trait
+pub trait ManifoldComplexExt { ... }
+impl ManifoldComplexExt for Complex {
+  /// $dif^k: cal(W) Lambda^k -> cal(W) Lambda^(k+1)$
+  fn exterior_derivative_operator(&self, grade: ExteriorGrade) -> SparseMatrix {
+    self.boundary_operator(grade + 1).transpose()
+  }
+}
+```
+
+By construction Stokes' Theorem is fullfiled, which is crucial to many applications.
+
+The exterior derivative is closed in the space of Whitney forms, because of the de Rham complex.
+
+The local (on a single cell) exterior derivative is always the same for any cell.
+Therefore we can compute it on the reference cell.
+
+
 == Whitney Forms
 
+The basis we will be working with is called the Whitney basis.
+The Whitney space is the space of piecewise-linear (over the cells)
+differential forms.
 
 
+To give an idea of the type of functions we are dealing with, we will
+look at visualizations of the basis functions in the 2 dimensional case.
 
+$
+  lambda_(i j) = lambda_i dif lambda_j - lambda_j dif lambda_i
+$
+
+$
+  lambda_01 &= (1-y) dif x + x dif y
+  \
+  lambda_02 &= y dif x + (1-x) dif y
+  \
+  lambda_12 &= -y dif x + x dif y
+$
+
+#figure(
+  grid(
+    columns: (1fr, 1fr, 1fr),
+    rows: 1,
+    gutter: 3pt,
+    image("../res/ref_lambda01.png", width: 100%),
+    image("../res/ref_lambda02.png", width: 100%),
+    image("../res/ref_lambda12.png", width: 100%),
+  ),
+  caption: [
+    Vector proxies of Reference Local Shape Functions
+    $lambda_01, lambda_02, lambda_12 in cal(W) Lambda^1 (Delta_2^"ref")$.
+  ],
+) <img:ref_whitneys>
+
+
+#figure(
+  grid(
+    columns: (1fr, 1fr, 1fr),
+    rows: 1,
+    gutter: 3pt,
+    image("../res/eq_phi01.png", width: 100%),
+    image("../res/eq_phi02.png", width: 100%),
+    image("../res/eq_phi12.png", width: 100%),
+  ),
+  caption: [
+    Vector proxies of Global Shape Functions
+    $phi_01, phi_02, phi_12 in cal(W) Lambda^1 (mesh)$ \
+    on equilateral triangle mesh $mesh$.
+  ],
+) <img:global_whitneys>
+
+=== Reconstruction: Whitney Interpolatoin via the Whitney map
 
 Whitney forms are the piecewise-linear (over the cells) differential forms
 that can be uniquely reconstructed from cochains. This reconstruction
@@ -1876,7 +2123,7 @@ $
 
 And arrive at the LSE.
 $
-  amat(M)^(k-1) vvec(sigma) - amat(C) vvec(u) = 0
+  amat(M)^(k-1) vvec(sigma) - amat(C) vvec(u) = amat(0)
   \
   amat(D) vvec(sigma) + amat(L) vvec(u) = lambda amat(M)^k vvec(u)
 $
@@ -1891,8 +2138,8 @@ $
   =
   lambda
   mat(
-    0,0;
-    0,amat(M)^k
+    amat(0)_(sigma times sigma),amat(0)_(sigma times u);
+    amat(0)_(u times sigma),amat(M)^k
   )
   vec(vvec(sigma), vvec(u))
 $
@@ -2278,3 +2525,11 @@ theory predicts, confirming the correct implementation.
 - Possible improvements and future work (e.g., efficiency, higher-order elements, more general manifolds)
 - Broader impact (e.g., Rust in scientific computing, FEEC extensions)
 - Discarded ideas and failed apporaches (generic dimensionality à la nalgebra/eigen)
+
+A far more meaningful PDE system that has some really interesting applications in real-life
+are Maxwell's Equation describing Electromagnetism.
+FEEC is the perfect fit for Maxwell's equations, since the relativistic variant of them
+is also formulated in terms of differential geometry as is general relativity.
+This means that purely thanks to the generality of the library we are able to solve
+Maxwell's equations on the curved 4D spacetime manifold.
+
