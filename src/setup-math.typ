@@ -24,7 +24,7 @@
   doc
 }
 
-#let avec(a) = math.upright(math.bold(a))
+#let avec(a) = math.bold(a)
 #let vvec(a) = math.accent(math.bold(a), math.arrow)
 #let nvec(a) = math.accent(avec(a), math.hat)
 

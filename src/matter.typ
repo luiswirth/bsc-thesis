@@ -10,7 +10,7 @@ some software engineering decisions we made.
 == Why Rust?
 
 We have chosen Rust as the main programming language for the implementation of
-our finite element library.
+our Finite Element library.
 There are various reasons for this choice, some of which we briefly outline
 here.
 
@@ -417,17 +417,16 @@ is the same operation as for a simplex.
 
 
 
-
 = Topology & Geometry of Simplicial Riemannian Manifolds
 
-In this chapter we will develop various data structures to represent our finite
-element mesh.
+In this chapter we will develop various data structures and algorithms to
+represent and work with our Finite Element mesh.
 It will store the topological and geometrical properties of our arbitrary
 dimensional discrete PDE domain.
 A simplicial complex will be used to represent the topology (incidence and
 adjacency) of the mesh and double as the container for all the mesh entities,
-which are all simplicies. It will also provide a global numbering, unique
-identification and iteration of all these entities.
+which are all simplicies. It will also provide unique identification through a
+global numbering, and iteration of all these entities.
 For the geometry, all edge lengths of the mesh will be stored to compute the
 piecewise-flat (over the cells) Riemannian metric, known as the Regge metric.
 We also support the optional storage of global vertex coordinates, if an
@@ -435,18 +434,18 @@ embedding were to be known.
 
 == Coordinate Simplicies
 
-Finite Element methods benefit from their ability to work on unstructured meshes.
+Finite Element Methods benefit from their ability to work on unstructured meshes.
 So instead of subdividing a domain into a regular grid, FEM works on potentially
-very non-uniform meshes.
+highly non-uniform meshes.
 The simplest type of mesh that works for such non-uniform meshes are simplicial
 meshes.
 In 2D these are triangular meshes as known from computer graphics.
 A 3D simplicial mesh is made up from tetrahedrons.
-These building blocks need to be generalized for our arbitrary dimensional
+These building blocks need to be generalized to our arbitrary dimensional
 implementation.
 
-We begin the exposition of the mesh topic with a coordinate-based objects
-that rely on an embedding.
+We begin the exposition of the mesh topic with a coordinate-based object
+that relies on an embedding in an ambient space.
 Later on we will shed the coordinates and only rely on intrinsic geometry.
 For didactics it's however useful to start with coordinates.
 
@@ -461,27 +460,26 @@ These are first 4 kinds:
 - a 2-simplex is a triangle, and
 - a 3-simplex is a tetrahedron.
 The idea here is that an $n$-simplex is the polytope with the fewest vertices
-that spans a $n$-dimensional space. It's the simplest $n$-polytope there is.
-A $n$-simplex $sigma$ always has $n+1$ vertices $v_0,dots,v_n in RR^N$ in a possible higher dimensional
+that spans a $n$-dimensional affine subspace of $RR^N$. It's the simplest $n$-polytope there is.
+A $n$-simplex $sigma$ always has $n+1$ vertices $avec(v)_0,dots,avec(v)_n in RR^N$ in a possibly higher dimensional
 space $RR^N, N >= n$ and the simplex is the patch of space
 bounded by the convex hull of the vertices.
 $
   Delta(RR^n) in.rev sigma =
-  "convex" {vvec(v)_0,dots,vvec(v)_n} =
+  "convex" {avec(v)_0,dots,avec(v)_n} =
   {
-    sum_(i=0)^n lambda_i vvec(v)_i
+    sum_(i=0)^n lambda^i avec(v)_i
     mid(|)
-    quad lambda_i in [0,1],
-    quad sum_(i=0)^n lambda_i = 1
+    quad lambda^i in [0,1],
+    quad sum_(i=0)^n lambda^i = 1
   }
 $ <def-simplex>
 
 We call such an object a *coordinate simplex*, since it depends on global coordinates of
 the vertices and lives in a possible higher-dimensinal ambient space $RR^N$. It therefore
 relies on an embedding.
-This object is uniquely determined by the coordinates $vvec(v)_i$ of each vertex.
-Such a coordinate simplex object is uniquely defined by the coordinates of each vertex.
-This inspires a simple computational representation based on a struct, that
+This object is uniquely determined by the coordinates $avec(v)_i$ of each vertex,
+inspiring a simple computational representation based on a struct, that
 stores the coordinates of each vertex in the columns of a matrix.
 ```rust
 pub struct SimplexCoords {
@@ -493,11 +491,12 @@ impl SimplexCoords {
 }
 ```
 
-We implement two methods to compute both the  intrinsic dimension $n$, which
-is the number of vertices minus one and the ambient dimension $N$ of the global coordinates.
+We implement two methods to compute both the intrinsic dimension $n$, which
+is one less the number of vertices and the ambient dimension $N$ of the global coordinates.
 A special and particulary simple case is when intrinsic dimension and ambient dimension
 match up $n=N$.
 ```rust
+pub type Dim = usize;
 pub fn dim_intrinsic(&self) -> Dim { self.nvertices() - 1 }
 pub fn dim_embedded(&self) -> Dim { self.vertices.nrows() }
 pub fn is_same_dim(&self) -> bool { self.dim_intrinsic() == self.dim_embedded() }
@@ -506,21 +505,20 @@ pub fn is_same_dim(&self) -> bool { self.dim_intrinsic() == self.dim_embedded() 
 #v(0.5cm)
 === Barycentric Coordinates
 
-The coefficents $vvec(lambda) = [lambda_i]_(i=0)^n$ in @def-simplex are called
+The coefficents $avec(lambda) = [lambda^i]_(i=0)^n$ in @def-simplex are called
 *barycentric coordinates*.
-They appear inside the weighted average $sum_(i=0)^n lambda_i vvec(v)_i$
-as weights $lambda_i in [0,1]$ in front of each cartesian vertex coordinate
-$vvec(v)_i in RR^N$.
-They constitute an intrinsic local coordiante system inside any simplex.
-They are called barycentric, because the barycenter of the simplex always has
-the coordinate $vvec(lambda) = [1/n]^(n+1)$.
-
-The simplex definition gives rise to a very simple coordinate transformation
-$psi: vvec(lambda) |-> vvec(x)$ from intrinsic barycentric $vvec(lambda) in
-RR^n$ to ambient cartesian $vvec(x) in RR^N$.
+They appear inside the convex combination / weighted average $sum_(i=0)^n lambda^i avec(v)_i$
+as weights $lambda^i in [0,1]$ with condition $sum_(i=0)^n lambda^i = 1$ in front of
+each cartesian vertex coordinate $avec(v)_i in RR^N$.
+They constitute an intrinsic local coordiante representation with respect to the simplex $sigma in RR^N$,
+which is independent from the embedding in $RR^N$ and only relies on the convex combination
+of vertices. \
+The coordinate transformation $psi: avec(lambda) |-> avec(x)$ from intrinsic
+barycentric $avec(lambda) in RR^n$ to ambient cartesian $avec(x) in RR^N$ coordinate is
+given by
 $
-  vvec(x) = psi (vvec(lambda))
-  = sum_(i=0)^n lambda_i vvec(v)_i
+  avec(x) = psi (avec(lambda))
+  = sum_(i=0)^n lambda^i avec(v)_i
 $
 
 We can easily implement this as
@@ -535,35 +533,65 @@ pub fn bary2global<'a>(&self, bary: impl Into<BaryCoordRef<'a>>) -> EmbeddingCoo
     .sum()
 }
 ```
+The barycentric coordinate representation can be extended beyond the bounds of the simplex to
+the whole affine subspace.
+The condition $sum_(i=0)^n lambda^i = 1$ must still hold but only points
+$avec(x) in sigma$ inside the simplex have $lambda^i in [0,1]$.
+```rust
+pub fn is_coord_inside(&self, global: CoordRef) -> bool {
+  let bary = self.global2bary(global);
+  is_bary_inside(&bary)
+}
+pub fn is_bary_inside<'a>(bary: impl Into<CoordRef<'a>>) -> bool {
+  bary.into().iter().all(|&b| (0.0..=1.0).contains(&b))
+}
+```
+Outside the simplex $avec(x) in.not sigma$, $lambda^i$ may be greater than one
+or even negative. \
+The barycenter $avec(m) = 1/(n+1) sum_(i=0)^n avec(v)_i$ always has the special
+barycentric coordinates $psi(avec(m)) = [1/n]^(n+1)$.
+```rust
+pub fn barycenter(&self) -> Coord {
+  let mut barycenter = na::DVector::zeros(self.dim_embedded());
+  self.vertices.coord_iter().for_each(|v| barycenter += v);
+  barycenter /= self.nvertices() as f64;
+  barycenter
+}
+```
 
 This coordinate system treats all vertices on equal footing and therefore
 there is a weight for each vertex.
-But as a consequence of this, there is some redundancy in this coordinate system,
-since we have $n+1$ vertices but only $n$ dimensions.
+But as a consequence of this, there is some redundancy in this coordinate representation,
+making it not a proper coordinate system,
+since we have $n+1$ vertices for an only $n$-dimensional affine subspace.
 
 We can instead single out a special vertex to remove this redundancy. We choose
-for this vertex $vvec(v)_0$ and call it the *base vertex*.
+for this vertex $avec(v)_0$ and call it the *base vertex*.
 ```rust
 pub fn base_vertex(&self) -> CoordRef { self.coord(0) }
 ```
 
-We can then leave off the redundant $lambda_0 = 1 - sum_(i=1)^n lambda_i$
-corresponding to $vvec(v)_0$.
-Then the reduced barycentric coordiantes $vvec(lambda)_- = [lambda_i]_(i=1)^n$
-constitutes a coordinate system without any reduandancy.
+We can then leave off the redundant $lambda^0 = 1 - sum_(i=1)^n lambda^i$
+corresponding to $avec(v)_0$.
+Then the reduced barycentric coordiantes $avec(lambda)^- = [lambda^i]_(i=1)^n$
+constitutes a proper coordinate system without any redundant information.
+This coordinate system also works for the whole affine subspace, but now
+the coordinates are completly free and there is a bijection between
+the affine subspace and the whole of $RR^n$. There is a unique representation
+for both ways.
 
 #v(0.5cm)
 === Spanning Vectors
 
 If we consider the edges eminating from the base vertex, we get the
-*spanning vectors* $[e_i]_(i=1)^n$ with $vvec(e)_i = vvec(v)_i - vvec(v)_0 in RR^N$.
+*spanning vectors* $[avec(e)_i]_(i=1)^n$ with $avec(e)_i = avec(v)_i - avec(v)_0 in RR^N$.
 We can define a matrix $amat(E) in RR^(N times n)$ that has these
 spanning vectors as columns.
 $
   amat(E) = 
   mat(
       |,  , |;
-      vvec(e)_1,dots.c,vvec(e)_n;
+      avec(e)_1,dots.c,avec(e)_n;
       |,  , |;
     )
 $
@@ -584,12 +612,17 @@ pub fn spanning_vectors(&self) -> na::DMatrix<f64> {
 These spanning vectors are very natural to the reduced barycentric coordinate system,
 since we can rewrite the coordinate transformation $psi$ as
 $
-  vvec(x)
-  = sum_(i=0)^n lambda_i vvec(v)_i
-  = vvec(v)_0 + sum_(i=1)^n lambda_i (vvec(v)_i - vvec(v)_0)
-  = vvec(v)_0 + amat(E) vvec(lambda)
+  avec(x)
+  = sum_(i=0)^n lambda^i avec(v)_i
+  = avec(v)_0 + sum_(i=1)^n lambda^i (avec(v)_i - avec(v)_0)
+  = avec(v)_0 + amat(E) avec(lambda)
 $
-This makes it very apparant that this transformation is an affine map.
+This makes it very apparant that this transformation is an affine map, between
+the reduced barycentric coordinates $avec(lambda)^-$, which we also just call
+local coordinates and the cartesian coordinates of the affine subspace
+spanned up by the spanning vectors positioned at the base vertex.
+
+We can implement some transformation functions.
 ```rust
 pub fn linear_transform(&self) -> na::DMatrix<f64> { self.spanning_vectors() }
 pub fn affine_transform(&self) -> AffineTransform {
@@ -601,22 +634,88 @@ pub fn local2global<'a>(&self, local: impl Into<LocalCoordRef<'a>>) -> Embedding
   let local = local.into();
   self.affine_transform().apply_forward(local)
 }
+```
+
+Where we represent an affine transform as
+```rust
+pub struct AffineTransform {
+  pub translation: na::DVector<f64>,
+  pub linear: na::DMatrix<f64>,
+}
+pub fn apply_forward(&self, coord: na::DVectorView<f64>) -> na::DVector<f64> {
+  &self.linear * coord + &self.translation
+}
+```
+
+Reversing the transformation, is more subtle, as due to floating point inaccuricies,
+we almost never exactly lie in the affine subspace. Therefore we rely on the
+Moore-Penrose pseudo-inverse, computed via SVD, to get a least-square solution.
+$
+  avec(lambda)^- = phi(avec(x))
+  = amat(E)^dagger (avec(x) - avec(v)_0)
+$
+
+```rust
 pub fn global2local<'a>(&self, global: impl Into<EmbeddingCoordRef<'a>>) -> LocalCoord {
   let global = global.into();
   self.affine_transform().apply_backward(global)
 }
+
+pub fn apply_backward(&self, coord: na::DVectorView<f64>) -> na::DVector<f64> {
+  if self.linear.is_empty() { return na::DVector::default(); }
+  self
+    .linear
+    .clone()
+    .svd(true, true)
+    .solve(&(coord - &self.translation), 1e-12)
+    .unwrap()
+}
+
+pub fn pseudo_inverse(&self) -> Self {
+  let linear = self.linear.clone().pseudo_inverse(1e-12).unwrap();
+  let translation = &linear * &self.translation;
+  Self { translation, linear, }
+}
+
 ```
 
 By computing derivatives of the affine parametrization of the simplex, we
 find that the spanning vectors are a very natural frame/basis for the tangent space
 $T_p sigma$ of the simplex $sigma$ at each point $p in sigma$.
+The jacobian of the affine map is exactly the linear map represented by $amat(E)$.
 $
-  (diff vvec(x))/(diff lambda_i)
-  = vvec(e)_i
+  (diff avec(x))/(diff lambda^i)
+  = avec(e)_i
   quad quad
-  (diff vvec(x))/(diff vvec(lambda))
+  (diff avec(x))/(diff avec(lambda))
   = amat(E)
 $
+
+Furthermore we can also compute the total differential of the barycentric coordinate
+functions based on the pseudo-inverse.
+This constitutes a natural basis for cotangent space $T^*_p sigma$ of the simplex $sigma$
+at each point $p in sigma$. It is in fact the dual basis.
+$
+  (diff avec(lambda))/(diff avec(x))
+  = amat(E)^dagger
+  quad quad
+  avec(epsilon)^i = dif lambda^i = (diff lambda^i)/(diff avec(x))
+  = (amat(E)^dagger)_(i,:)
+  quad quad
+  dif lambda^0 = -sum_(i=1)^n dif lambda^i
+  quad quad
+  dif lambda^i (diff/(diff lambda^j)) = delta^i_j
+$
+```rust
+pub fn difbarys(&self) -> na::DMatrix<f64> {
+  let difs = self.linear_transform().pseudo_inverse(1e-12).unwrap();
+  let mut grads = difs.insert_row(0, 0.0);
+  grads.set_row(0, &-grads.row_sum());
+  grads
+}
+```
+
+TODO: consider moving to Riemannian geometry section...
 Using the euclidean geometry of the ambient space, we can compute the metric tensor
 expressed in this tangent space basis to do intrinsic Riemannian geometry.
 $
@@ -630,16 +729,11 @@ pub fn metric_tensor(&self) -> RiemannianMetric {
 }
 ```
 
-
-Furthermore these spanning vectors span up the parallelepiped in whose corner the
-simplex is contained.
-This makes the spanning vectors a very natural frame/basis for the local tangent space
-inside the simplex.
-$T_sigma {sigma} subset.eq RR^N$ embedded in $RR^N$ with $dim T_sigma {sigma} = n$.
-This parallelipied can be used to compute the volume of the simplex, as a fraction $(n!)^(-1)$ of
-the volume of the parallelepiped, which is computed as the determinant of the
-spanning vectors in the case $n=N$ and otherwise using the square root of the
-gramian determinant
+Furthermore these spanning vectors define a parallelepiped.
+This parallelipied can be used to compute the volume of the simplex, as a
+fraction $(n!)^(-1)$ of the volume of the parallelepiped, which is computed as
+the determinant of the spanning vectors in the case $n=N$ and otherwise using
+the square root of the gramian determinant
 $sqrt(det(amat(E)^transp amat(E)))$.
 ```rust
 pub fn det(&self) -> f64 {
@@ -654,12 +748,16 @@ pub fn vol(&self) -> f64 { self.det().abs() }
 pub fn ref_vol(dim: Dim) -> f64 { (factorial(dim) as f64).recip() }
 
 ```
-Based on this we can also get the global orientation of the simplex
+Based on this we can also get the global orientation of the simplex via
+the sign of the determinant.
 ```rust
 pub fn orientation(&self) -> Sign {
   Sign::from_f64(self.det()).unwrap()
 }
 ```
+As a consequence swapping to vertices in the simplex, will swap the orientation of the simplex,
+by the properties of the determinant.
+
 Every simplex has two orientations positive and negative, just like the determinant
 always has only two signs.
 #table(
@@ -683,70 +781,33 @@ $
 For each dimension $n in NN$ there is exactly one reference simplex $sigma_"ref"^n$,
 which has coinciding intrinsic and ambient dimension $N=n$.
 For this simplex the edge vectors are exactly the euclidean standard basis vectors
-$vvec(e)_i = nvec(e)_i$ with $(nvec(e)_i)_j = delta_i^j$.
+$avec(e)_i = nvec(e)_i$ with $(nvec(e)_i)_j = delta_i^j$.
+Is has volume $det(sigma) = (n!)^(-1)$.
 
 They give rise to an euclidean orthonormal tangent space basis. $amat(E) = amat(I)_n$
 Which manifests as a metric tensor that is equal to the identity matrix
 $amat(G) = amat(I)_n^transp amat(I)_n = amat(I)_n$.
 
-The base vertex is the origin $v_0 = vvec(0) in RR^n$ and the other vertices
-are $vvec(v)_i = vvec(0) + nvec(e)_i = nvec(e)_i$.
+The base vertex is the origin $v_0 = avec(0) in RR^n$ and the other vertices
+are $avec(v)_i = avec(0) + nvec(e)_i = nvec(e)_i$.
 The parametrization of the reference simplex is the identity map.
-$phi: vvec(lambda)_- |-> vvec(0) + amat(I) vvec(lambda)_-$
+$phi: avec(lambda)^- |-> avec(0) + amat(I) avec(lambda)^-$
 
 Every (real) simplex is the image of the reference simplex under the affine parametrization
 map.
 $
   sigma = phi(sigma_"ref"^n)
 $
-Affine-invariance.
-
-
-$
-  (diff vvec(x))/(diff vvec(lambda))
-  = amat(E)
-  quad quad
-  (diff vvec(x))/(diff lambda_i)
-  = vvec(e)_i
-  quad quad
-  (diff x_i)/(diff vvec(lambda))
-  = amat(E)_(i,:)
-$
-
-$
-  vvec(lambda) = phi(x_1,dots,x_n)
-  = amat(E)^dagger (vvec(x) - vvec(v)_0)
-$
-
-$
-  (diff vvec(lambda))/(diff vvec(x))
-  = amat(E)^dagger
-  quad quad
-  (diff vvec(lambda))/(diff x_i)
-  = (amat(E)^dagger)_(:,i)
-  quad quad
-  (diff lambda_i)/(diff vvec(x))
-  = (amat(E)^dagger)_(i,:)
-$
-
-This study of the properties of the coordinate simplex has hopefully
-painted an intuitive geometrical view of simplicies.
-We will now move on to full meshes consisting of multiple simplicies
-and shed the coordinates.
+The barycentric coordinate functions are since they are intrinsic affine-invariant.
 
 == Simplicial Topology
 
-We now construct a topological manifold that consists of simplicies.
-
-In our coordinate-independent framework, we consider abstract simplicies,
-which are just finite ordered sets of vertex indicies.
-An example for a simplex simplex could be the list $[12, 27, 4]$, which
-represent a 2-simplex, so a triangle with the three vertices 12, 27 and 4 in
-this very order.
+After studying coordinate simplicies, the reader has hopefully developed
+some intuitive understanding of simplicies. We will now shed the coordinates
+and represent simplicies in a more abstract way, by just considering
+them as a list of vertex indicies, without any vertex coordinates.
 This makes our simplicies just combinatorial objects and these combinatorics
 will be heart of our mesh datastructure.
-
-In our code we will represent a simplex as
 ```rust
 pub type VertexIdx = usize;
 pub struct Simplex {
@@ -754,33 +815,27 @@ pub struct Simplex {
 }
 ```
 
-Abstract simplicies only convey topological information.
-Which vertices are connected to each other to form this simplex and which
-simplicies share the same vertices, giving us adjacency information.
+The topology of the mesh will then be captured by the fact that some simplicies
+share the same vertices, meaning that they are somehow topologically connected,
+by being either adjacent or indicent.
+
 
 === Orientation
 
-Simplicies have an orientation, that is determined through the order
-of the vertices. For any simplex there are exactly two orientations, which
+We have seen that with coordinate simplicies due to the properties of the
+determiant the swapping of two vertices changes the orientation.
+This property is still present in our abstract simplicies, where
+the orientation is dependent on the ordering of the vertices.
+For any simplex there are exactly two orientations, which
 are opposites of each other.
-In euclidean geometry the orientation is absolute and can be determined based
-on the sign of determinant of the spanning vectors.
-
-#table(
-  columns: 4,
-  stroke: fgcolor,
-  $n$, [Simplex], [Positive], [Negative],
-  $1$, [Edge], [left-to-right], [right-to-left],
-  $2$, [Triangle], [counterclockwise], [clockwise],
-  $3$, [Tetrahedron], [right-handed], [left-handed],
-)
-
 All permutations can be divided into two equivalence classes.
 Given a reference ordering of the vertices of a simplex,
 we can call these even and odd permutations, relative to this reference.
 We call simplicies with even permutations, positively oriented and
 simplicies with odd permutations negatively oriented.
-For example we have: $[12, 27, 4] = -[27, 12, 4]$.
+
+Our convention will be to call simplicies with increasing
+indices positively oriented.
 
 === Skeleton
 
@@ -824,11 +879,11 @@ $
 All $n!$ simplicies will be based on this vertex base set. To generate the list
 of vertices of the simplex, we start at the origin vertex $v_0 = 0 = (0)^n$.
 From there we walk along on axis directions from vertex to vertex.
-For this we consider all $n!$ permutations of the basis directions $vvec(e)_1,dots,vvec(e)_n$.
+For this we consider all $n!$ permutations of the basis directions $avec(e)_1,dots,avec(e)_n$.
 A permutation $sigma$ tells in which axis direction we need to walk next.
 This gives us the vertices $v_0,dots,v_n$ that forms a simplex.
 $
-  v_k = v_0 + sum_(i=1)^k vvec(e)_sigma(i)
+  v_k = v_0 + sum_(i=1)^k avec(e)_sigma(i)
 $
 
 The algorithm in Rust looks like:
@@ -987,24 +1042,6 @@ Since our manifold is piecewise-flat the tangent space remains the same
 over each cell. So instead of a tangent space $T_p M$ at each point $p$,
 we have a tangent space $T_sigma M$ at each cell $sigma$.
 
-Our refrence charts induce a natural basis on each tangent space.
-$
-  (diff phi_i)/(diff lambda_j) = v_j - v_0 = e_j
-$
-
-So the edge vectors $e_j$ eminating from the origin vertex $v_0$
-form a basis of the tangent space. This is very intuitive.
-
-By lucky coincidence, the notation for edge vectors and basis vectors
-just happens to be the same. Both times denoted by a $e_i$.
-
-The element of the tangent space are the vectors with which we can do
-vector calculus or in our case the more general exterior calculus.
-
-Vectors are *contravariant* tensors.
-In exterior algebra we will extend them to multivectors that
-are rank $k$ fully contravariant tensors.
-
 === Cotangent space
 
 There is a dual space to the tangent space, called the cotangent space.
@@ -1050,7 +1087,7 @@ There are two ways of doing geometry.
 - *Intrinsic Riemannian Geometry*
 Formoniq supports both representation of the mesh. This might come as a suprise, since
 initially we stated that we will be solely relying on coordinate-free meshes.
-What we mean by this is that the finite element algorithms will only rely on the
+What we mean by this is that the Finite Element algorithms will only rely on the
 intrinisic geometry. This is still true. But in order to obtain the intrinsic description
 it is helpful to first construct a coordinate representation and then compute
 the intrinsic geometry and to forget about the coordinates then.
@@ -2123,9 +2160,9 @@ $
 
 And arrive at the LSE.
 $
-  amat(M)^(k-1) vvec(sigma) - amat(C) vvec(u) = amat(0)
+  amat(M)^(k-1) avec(sigma) - amat(C) avec(u) = amat(0)
   \
-  amat(D) vvec(sigma) + amat(L) vvec(u) = lambda amat(M)^k vvec(u)
+  amat(D) avec(sigma) + amat(L) avec(u) = lambda amat(M)^k avec(u)
 $
 
 This LSE has block structure and can be written as
@@ -2134,19 +2171,19 @@ $
     amat(M)^(k-1), -amat(C);
     amat(D), amat(L);
   )
-  vec(vvec(sigma), vvec(u))
+  vec(avec(sigma), avec(u))
   =
   lambda
   mat(
     amat(0)_(sigma times sigma),amat(0)_(sigma times u);
     amat(0)_(u times sigma),amat(M)^k
   )
-  vec(vvec(sigma), vvec(u))
+  vec(avec(sigma), avec(u))
 $
 
 This is a symmetric indefinite sparse generalized matrix eigenvalue problem,
 that can be solved by an iterative eigensolver such as Krylov-Schur.
-This is also called a GHIEP problem. We solve this using SLEPc/PETSc.
+In SLEPc terminology this is called a GHIEP problem.
 
 ```rust
 pub struct MixedGalmats {
@@ -2273,11 +2310,11 @@ By inserting our known Galerkin matrices, we obtain.
 
 
 $
-  amat(M)^(k-1) vvec(sigma) - amat(C) vvec(u) = 0
+  amat(M)^(k-1) avec(sigma) - amat(C) avec(u) = 0
   \
-  amat(D) vvec(sigma) + amat(L) vvec(u) + amat(M) amat(H) vvec(p) = amat(M)^k vvec(f)
+  amat(D) avec(sigma) + amat(L) avec(u) + amat(M) amat(H) avec(p) = amat(M)^k avec(f)
   \
-  amat(H)^transp amat(M) vvec(u) = 0
+  amat(H)^transp amat(M) avec(u) = 0
 $
 
 
@@ -2296,9 +2333,9 @@ $
     amat(D), amat(L), amat(M)amat(H);
     0, amat(H)^transp amat(M), 0
   )
-  vec(vvec(sigma), vvec(u), vvec(p))
+  vec(avec(sigma), avec(u), avec(p))
   =
-  vec(0, amat(M)^k vvec(f), 0)
+  vec(0, amat(M)^k avec(f), 0)
 $
 
 //$
