@@ -1,19 +1,18 @@
 = Introduction 
 
-== FEEC and its significance
-
 Partial Differential Equations (PDEs) are the mathematical language we use to
-model continuum problems across physics and engineering. From heat transfer
-and fluid dynamics to electromagnetism and quantum mechanics, PDEs describe
-the fundamental systems that govern our universe. Because of this, solving PDEs
-efficiently and accurately is central to modern computational science.
+model continuum problems across physics and engineering.
+From heat transfer and fluid dynamics to electromagnetism and quantum mechanics,
+PDEs describe the fundamental systems that govern our universe.
+Because of this, solving PDEs efficiently and accurately is central to modern
+computational science.
 
 The Finite Element Method (FEM) is one of the major methods employed to
 numerically solve PDEs on unstructured meshes inspired by ideas from functional
 analysis.
 
-While scalar-valued FEM is realtively easily constructed and studied
-using Lagrangian FE spaces, vector-valued FEM is far more involved.
+While scalar-valued FEM is realtively easily constructed and studied using
+Lagrangian FE spaces, vector-valued FEM is far more involved.
 #quote(block: true, attribution: [Hiptmair @hiptmair-whitney])[
 Without referring to differential geometry, several authors had devised vector
 valued finite elements that can be regarded as special cases of discrete
@@ -34,19 +33,23 @@ differential forms instead of vector calculus to solve PDEs.
 FEEC provides structure-preserving discretizations that ensure stability,
 accuracy, and convergence.
 
-FEEC and has been applied with great success to analyze and construct conforming FE spaces
-for arbitrary rank differential forms in arbitrary dimensions on arbitrary topologies, thanks
-to the embrace of differential geometry.
-This is in stark contrast to FEM software implementations, which are usually hard-coded
-to 3 dimensions and therefore rely on vector proxies instead of actual differential forms
-and exterior algebra data structures. Furthermore they make use of global coordinates
-of the manifolds for their computations, therefore relying on embeddings instead
-of the intrinisc nature of the manifold.
+FEEC is the de facto standard for analyzing and constructing conforming
+FE spaces for arbitrary rank differential forms in arbitrary dimensions on
+arbitrary topologies.
+In modern FEM theory is therefore standard to embrace differential geometry
+instead of vectors calculus.
+This is in stark contrast to FEM software implementations, which are usually
+hard-coded to 3 dimensions and rely on vector proxies instead of actual
+differential forms and exterior algebra.
+Furthermore almost all implementations make use of global coordinates on the
+manifolds, therefore relying on embeddings instead of the intrinisc geometry
+nature of the manifold.
 
-This thesis takes a different approach to implementation of FEM. We want to fully embrace differential geometry
-and in this way provide a implementation of FEEC that works in arbitrary dimensions
-for arbitrary Riemannian manifolds without any global coordinates but only
-an intrinsic Riemannian metric. For the topology we will use simplicial complexes.
+This thesis takes a different approach to implementation of FEM.
+We want to fully embrace differential geometry and in this way provide a
+implementation of FEEC that works in arbitrary dimensions for arbitrary
+Riemannian manifolds with arbitrary simplicial topology without any global
+coordinates but only an intrinsic Riemannian metric.
 
 We will restrict ourselves to 1st order piecewise linear FE and therefore
 also just piecewise-flat approximations of the underlying manifold
@@ -58,12 +61,22 @@ We will work to solve the eigenvalue problem and source problem corresponding to
 this operator, which will guide our implementation.
 For both these problems we rely on a mixed weak formulation of Hodge-Laplacian.
 
-For the treatment of arbitrary topologies, a big theme is simplicial homology of the mesh
-and the isomorphic de Rham cohomology of differential forms.
+For the treatment of arbitrary topologies, a big theme is homology and cohomology.
+Homology theory is topological disciple concerned with the couting of holes of
+a topological space, in our case the simplicial complex which approximates our
+PDE domain.
+The simplicial homology of our mesh is isomorphic to the de Rham cohomology of
+the space of differential forms.
+It makes statement about the existance of differential forms on our domain and
+therefore has influence on the existance and uniqueness of our PDE problem.
+The ability of FEEC to treat arbitrary topologies is thanks to homology theory.
+In the concrete case of the Hodge-Laplace operator we are dealing with Hodge
+theory.
+We will not explain homology in detail in this thesis, since in the implementation
+it has only a very small part.
 
-== Rust in scientific computing
-
-The implementation of the FEM library will be done in the Rust programming language.
+*Rust*\
+The implementation of our FEM library will be done in the Rust programming language.
 Rust was chosen for its strong guarantees in memory safety, performance, and
 modern language features, making it ideal for high-performance computing tasks
 like finite elements. The Rust ownership model, borrow checker, and type system
@@ -71,14 +84,7 @@ act as a proof system to ensure there are no memory bugs, race conditions, or
 similar undefined behaviors in any program, while achieving performance levels
 comparable to C/C++.
 
-For this, we are using the Rust programming language, leveraging its performance,
-safety, and concurrency to create a robust tool.
-This library brings FEEC into computational practice, bridging the gap between
-theory and application.
-
-
-== Goals and Contributions
-
+*Goals and Contributions*\
 The thesis aims to lower the bar of entry to the theory of FEEC by providing a
 beginner friendly exposition of the main concepts.
 Furthermore we provide a implementation of a FEEC library that should be useable
@@ -90,10 +96,10 @@ and complicated mathematical framework that was created around FEEC.
 This thesis is more pragmatic and should appeal to a wider audiance than the
 original books and papers on FEEC.
 
-== Outline of the thesis structure
-
-Our library is the core of the thesis, so the structure should parallel its modularity.
-The first two sections provide context: Rust choices and software architecture.
+*Outline of the thesis structure*\
+Our library is the core of the thesis, so the structure of it should parallel
+the structure of the library.
+The first chapter provide context: Rust choices and software architecture.
 - The next sections introduce the mathematical foundations that your crates encapsulate.
 - The final sections describe how Formoniq ties everything together and its practical application.
 
@@ -115,14 +121,6 @@ vector calculus.
 In this section we will learn about differential forms, which are
 the values our PDEs will take. We will learn about the most important
 properties of them and also learn about their discrete counterparts called cochains.
-
-After this we take a dive into homology theory, which is topological disciple
-concerned with the couting of holes of a topological space, in our case
-the simplicial complex which approximates our PDE domain.
-The simplicial homology of our mesh influences the de Rham cohomology
-which makes statement about the existance of differential forms
-and therefore has influence on the existance and uniqueness of our PDE problem.
-A lot of the magic of FEEC lies in homology.
 
 Once we've explored al of these various theories relevant to the implementation,
 we will finally talk about the implementation of the heart of our FEEC library,

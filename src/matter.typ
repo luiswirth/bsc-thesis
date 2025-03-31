@@ -227,196 +227,6 @@ We are also always focused on a memory-economic representation of information.
 
 
 
-
-
-= Arbitrary Dimensions & Multi-Index Combinatorics
-
-== Programming in Arbitrary Dimensions
-
-Supporting arbitrary dimensions requires a special style of programming.
-One way in which this manifests is how we work with for-loops.
-Usually if one would work in fixed 3D, then one would iterate over
-3D arrays using 3 nested for-loops. But in arbitrary dimensions one would need
-a number of for loops that is determined by a variable at run-time. This is not possible.
-So we cannot rely on nested for-loops to iterate over $n$-dimensional data.
-Instead we will rely on a arbitrary dimensional multi-index implementation.
-
-A multi-index is a dimensional generalization of a index.
-It looks like this
-$ I = (i_0,i_1,dots,i_n) $
-It's a tuple of single indices, grouping them together.
-We can write a for loop over all variants of valid multi indices and
-then use the multi-index to index into our multi-dimensional data structure.
-
-
-This motivates the creation of a small library that supports multi-indices.
-There are two main flavors of multi-indices that concern us.
-
-== Cartesian Multi-Index
-
-A cartesian multi-index is pretty simple. It's an element of a cartesian product
-of various single-index sets.
-
-- Cartesian product style for-loops
-- Reference simplex style for-loops
-
-== Anti-symmetric multi-indices
-
-Anti-Symmetric Mutli-Indices play a huge role in the combinatorics
-of simplicies and exterior algebras.
-
-These are multi-indicies with are ordered sets (no duplicates)
-of indices. They are governed by various rules surrounding
-permutations and sign.
-
-=== Sign
-
-Swapping any two indicies results in a sign change of the multi-index.
-We represent the sign of such a multi-index using a `Sign` enum.
-
-```rust
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
-pub enum Sign {
-  #[default]
-  Pos = 1,
-  Neg = -1,
-}
-```
-
-It comes with some basic convenience functions
-```rust
-pub fn from_bool(b: bool) -> Self {
-  match b {
-    true => Self::Pos,
-    false => Self::Neg,
-  }
-}
-pub fn from_f64(f: f64) -> Option<Self> {
-  if f == 0.0 { return None; }
-  Some(Self::from_bool(f > 0.0))
-}
-
-/// useful for permutation parity
-pub fn from_parity(n: usize) -> Self {
-  match n % 2 {
-    0 => Self::Pos,
-    1 => Self::Neg,
-    _ => unreachable!(),
-  }
-}
-
-pub fn other(self) -> Self {
-  match self {
-    Sign::Pos => Sign::Neg,
-    Sign::Neg => Sign::Pos,
-  }
-}
-pub fn flip(&mut self) {
-  *self = self.other()
-}
-```
-
-We implement some basic arithmetic for this struct, such
-as negation and multiplication.
-```rust
-impl std::ops::Neg for Sign {
-  type Output = Self;
-  fn neg(self) -> Self::Output {
-    match self {
-      Self::Pos => Self::Neg,
-      Self::Neg => Self::Pos,
-    }
-  }
-}
-impl std::ops::Mul for Sign {
-  type Output = Self;
-  fn mul(self, other: Self) -> Self::Output {
-    match self == other {
-      true => Self::Pos,
-      false => Self::Neg,
-    }
-  }
-}
-```
-
-The main use of this `Sign` type is representing the sign of a permutation.
-For this we implement a basic bubble sort that counts the number of swaps,
-based on which we can compute the sign of the sorted permutation relative
-to the original permutation.
-```rust
-/// Returns the sorted permutation of `a` and the sign of the permutation.
-pub fn sort_signed<T: Ord>(a: &mut [T]) -> Sign {
-  Sign::from_parity(sort_count_swaps(a))
-}
-
-/// Returns the sorted permutation of `a` and the number of swaps.
-pub fn sort_count_swaps<T: Ord>(a: &mut [T]) -> usize {
-  let mut nswaps = 0;
-
-  let mut n = a.len();
-  if n > 0 {
-    let mut swapped = true;
-    while swapped {
-      swapped = false;
-      for i in 1..n {
-        if a[i - 1] > a[i] {
-          a.swap(i - 1, i);
-          swapped = true;
-          nswaps += 1;
-        }
-      }
-      n -= 1;
-    }
-  }
-  nswaps
-}
-```
-
-=== IndexSet
-
-This is our antisym multi-index struct.
-```rust
-#[derive(Debug, Default, Clone, PartialEq, Eq, Hash)]
-pub struct MultiIndex<O: IndexKind> {
-  indices: Vec<usize>,
-  _order: PhantomData<O>,
-}
-```
-
-Through the generic type parameter `O: IndexKind` we introduce
-a marker type that represents the kind of index we are dealing with.
-There are two kinds: `ArbitraryList`, with no constraints on
-the indices and `IncreasingSet`. These are represent using marker types
-(zero-sized) and a marker trait (no associated methods).
-```rust
-pub trait IndexKind: Debug + Default + Clone + Copy + PartialEq + Eq + Hash {}
-
-/// Arbitrary order of elements. May contain duplicates.
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct ArbitraryList;
-impl IndexKind for ArbitraryList {}
-
-/// Strictly increasing elements! No duplicates allowed.
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct IncreasingSet;
-impl IndexKind for IncreasingSet {}
-```
-
-The `IncreasingSet` kind represents the antisymmetric index.
-
-This crate is rather convoluted due to the type state.
-The design is not optimal, even though much time was spent
-refactoring this module. It has been a difficult design challenge.
-We will keep it as is.
-
-Many operations are possible on the two kinds of multi indices.
-Such as computing all permutations or all subsets of indices.
-Or computing the "boundary" of a IncreasingSet. Which
-is the same operation as for a simplex.
-
-
-
-
 = Topology & Geometry of Simplicial Riemannian Manifolds
 
 In this chapter we will develop various data structures and algorithms to
@@ -470,7 +280,7 @@ $
   {
     sum_(i=0)^n lambda^i avec(v)_i
     mid(|)
-    quad lambda^i in [0,1],
+    quad lambda^i >= 0,
     quad sum_(i=0)^n lambda^i = 1
   }
 $ <def-simplex>
@@ -575,6 +385,7 @@ We can then leave off the redundant $lambda^0 = 1 - sum_(i=1)^n lambda^i$
 corresponding to $avec(v)_0$.
 Then the reduced barycentric coordiantes $avec(lambda)^- = [lambda^i]_(i=1)^n$
 constitutes a proper coordinate system without any redundant information.
+We also call this the *local coordinate system*.
 This coordinate system also works for the whole affine subspace, but now
 the coordinates are completly free and there is a bijection between
 the affine subspace and the whole of $RR^n$. There is a unique representation
@@ -615,12 +426,13 @@ $
   avec(x)
   = sum_(i=0)^n lambda^i avec(v)_i
   = avec(v)_0 + sum_(i=1)^n lambda^i (avec(v)_i - avec(v)_0)
-  = avec(v)_0 + amat(E) avec(lambda)
+  = avec(v)_0 + amat(E) avec(lambda)^-
 $
-This makes it very apparant that this transformation is an affine map, between
-the reduced barycentric coordinates $avec(lambda)^-$, which we also just call
-local coordinates and the cartesian coordinates of the affine subspace
-spanned up by the spanning vectors positioned at the base vertex.
+This makes it very apparant that this transformation is an affine map, with
+translation by $avec(v)_0$ and linear map $avec(lambda)^- |-> amat(E) vvec(lambda)^-$, between
+the local coordinates $avec(lambda)^-$ and the cartesian coordinates $avec(x)$ of the
+affine subspace spanned up by the spanning vectors positioned at the base
+vertex.
 
 We can implement some transformation functions.
 ```rust
@@ -754,6 +566,11 @@ the sign of the determinant.
 pub fn orientation(&self) -> Sign {
   Sign::from_f64(self.det()).unwrap()
 }
+
+pub enum Sign {
+  Pos = +1,
+  Neg = -1,
+}
 ```
 As a consequence swapping to vertices in the simplex, will swap the orientation of the simplex,
 by the properties of the determinant.
@@ -774,9 +591,9 @@ always has only two signs.
 === Reference Simplex
 
 There is a special simplex, called the *reference simplex*, which has exactly the
-barycentric coordinates also as global coordinates.
+local coordinates (reduced barycentric coordinates) also as global coordinates.
 $
-  sigma_"ref"^n = {(lambda_1,dots,lambda_n) in RR^n mid(|) lambda_i in [0,1], quad sum_(i=1)^n lambda_i <= 1 }
+  sigma_"ref"^n = {(lambda_1,dots,lambda_n) in RR^n mid(|) lambda_i >= 0, quad sum_(i=1)^n lambda_i <= 1 }
 $
 For each dimension $n in NN$ there is exactly one reference simplex $sigma_"ref"^n$,
 which has coinciding intrinsic and ambient dimension $N=n$.
@@ -798,59 +615,842 @@ map.
 $
   sigma = phi(sigma_"ref"^n)
 $
+The reference simplex acts as a chart of each real simplex $sigma$. While $psi:
+sigma -> sigma_"ref"^n subset.eq RR^n$ is the chart map.
+
 The barycentric coordinate functions are since they are intrinsic affine-invariant.
 
-== Simplicial Topology
+
+== Abstract Simplicies
 
 After studying coordinate simplicies, the reader has hopefully developed
 some intuitive understanding of simplicies. We will now shed the coordinates
 and represent simplicies in a more abstract way, by just considering
 them as a list of vertex indicies, without any vertex coordinates.
-This makes our simplicies just combinatorial objects and these combinatorics
-will be heart of our mesh datastructure.
+A $n$-simplex $sigma$ is a $(n+1)$-tuple of natural numbers, which represent vertex
+indices.
+$
+  sigma = [v_0,dots,v_n] in NN^(n+1)
+  quad quad
+  v_i in NN
+$
+
+In Rust we can simply represent this as the following struct.
 ```rust
 pub type VertexIdx = usize;
 pub struct Simplex {
-  vertices: Vec<VertexIdx>,
+  pub vertices: Vec<VertexIdx>,
+}
+impl Simplex {
+  pub fn new(vertices: Vec<VertexIdx>) -> Self { Self { vertices } }
+  pub fn standard(dim: Dim) -> Self { Self::new((0..dim + 1).collect()) }
+  pub fn single(v: usize) -> Self { Self::new(vec![v]) }
+
+  pub fn nvertices(&self) -> usize { self.vertices.len() }
+  pub fn dim(&self) -> Dim { self.nvertices() - 1 }
 }
 ```
 
-The topology of the mesh will then be captured by the fact that some simplicies
-share the same vertices, meaning that they are somehow topologically connected,
-by being either adjacent or indicent.
+The ordering of the vertices _does_ matter, therefore we really have ordered tuples
+and not just unordered sets. This makes our simplicies combinatorial objects and
+these combinatorics will be heart of our mesh datastructure.
+
+=== Canonical Representation: Sorted Simplex
+
+Even though order does matter, simplicies that share the same vertices,
+are still pretty much the same. For this reason it is helpful,
+to introduce a convention for the canonical representation of a
+simplex given a set of vertices.
+
+Our canonical representative will be the tuple, which as it's vertex indices
+sorted increasingly. We can take any simplex in arbitrary order and
+convert it to it's canonical representation.
+```rust
+pub fn is_sorted(&self) -> bool { self.vertices.is_sorted() }
+pub fn sort(&mut self) { self.vertices.sort_unstable() }
+pub fn sorted(mut self) -> Self { self.sort(); self }
+```
+
+Using this canonical representation, we can easily check
+whether we two simplicies have the same vertex set, meaning
+they are permutations of each other.
+```rust
+pub fn set_eq(&self, other: &Self) -> bool {
+  self.clone().sorted() == other.clone().sorted()
+}
+pub fn is_permutation_of(&self, other: &Self) -> bool {
+  self.set_eq(other)
+}
+```
 
 
 === Orientation
 
-We have seen that with coordinate simplicies due to the properties of the
-determiant the swapping of two vertices changes the orientation.
-This property is still present in our abstract simplicies, where
-the orientation is dependent on the ordering of the vertices.
-For any simplex there are exactly two orientations, which
-are opposites of each other.
+For our coordinate simplicies, we have seen that there are always
+two orientations that a simplex can have.
+We computed the orientation based on the determinant of the spanning vectors,
+but without any coordinates this is no longer possible.
+
+However we can still have a notion of relative orientation.
+We have seen that with coordinate simplicies that swapping of two vertices
+flips the orientation, due to the properties of the determiant.
+The same behavior is present in abstract simplicies, based on the
+ordering of the vertices.
 All permutations can be divided into two equivalence classes.
 Given a reference ordering of the vertices of a simplex,
-we can call these even and odd permutations, relative to this reference.
+we can call these even and odd permutations.
 We call simplicies with even permutations, positively oriented and
 simplicies with odd permutations negatively oriented.
+Therefore every abstract simplex has exactly two orientations, positive
+and negative depending on the ordering of vertices.
 
-Our convention will be to call simplicies with increasing
-indices positively oriented.
-
-=== Skeleton
-
-It's our goal to have a discrete variant of a $n$-manifold.
-We can do this by combining multiple $n$-simplicies.
-These $n$-simplicies are supposed to approximate the topology of the manifold.
-We call such a set of simplicies a skeleton.
-We will be using $n$-skeletons to represent the top-level topology of our domain
-$n$-manifold.
-
+We use as reference ordering our canonical sorted representation.
+We can determine the orientation relative to this sorted permutation,
+by counting the number of swaps necessary to sort the simplex.
+For this we implement a basic bubble sort, that keeps track of the number of swaps.
 ```rust
-pub struct Skeleton {
-  simplicies: Vec<Simplex>,
+pub fn orientation_rel_sorted(&self) -> Sign { self.clone().sort_signed() }
+pub fn sort_signed(&mut self) -> Sign { sort_signed(&mut self.vertices) }
+
+/// Returns the sorted permutation of `a` and the sign of the permutation.
+pub fn sort_signed<T: Ord>(a: &mut [T]) -> Sign {
+  Sign::from_parity(sort_count_swaps(a))
+}
+/// Returns the sorted permutation of `a` and the number of swaps.
+pub fn sort_count_swaps<T: Ord>(a: &mut [T]) -> usize {
+  let mut nswaps = 0;
+
+  let mut n = a.len();
+  if n > 0 {
+    let mut swapped = true;
+    while swapped {
+      swapped = false;
+      for i in 1..n {
+        if a[i - 1] > a[i] {
+          a.swap(i - 1, i);
+          swapped = true;
+          nswaps += 1;
+        }
+      }
+      n -= 1;
+    }
+  }
+  nswaps
 }
 ```
+
+
+Two simplicies that are made up of the same vertices, have equal orientation iff
+their two permutations fall into the same (even or odd) permutation equivalence
+class. Using the transivity of this equivalence relation, we can do the check
+relative to the sorted permutation.
+```rust
+pub fn orientation_eq(&self, other: &Self) -> bool {
+  self.orientation_rel_sorted() == other.orientation_rel_sorted()
+}
+```
+
+=== Subsets
+
+Another important notion is the idea of a subsimplex or a face of a simplex.
+
+A subsimplex is just a subset of a simplex.
+
+We can easily check if a simplex is a subset of another simplex,
+by using the subset relation definition.
+$A subset.eq B <=> (forall a in A => a in B)$
+```rust
+pub fn is_subset_of(&self, other: &Self) -> bool {
+  self.iter().all(|v| other.vertices.contains(v))
+}
+pub fn is_superset_of(&self, other: &Self) -> bool {
+  other.is_subset_of(self)
+}
+```
+
+We can generate all subsets, for which we rely on a
+itertools implementation.
+```rust
+pub fn subsets(&self, sub_dim: Dim) -> impl Iterator<Item = Self> {
+  itertools::Itertools::permutations(self.clone().into_iter(), sub_dim + 1).map(Self::from)
+}
+```
+
+The number of subsimplicies is given by the binomial coefficent.
+```rust
+pub fn nsubsimplicies(dim_cell: Dim, dim_sub: Dim) -> usize {
+  binomial(dim_cell + 1, dim_sub + 1)
+}
+```
+
+
+```rust
+/// Computes local vertex numbers relative to sup.
+pub fn relative_to(&self, sup: &Self) -> Simplex {
+  let local = self
+    .iter()
+    .map(|iglobal| {
+      sup
+        .iter()
+        .position(|iother| iglobal == iother)
+        .expect("Not a subset.")
+    })
+    .collect();
+  Simplex::new(local)
+}
+```
+
+
+=== Substrings
+
+When considering the facets of an $n$-simplex, there are multiple
+permutations with the same set of vertices. It would be nice
+to instead have only one permutation per subset of vertices.
+For this we can instead consider the substrings of the original simplex.
+This then also preservers the vertex order.
+
+We have some methods to check wheter a simplex is a substring of another, based
+on a naive substring check algorithm.
+```rust
+pub fn is_substring_of(&self, other: &Self) -> bool {
+  let sub = self.clone().sorted();
+  let sup = other.clone().sorted();
+  sup
+    .vertices
+    .windows(self.nvertices())
+    .any(|w| w == sub.vertices)
+}
+pub fn is_superstring_of(&self, other: &Self) -> bool {
+  other.is_substring_of(other)
+}
+```
+
+We also have a method for generating all $k$-subsimplicies that
+are substrings of a $n$-simplex. For this we generate all $k+1$-substrings
+of the original $n+1$ vertices.
+We use here the implementation of provided by the itertools crate.
+```rust
+pub fn substrings(&self, sub_dim: Dim) -> impl Iterator<Item = Self> {
+  itertools::Itertools::combinations(self.clone().into_iter(), sub_dim + 1).map(Self::from)
+}
+```
+This implementation is nice, since it provides the substrings in a lexicographical
+order w.r.t. the local indices.
+If the original simplex was sorted, then the substrings are truely lexicographically ordered even
+w.r.t. the global indices.
+
+A very standard operation is to generate all substrings simplicies of the standard simplex.
+We call these the standard subsimplicies.
+```rust
+pub fn standard_subsimps(dim_cell: Dim, dim_sub: Dim) -> impl Iterator<Item = Simplex> {
+  Simplex::standard(dim_cell).substrings(dim_sub)
+}
+```
+
+We can also generate all the various standard subsimplicies for each standard simplex
+dimension in a graded fashion. Something we will be using for generating the standard
+simplicial complex.
+```rust
+pub fn graded_subsimps(dim_cell: Dim) -> impl Iterator<Item = impl Iterator<Item = Simplex>> {
+  (0..=dim_cell).map(move |d| standard_subsimps(dim_cell, d))
+}
+```
+
+We can also go the other directions and generate the superstrings of a given simplex,
+if we are given a root simplex that has both the original simplex and it's substrings as
+substrings.
+```rust
+pub fn superstrings(&self, super_dim: Dim, root: &Self) -> impl Iterator<Item = Self> + use<'_> {
+  root
+    .substrings(super_dim)
+    .filter(|sup| self.is_substring_of(sup))
+}
+```
+
+=== Boundary
+
+There is a special operation related to substring simplicies, called the
+boundary operator.
+The boundary operator can be applied to any $n$-simplex $sigma in NN^(n+1)$ and
+is the fdefined as.
+$
+  diff sigma = sum_i (-1)^i [v_0,dots,hat(v)_i,dots,v_n]
+$
+On the left we have a formal sum of simplicies.
+This formal sum consits of all the $(n-1)$-substrings of a $n$-simplex,
+together with a sign, giving the boundary simplicies a meaningful orientation.
+
+When understanding this formal linear combinations as an element of the
+free albelian group generated by the basis of all simplicies,
+then this operator is linear.
+
+For instance, the boundary of the triangle $sigma = [0,1,2]$ is
+$
+  diff sigma = [1,2] - [0,2] + [0,1] = [0,1] + [1,2] + [2,0]
+$
+which is exactly what you get if you walk along the edges of the triangle.
+
+We introduce an additional convention here regarding the ordering of the boundary simplicies.
+We rely on the `subsimps` implementation that gives us a lexicographically ordered
+subsimps. This is exactly the opposite of the ordered suggested of the sum sign.
+We need to make sure the sign is still the same for all boundary simplicies.
+```rust
+pub fn boundary(&self) -> impl Iterator<Item = SignedSimplex> {
+  let mut sign = Sign::from_parity(self.nvertices() - 1);
+  self.substrings(self.dim() - 1).map(move |simp| {
+    let this_sign = sign;
+    sign.flip();
+    SignedSimplex::new(simp, this_sign)
+  })
+}
+```
+
+
+We can add an extra formal sign symbol to the simplex to obtain
+a signed simplex.
+```rust
+#[derive(Debug, Default, Clone, PartialEq, Eq, Hash)]
+pub struct SignedSimplex {
+  pub simplex: Simplex,
+  pub sign: Sign,
+}
+```
+
+== Simplicial Skeleton
+
+Simplicies are the building blocks of our mesh.
+If we build our mesh from coordinate simplicies, then we have the typical euclidean
+extrinsic description of an embedded mesh, that contains all geometric information. 
+As an embedding the union of these coordinate simplicies really is a
+$n$-dimensional region of $N$-dimensional of euclidean space.
+
+If we, in contrast, build our mesh only from abstract simplicies, then
+we are missing this full geometric information.
+since, abstract simplicies only specify the vertices (as indices) that they are made of.
+This information however fully defines the topology of our discrete
+$n$-manifold.
+If two simplicies share the same vertices, then these are connected, by either
+being adjacent or by being incident.
+This makes the topology purely combinatorial.
+
+In the following sections we study this simplicial topology and implement data
+structures and algorithms related to it.
+
+#v(1cm)
+
+To define the topology of our simplicial $n$-manifold, we just need
+to store the $n$-simplicies that make it up.
+This defines the topology of the mesh at the top-level.
+We call such a collection of $n$-simplicies that share the same vertices a $n$-skeleton.
+
+```rust
+/// A container for sorted simplicies of the same dimension.
+#[derive(Default, Debug, Clone)]
+pub struct Skeleton {
+  /// Every simplex is sorted.
+  simplicies: IndexSet<Simplex>,
+  nvertices: usize,
+}
+```
+
+A skeleton takes care of various responsibilities of a mesh data structure.
+It is a container for all $n$-simplicies.
+It allows for the iteration of all these mesh entities.
+```rust
+impl Skeleton {
+  pub fn iter(&self) -> indexmap::set::Iter<'_, Simplex> {
+    self.simplicies.iter()
+  }
+}
+impl IntoIterator for Skeleton {
+  type Item = Simplex;
+  type IntoIter = indexmap::set::IntoIter<Self::Item>;
+  fn into_iter(self) -> Self::IntoIter {
+    self.simplicies.into_iter()
+  }
+}
+```
+In provides unique identification of the simplicies
+through a global numbering.
+This is a bijective mapping between the simplex index
+and the abstract simplex itself. This represented through this `IndexSet` data structure
+from the `index-map` crate. It has the typical `Vec` funcitonality for retrieving
+a `Simplex` from it's `SimplexIdx`, but it also supports the reverse direction (through hashing)
+of retrieving the index from the `Simplex` itself.
+```rust
+pub fn simplex_by_kidx(&self, idx: KSimplexIdx) -> &Simplex {
+  self.simplicies.get_index(idx).unwrap()
+}
+pub fn kidx_by_simplex(&self, simp: &Simplex) -> KSimplexIdx {
+  self.simplicies.get_index_of(simp).unwrap()
+}
+```
+
+
+The skeleton constructor upholds various gurantees about the simplicies
+that are contained in it.
+```rust
+pub fn new(simplicies: Vec<Simplex>) -> Self {
+  assert!(!simplicies.is_empty(), "Skeleton must not be empty");
+  let dim = simplicies[0].dim();
+  assert!(
+    simplicies.iter().map(|simp| simp.dim()).all(|d| d == dim),
+    "Skeleton simplicies must have same dimension."
+  );
+  assert!(
+    simplicies.iter().all(|simp| simp.is_sorted()),
+    "Skeleton simplicies must be sorted."
+  );
+  let nvertices = if dim == 0 {
+    assert!(simplicies.iter().enumerate().all(|(i, simp)| simp[0] == i));
+    simplicies.len()
+  } else {
+    simplicies
+      .iter()
+      .map(|simp| simp.iter().max().expect("Simplex is not empty."))
+      .max()
+      .expect("Simplicies is not empty.")
+      + 1
+  };
+
+  let simplicies = IndexSet::from_iter(simplicies);
+  Self {
+    simplicies,
+    nvertices,
+  }
+}
+```
+First of all, the skeleton cannot be empty and all simplicies must be of the
+same dimension.
+Furthermore we want to only store canonical representation of simplicies, since
+only then the reverse mapping from simplex to index is useful, because independent
+of the current vertex ordering we can always convert to the canonical representation
+to get the index.
+Lastly we have a special requirement on a 0-skeleton, because there the
+simplicies are exactly just the vertices and we want them sorted.
+
+
+== Simplicial Complex
+
+A $n$-skeleton alone doesn't suffice as data structure for our FEEC implementation,
+since it is missing the topology of the lower-dimensional subsimplicies of our cells.
+But our FE basis functions are associated with these subsimplicies, so we need to represent them.
+
+The skeleton only stores the top-level simplicies $Delta_n (mesh)$, but our FEM library
+also needs to reference the lower-level simplicies $Delta_k (mesh)$, since these are also
+also mesh entities on which the DOFs of our FE space live.
+
+
+Enter the simplicial complex. It stores not only the top-level cells, but also all
+$k$-subsimplicies with $0 <= k <= n$.
+So a simplicial $n$-complex is made up of $n+1$ skeletons of dimensions $0,dots,n$.
+
+Some useful terminology is
+- The $0$-simplicies are called vertices.
+- The $1$-simplicies are called edges.
+- The $2$-simplicies are called faces.
+- The $3$-simplicies are called tets.
+- The $(n-1)$-simplicies are called facets.
+- The $n$-simplicies are called cells.
+
+It will be the main topological data structure that we will, pass as argument
+into all FEEC algorithm routines.
+
+In general a simplicial complex need not have manifold topology, since it can
+represent more general topological spaces beyond manifolds.
+Our PDE framework however needs domains to be manifold.
+For this reason we will restrict our data structure to this. As a consequence
+our simplicial complex will be pure, meaning every $k$-subsimplex is contained in at
+least one cell.
+This will be ensured by the fact, that we will generate our simplicial complex
+from a cell-skeleton and all possible subset simplicies will be present.
+
+However the skeleton itself, might not encode a manifold topology. This would be the case
+if in 2D, we would have more than two triangles meeting at a single edge. Then we don't
+have a surface, but some non-manifold topological space.
+In general the rule is that at each facet has at most 2 cocells. A property we
+will be checking when building the complex.
+
+For a simplicial complex to be manifold, the neighborhood of each vertex (i.e. the
+set of simplices that contain that point as a vertex) needs to be homeomorphic
+to a $n$-ball.
+
+
+```rust
+/// A simplicial manifold complex.
+#[derive(Default, Debug, Clone)]
+pub struct Complex {
+  skeletons: Vec<(Skeleton, SkeletonData)>,
+}
+impl Complex {
+  pub fn dim(&self) -> Dim { self.skeletons.len() - 1 }
+}
+```
+
+One of the main algorithms is to construct a simplicial complex from a top-level
+cell-skeleton. For this we generate the substrings of all lengths of the cells.
+While constructing we also precompute and store certain topological properties,
+such as in which cells the subsimplex is contained.
+Afterwards we do some topology checks, such as verifying that the topology of
+the given skeleton was actually manifold.
+```rust
+pub fn from_cells(cells: Skeleton) -> Self {
+  let dim = cells.dim();
+
+  let mut skeletons = vec![(Skeleton::default(), SkeletonData::default()); dim + 1];
+  skeletons[0].0 = Skeleton::new((0..cells.nvertices()).map(Simplex::single).collect());
+  skeletons[0].1 = SkeletonData(
+    (0..cells.nvertices())
+      .map(|_| SimplexData::default())
+      .collect(),
+  );
+
+  for (icell, cell) in cells.iter().enumerate() {
+    for (dim_sub, (sub_skeleton, sub_skeleton_data)) in skeletons.iter_mut().enumerate() {
+      for sub in cell.substrings(dim_sub) {
+        let (sub_idx, is_new) = sub_skeleton.insert(sub);
+        let sub_data = if is_new {
+          sub_skeleton_data.0.push(SimplexData::default());
+          sub_skeleton_data.0.last_mut().unwrap()
+        } else {
+          &mut sub_skeleton_data.0[sub_idx]
+        };
+        sub_data.cocells.push(SimplexIdx::new(dim, icell));
+      }
+    }
+  }
+
+  // Topology checks.
+  if dim >= 1 {
+    let facet_data = &skeletons[dim - 1].1;
+    for SimplexData { cocells } in &facet_data.0 {
+      let nparents = cocells.len();
+      let is_manifold = nparents == 2 || nparents == 1;
+      assert!(is_manifold, "Topology must be manifold.");
+    }
+  }
+
+  Self { skeletons }
+}
+```
+
+=== Boundary Operator
+
+
+```rust
+/// $diff^k: Delta_k -> Delta_(k-1)$
+pub fn boundary_operator(&self, dim: Dim) -> SparseMatrix {
+  let sups = &self.skeleton(dim);
+
+  if dim == 0 {
+    return SparseMatrix::zeros(0, sups.len());
+  }
+
+  let subs = &self.skeleton(dim - 1);
+  let mut mat = SparseMatrix::zeros(subs.len(), sups.len());
+  for (isup, sup) in sups.handle_iter().enumerate() {
+    let sup_boundary = sup.simplex_set().boundary();
+    for sub in sup_boundary {
+      let sign = sub.sign.as_f64();
+      let isub = subs.get_by_simplex(&sub.simplex).kidx();
+      mat.push(isub, isup, sign);
+    }
+  }
+  mat
+}
+```
+
+Simplicial complexes are objects that are studied in algebraic topology.
+
+One of the major theories relevant to FEEC is homology theory,
+which is rooted in algebraic topology.
+Informally speaking homology is all about identifying holes
+of a topological space, which in our case is our PDE domain manifold
+represented as a simplicial complex.
+
+The presence of holes has influence on the existance and uniqueness of
+PDE solutions and therefore is relevant and needs to be studied.
+
+=== Referencing Simplicies in the Mesh: Simplex Indices and Handles
+
+To identify a simplex inside the mesh, we use an indexing system.
+If the context of a concrete dimension is given,
+than we only need to know the index inside the skeleton, which
+is just an integer
+```rust
+pub type KSimplexIdx = usize;
+```
+If the skeleton context is not given, then we also need to specify
+the dimension, for this we have a fat index, that contains both parts.
+```rust
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct SimplexIdx {
+  pub dim: Dim,
+  pub kidx: KSimplexIdx,
+}
+```
+Using this we reference any simplex in the mesh. Since we are using a `indexmap::IndexSet`
+data structure for storing our simplicies inside a skeleton,
+we are able to go both ways. We can not only retrieve the simplex, given the index,
+but we can also get the index corresponding to a given simplex.
+
+The `Simplex` struct doesn't reference the mesh and therefore doesn't have access
+to any other simplicies. But for doing any kind of topological computations,
+it is helpful to be able to reference other simplicies in the mesh.
+For this reason we introduce a new concept, that represents a simplex
+inside of a mesh. We create a simplex handle, that is like a more sophisticated
+pointer to a simplex, that has a reference to the mesh.
+This allows us to interact with these simplicies inside the mesh very naturally.
+
+```rust
+#[derive(Copy, Clone)]
+pub struct SimplexHandle<'c> {
+  complex: &'c Complex,
+  idx: SimplexIdx,
+}
+```
+Pretty much all functionality that was available on the raw `Simplex` struct,
+is also available on the handle, but here we directly provide any relevant
+mesh information.
+
+For instance the `SimplexHandle::supersimps` gives us all supersimplicies that
+are also contained in the mesh, which are exactly all the superstring simplicies.
+The `Simplex::superstring` method however expects a `root: &Simplex`, which
+gives the context in which we are searching for superstrings. This context
+is directly provided to the method on the handle, since the mesh knows
+the cocells of each simplex, which is here chosen as the root, so we
+don't need to provide this argument ourselves.
+```rust
+  pub fn supersimps(&self, dim_super: Dim) -> Vec<SimplexHandle> {
+    self
+      .cocells()
+      .flat_map(|parent| {
+        self
+          .raw()
+          .superstrings(dim_super, parent.raw())
+          .map(move |sup| self.complex.skeleton(dim_super).get_by_simplex(&sup))
+      })
+      .collect()
+  }
+```
+Furthermore these functions always directly access the `IndexSet` and retreive
+the corresponding index of the simplex and construct a new `SimplexHandle` out of
+it, such that we can easily apply subsequent method calls on the returned objects.
+
+
+== Simplicial Geometry
+
+We have now successfully developed the topological structure of our mesh,
+by combining many abstract simplicies into skeletons and collecting
+all of these skeletons together.
+
+What we are still missing in our mesh data structure now, is any geometry.
+The geometry is missing, since we only store abstract simplicies and not
+something like coordinate simplicies.
+
+This was purposefully done, because we want to seperate the topology from the geometry.
+This allows us to switch between a coordinate-based embedded geometry and a coordinate-free
+intrinsic geometry based on a Riemannian metric.
+
+
+== Coordinate-Based Euclidean Geometry
+
+Let us first quickly look at the familiar coordinate-based euclidean geometry,
+that relies on an embedding.
+All we need is to know the coordinates of all vertices in the mesh.
+```rust
+#[derive(Debug, Clone)]
+pub struct VertexCoords {
+  coord_matrix: na::DMatrix<f64>,
+}
+impl VertexCoords {
+  pub fn dim(&self) -> Dim { self.coord_matrix.nrows() }
+  pub fn nvertices(&self) -> usize { self.coord_matrix.ncols() }
+  pub fn coord(&self, ivertex: VertexIdx) -> CoordRef { self.coord_matrix.column(ivertex) }
+}
+```
+We once again store the coordinates of the vertices in the column of a matrix,
+just as we did for the `SimplexCoords` struct, but here we store the coordinates
+of all the vertices in the mesh, so this is usually a really wide matrix.
+The `dim` function here refrences the dimension of the ambient space. It
+is different from the topology dimension in general.
+
+Here we witness another benefit of seperating topology and geometry, which should be done
+even when there are not multiple geometry representations supported:
+We avoid any redudancy in storing the vertex coordinates. For every vertex we
+store it's coordinate exactly once. This is contrast to use a list of `SimplexCoords`, for
+which there would have been many duplicate coordinates, since the vertices are
+shared by many simplicies. So seperating topology and geometry is always very natural
+even in the case of the typical coordinate-based geometry.
+
+== Coordinate-Free Riemannian Geometry
+
+Now we come to the more interesting coordinate-free Riemannian geometry
+representation, which is an intrinsic discription of the manifold geometry based
+only on a metric.
+This representation is not present in most FE implementations and is a specialy of this library.
+This geometry representation is the one the whole FE library is built around.
+All FE algorithms only depend on this geometry representation and cannot operate
+directly on the coordinate-based geometry. Instead one should always derive a
+coordinate-free representation from the coordinate-based one. This can be easily
+done using a single function call.
+
+Most of the time one starts with a coordiante free representation
+that has been constructed for instance by some mesh generator like gmsh and
+then one computes the intrinisc geometry and forgets about the coordinates
+
+=== Riemannian Metric
+
+To do Riemannian geometry we need a structure over the manifold called
+a *Riemannian metric* $g$. 
+It is a continuous function over the whole manifold, which at each point $p$
+gives us an inner product $g_p: T_p M times T_p M -> RR^+$ on the tangent space
+$T_p M$ at this point $p$.
+It is the analog to the standard euclidean inner product in euclidean geometry.
+While euclidean space is flat and the inner product is the same everywhere, a
+manifold is curved in general and therefore the inner product changes from point
+to point, reflecting the changing geometry.
+
+Given a chart-induced basis $diff/(diff x^1),dots,diff/(diff x^n)$ of the tangent space $T_p M$ at
+a point $p$, the inner product $g_p$ can be represented in this basis using components $(g_p)_(i j) in RR$.
+This is done by plugging in all combinations of basis vectors into the two
+arguments of the bilinear form.
+$
+  (g_p)_(i j) = g_p (restr(diff/(diff x^i))_p,restr(diff/(diff x^j))_p)
+$
+
+We can collect all these components into a matrix $amat(G) in RR^(n times n)$
+$
+  amat(G) = [g_(i j)]_(i,j=1)^(n times n)
+$
+
+This is called a Gram matrix or Gramian and is the discretization of a
+inner product of a linear space, given a basis.
+This matrix doesn't represent a linear map, which would be a $(1,1)$-tensor, but
+instead a bilinear form, which is a $(0,2)$-tensor.
+In the context of Riemannian geometry this is called a *metric tensor*.
+This will be the computational representation of a metric $g_p$ at a point $p$,
+we will be using.
+```rust
+#[derive(Debug, Clone)]
+pub struct RiemannianMetric {
+  metric_tensor: na::DMatrix<f64>,
+  inverse_metric_tensor: na::DMatrix<f64>,
+}
+```
+
+We also store the inverse metric tensor $amat(G)^(-1)$, which gives an inner
+product on the cotangent space, the covectors.
+When using the dual basis the inverse metric tensor represented as a gramian in
+this basis is just the matrix inverse of the metric gramian.
+$
+  amat(G)^(-1) = [g(dif x^i,dif x^j)]_(i,j=1)^(n times n)
+$
+
+$
+  g^(i j) = g(dif x^i,dif x^j)
+$
+
+$
+  g^(i k) g_(k j)​= delta_j^i
+$
+
+=== Deriving the Metric from an Embedding
+
+One can easily derive the Riemannian metric from
+an embedding (or even an immersion) $f: M -> RR^N$. It's differential is a
+function $dif f_p: T_p M -> T_p RR^n$, also called the push-forward and tells
+us how our intrinsic tangential vectors are being stretched when viewed
+geometrically.
+The differential tells us also how to take an inner product of our tangent
+vectors, by inducing a metric
+$
+  g(u, v) = dif f(u) dot dif f(v)
+$
+
+Computationally this differential $dif f$ can be represented, since it is a
+linear map, by a Jacobi Matrix $amat(J)$.
+The metric gramian can then be obtained by a simple matrix product.
+$
+  amat(G) = amat(J)^transp amat(J)
+$
+
+
+=== Regge Metric
+
+The fact that our geometry is piecewise-flat over the cells, means that
+the metric is constant over each cell and changes only from cell to cell.
+
+This piecewise-constant metric is known as the *Regge metric* and comes from
+Regge calculus, a theory for numerical general relativety that is about
+producing simplicial approximations of spacetimes that are solutions to the
+Einstein field equation.
+
+A global way to store the Regge metric is based of edge lengths. Instead
+of giving all vertices a global coordinate, as one would do in extrinsic
+geometry, we just give each edge in the mesh a positive length. Just knowing
+the lengths doesn't tell you the positioning of the mesh in an ambient space
+but it's enough to give the whole mesh it's piecewise-flat geometry.
+Storing only the edge lengths of the whole mesh is a more memory efficent
+representation of the geometry than storing all the metric tensors.
+
+Mathematically this is just a function on the edges to the positive real numbers.
+$
+  l: Delta_1 (mesh) -> RR^+
+$
+that gives each edge $e in Delta_1 (mesh)$ a positive length $l_e in RR^+$.
+
+As an interesting side-note: If we would allow for pseudo-Riemannian manifolds
+with a pseudo-metric, meaning we would drop the positive-definiteness requirement,
+the edge lengths could become zero or even negative.
+
+Computationally we repesent the edge lengths in a single struct
+that has all lengths stored continuously in memory in a nalgebra vector.
+```rust
+pub struct MeshEdgeLengths {
+  vector: na::DVector<f64>,
+}
+```
+Our topological simplicial complex struct gives a global numbering to our
+edges, which then gives us the indices into this nalgebra vector.
+
+Our topological simplicial manifold together with these edge lengths
+gives us a simplicial Riemannian manifold.
+
+One can reconstruct the constant Regge metric on each cell based on the edge lengths
+of this very cell. 
+It can be derived via the law of cosines:
+$
+  amat(G)_(i j) = 1/2 (l_(0 i)^2 + l_(0 j)^2 - l_(i j)^2)
+$
+
+== Higher Order Geometry
+
+The original PDE problem, before discretization, is posed on a smooth manifold, which
+we then discretized in the form of a mesh.
+This smooth manifold has a non-zero curvature everywhere in general.
+This is in contrast to the simplex geometry we've chosen here,
+that approximates the geometry, by a *piecewise-flat geometry* over the cells.
+Each cell is a flat simplex that has no curvature change inside of it.
+
+This manifests as the fact, that for a coordinate-based representation of the
+geometry, the cell is just the convex hull of the vertex coordinates.
+And for the metric-based representation, we have a *piecewise-constant metric*
+over each cell.
+
+This is a piecewise-linear 1st order approximation of the geometry.
+But this is not only possible approximation. Higher-order mesh elements,
+such as quadratic or cubic elements allow for higher accuracy approximations
+of the mesh. In general any order polynomial elements can be used.
+We will restirct ourselves completly to first-order elements in this thesis.
+This approximation is sufficent for us, since it represents an
+*asmissable geometric variational crime*: The order of our FE method concides with
+the order of our mesh geometry; both are linear 1st order.
+This approximation doesn't affect the order of convergence in a negative way,
+and therefore is admissable.
+
+
+== Mesh Generation and Loading
 
 === Triangulation of Manifold
 
@@ -941,288 +1541,6 @@ a terrible result, due to the curse of dimensionality.
 The memory usage is dictated by the same scaling law.
 
 
-=== The Simplicial Complex
-
-A simplicial skeleton contains all information necessary to define the topology
-of the discrete manifold, but it's lacking information on all lower-dimensional
-simplicies contained in it. These are very relevant to the algorithms of FEEC.
-
-Inside of a simplex we can identify subsimplicies.
-For example a triangle $[0,1,2]$ contains the edges $[0,1]$, $[1,2]$ and $[3, 2]$.
-
-Every $n$-simplex $sigma$ contains $k$-subsimplicies $Delta_k (sigma)$ for all $k <= n$.
-For every subset of vertices there exists a subsimplex.
-
-Some useful terminology is
-- The $0$-simplicies are called vertices.
-- The $1$-simplicies are called edges.
-- The $2$-simplicies are called faces.
-- The $3$-simplicies are called tets.
-- The $(n-1)$-simplicies are called facets.
-- The $n$-simplicies are called cells.
-
-The skeleton only stores the top-level simplicies $Delta_n (mesh)$, but our FEM library
-also needs to reference the lower-level simplicies $Delta_k (mesh)$, since these are also
-also mesh entities on which the DOFs of our FE space live.
-
-For this reason we need another concept that extends our skeleton.
-This concept is called a simplicial complex. It contains all
-subsimplicies of all dimensions of a $n$-dimensional skeleton.
-It will be the main topological data structure that we will, pass as argument
-into all FEEC algorithm routines.
-
-```rust
-pub struct TopologyComplex {
-  skeletons: Vec<ComplexSkeleton>,
-}
-pub type ComplexSkeleton = IndexMap<SortedSimplex, SimplexData>;
-```
-
-From a mathematical perspective we have an abstract (no geometry) simplicial complex
-that is a families of abstract simplicies, which are all just ordered finite sets of
-the vertex indices, that are closed under the subset relation.
-This makes the simplical complex are purely combinatorial data strucuture.
-
-In general a simplicial complex need not have a manifold topology, since it can
-represent many more topological spaces beyond manifolds.
-For our PDE framework domains needs to be manifold, so our simplical complex
-data structure will also only support this.
-For a simplicial complex to manifold, the neighborhood of each vertex (i.e. the
-set of simplices that contain that point as a vertex) needs to be homeomorphic
-to a $n$-ball.
-This manifests for instance in the fact that there are at most 2 facets for each cell.
-Another property is that the simplicial complex needs to be pure, meaning
-every $k$-subsimplex is contained in some cell.
-
-== Simplicial Homology
-
-Simplicial complexes are objects that are studied in algebraic topology.
-
-One of the major theories relevant to FEEC is homology theory,
-which is rooted in algebraic topology.
-Informally speaking homology is all about identifying holes
-of a topological space, which in our case is our PDE domain manifold
-represented as a simplicial complex.
-
-The presence of holes has influence on the existance and uniqueness of
-PDE solutions and therefore is relevant and needs to be studied.
-
-
-== Atlas and Differential Structure
-
-Until now we only studied the manifold as a topological space.
-We now start studying additional structure.
-We start with coordinate charts and the atlas.
-
-
-These reference charts define the local coordinate systems we will be working
-in on each cell.
-
-The collection of all local coordinate charts for each cell
-covers the whole manifold, giving us an atlas.
-
-This is a very useful atlas, but it is not helpful to establish a differential
-structure on the manifold, as the overlapping regions are only $(n-1)$-dimensional
-facets and therefore not facilitate a proper $n$-dimensional open neighboorhood.
-Therefore we cannot investigate the smoothness of the transition maps.
-
-Without constructing an another atlas to establish this, we just state here
-that this is a piecewise $C^oo$-smooth manifold. Where the cells are the pieces.
-
-=== Tangent space
-
-Now that we've established the existance of a differentiable structure, we
-can now talk about the tangent bundle and the tangent spaces.
-
-The tangent space $T_p M$ is the linear space of vectors $v in T_p M$,
-that are tangent to the manifold $M$ in some point $p$. Since a manifold
-is curved in general the space of tangent vectors changes from point to point.
-
-Since our manifold is piecewise-flat the tangent space remains the same
-over each cell. So instead of a tangent space $T_p M$ at each point $p$,
-we have a tangent space $T_sigma M$ at each cell $sigma$.
-
-=== Cotangent space
-
-There is a dual space to the tangent space, called the cotangent space.
-The element of which are called covectors. Covectors are basically just
-linear forms on the tangent space.
-$
-  T^*_p M = { alpha mid(|) alpha: T_p M -> RR }
-$
-
-You can think of covectors as measuring (in a sense different from measure theory)
-tangent vectors.
-
-The cotangent space also demands a basis, for which there is once again a very natural choice.
-We use the dual basis defined by
-$
-  dif x^i (diff/(diff x^j)) = delta^i_j
-$
-
-So for our edge basis, we only need to specify how each edge gets measure and by linearity (only scaling)
-this tells us how each vector is measured.
-
-Covectors are *covariant* tensors.
-In exterior algebra we will extend them to multiforms that are rank $k$ fully
-covariant tensors. We will then consider fields of these multiforms that
-vary over the manifold, which we will then call differential forms.
-
-== Simplicial Manifold Geometry
-
-Our PDE domain is a curved manifold, it's curvature is not represented in the topology,
-but in the geometry. Curvature is a infintesimal notion, but for our discrete mesh
-we will need to discretize it.
-The approximation we will make here, is that the mesh is *piecewise-flat* over the cells
-of the mesh, meaning inside of a cell we don't observe any change of curvature.
-So we will not be using any higher-order mesh elements, like quadratic or cubic elements.
-This approximation will be fine for our implementation, as we restrict ourselves to
-1st order finite elements, where the basis functions are only linear.
-For linear finite elements, the piecewise-flat approximation is an *admissable geometric variational crime*,
-meaning it doesn't influence the order of convergence and therefore doesn't have a
-too bad influence on the solution.
-
-There are two ways of doing geometry.
-- *Extrinsic Eucliean Geometry*, and
-- *Intrinsic Riemannian Geometry*
-Formoniq supports both representation of the mesh. This might come as a suprise, since
-initially we stated that we will be solely relying on coordinate-free meshes.
-What we mean by this is that the Finite Element algorithms will only rely on the
-intrinisic geometry. This is still true. But in order to obtain the intrinsic description
-it is helpful to first construct a coordinate representation and then compute
-the intrinsic geometry and to forget about the coordinates then.
-We will see how this works in formoniq.
-
-=== Extrinsic Euclidean Geometry
-
-Extrinsic geometry, is the typical euclidean geometry
-everybody knows, where the manifold is embedded in an ambient space, for example the
-unit sphere inside of $RR^3$. The euclidean ambient space allows one to measure
-angles, lengths and volumes by using the standard euclidean inner product (dot product).
-The embedding gives the manifold global coordinates, which identify the points of the manifold
-using a position $xv in RR^N$. For our piecewise-flat mesh, the necessary geometrical information
-would only be the coordinates of all vertices.
-This is the usual way mesh-based PDE solvers work, by relying on these global coordinates.
-These vertex coordinates can be easily stored in a single struct that lays out
-the vertex coordinates as the columns of a matrix.
-```rust
-pub struct MeshVertexCoords(na::DMatrix<f64>);
-```
-Specifying the $k+1$ vertex coordinates $v_i in RR^N$ of a $k$-simplex defines a $k$-dimensional affine subspace
-of the ambient euclidean space $RR^N$. This is because $k+1$ points always define a $k$-dimensional plane
-uniquely. This makes the geometry piecewise-flat.
-
-
-=== Intrinsic Riemannian Geometry
-
-In contrast to this we have intrinsic Riemannian geometry that souly relies
-on a structure over the manifold called a *Riemannian metric* $g$.
-It is a continuous function over the whole manifold, which at each point $p$
-gives us an inner product $g_p: T_p M times T_p M -> RR^+$ on the tangent space $T_p M$ at this point.
-It is the analog to the euclidean inner product in euclidean geometry. Since the manifold
-is curved the inner product changes from point to point, reflecting the changing geometry.
-
-The Riemannian metric is a fully covariant grade 2 symmetric tensor field.
-Given a basis $diff/(diff x^1),dots,diff/(diff x^n)$ of the tangent space $T_p M$ (induced by a chart)
-the metric at a point $p$ can be fully represented as a matrix $amat(G) in RR^(n times n)$
-by plugging in all combinations of basis vectors into the two arguments of the bilinear form.
-$
-  amat(G) = [g(diff/(diff x^i),diff/(diff x^j))]_(i,j=1)^(n times n)
-$
-
-$
-  g_(i j) = g(diff/(diff x^i),diff/(diff x^j))
-$
-
-
-This is called a gramian matrix and can be used to represent any inner product
-of a vector space, given a basis. We will use gramians to computationally represent
-the metric at a point.
-
-The inverse metric tensor gives an inner product on the cotangent space (covectors).
-When using the dual basis the inverse metric tensor represented as a gramian in this basis is
-just the matrix inverse of the metric gramian.
-$
-  amat(G)^(-1) = [g(dif x^i,dif x^j)]_(i,j=1)^(n times n)
-$
-
-$
-  g^(i j) = g(dif x^i,dif x^j)
-$
-
-$
-  g^(i k) g_(k j)​= delta_j^i
-$
-
-One can easily derive the Riemannian metric from
-an embedding (or even an immersion) $f: M -> RR^N$. It's differential is a
-function $dif f_p: T_p M -> T_p RR^n$, also called the push-forward and tells
-us how our intrinsic tangential vectors are being stretched when viewed
-geometrically.
-The differential tells us also how to take an inner product of our tangent
-vectors, by inducing a metric
-$
-  g(u, v) = dif f(u) dot dif f(v)
-$
-
-Computationally this differential $dif f$ can be represented, since it is a
-linear map, by a Jacobi Matrix $amat(J)$.
-The metric gramian can then be obtained by a simple matrix product.
-$
-  amat(G) = amat(J)^transp amat(J)
-$
-
-
-The Riemannian metric (tensor) is an inner product on the tangent space with
-basis $diff/(diff x^i)$.\
-The inverse metric is an inner product on the cotangent space with basis $dif x^i$.\
-
-The fact that our geometry is piecewise-flat over the cells, means that
-the metric is constant over each cell and changes only from cell to cell.
-
-This piecewise-constant metric is known as the *Regge metric* and comes from
-Regge calculus, a theory for numerical general relativety that is about
-producing simplicial approximations of spacetimes that are solutions to the
-Einstein field equation.
-
-A global way to store the Regge metric is based of edge lengths. Instead
-of giving all vertices a global coordinate, as one would do in extrinsic
-geometry, we just give each edge in the mesh a positive length. Just knowing
-the lengths doesn't tell you the positioning of the mesh in an ambient space
-but it's enough to give the whole mesh it's piecewise-flat geometry.
-Storing only the edge lengths of the whole mesh is a more memory efficent
-representation of the geometry than storing all the metric tensors.
-
-Mathematically this is just a function on the edges to the positive real numbers.
-$
-  f: Delta_1 (mesh) -> RR^+
-$
-that gives each edge $e in Delta_1 (mesh)$ a positive length $f(e) in RR^+$.
-
-As an interesting side-note: If we would allow for pseudo-Riemannian manifolds
-with a pseudo-metric, meaning we would drop the positive-definiteness requirement,
-the edge lengths could become zero or even negative.
-
-Computationally we repesent the edge lengths in a single struct
-that has all lengths stored continuously in memory in a nalgebra vector.
-```rust
-pub struct MeshEdgeLengths {
-  vector: na::DVector<f64>,
-}
-```
-Our topological simplicial complex struct gives a global numbering to our
-edges, which then gives us the indices into this nalgebra vector.
-
-Our topological simplicial manifold together with these edge lengths
-gives us a simplicial Riemannian manifold.
-
-One can reconstruct the constant Regge metric on each cell based on the edge lengths
-of this very cell. 
-It can be derived via the law of cosines:
-$
-  amat(G)_(i j) = 1/2 (e_(0 i)^2 + e_(0 j)^2 - e_(i j)^2)
-$
-
 == Further Functionality
 
 Formoniq implements some further functionality for the mesh,
@@ -1270,51 +1588,229 @@ manifold/src
     └── vtk.rs
 ```
 
-= Exterior Algebra & Basis Representation
+= Exterior Algebra
 
-FEEC makes use of Exterior Calculus and Differential Forms. To develop
-these notions a good starting point is exterior algebra.
-This is just like how one first needs to learn about vector algebra, before
-one can do vector calculus.
+Exterior algebra is to exterior calculus, what vector algebra is to vector
+calculus.\
+In vector calculus we have vector fields $v$, which are functions
+$v: p in Omega |-> v_p$ over the manifold $Omega$ that at each point
+$p$ have a constant vector $v_p in T_p M$ as value.\
+In exterior calculus we have differential forms $omega$, which are functions
+$omega: p in Omega |-> omega_p$ over the manifold $Omega$ that at each point $p$
+have a constant *multiform* $omega_p in wedgespace (T^*_p M)$ as value.
 
-An Exterior Algebra is a construction over a vector space.
-In this section we will consider this vector space $V$ to be fixed
-together with some ordered basis ${e_i}_(i=1)^n$ and it's dual
-space $V^*$ with the dual basis ${epsilon^i}_(i=1)^n$.
-They are the representatives of the tangent space $T_p M$
-and it's basis ${diff/(diff x^i)}_(i=1)^n$
-and the cotangent space $T_p^* M$ and it's basis ${dif x^i}_(i=1)^n$ at some specific point $p$.
+If one were to implement something related to vector calculus
+it is of course crucial to be able to represent vectors in the program.
+This is usually the job of a basic linear algebra library such as Eigen in `C++`
+and nalgebra in Rust.\
+Since we want to implement FEEC, which uses exterior calculus,
+it is crucial, that we are able to represent multi-forms in our programs.
+For this there aren't any established libraries, so we do this ourselves
+and develop a small module.
 
-== Basis Representation
+== Exterior Algebra of Multiforms
 
-To do computations involving exterior algebras we want to create a datastructure.
+In general an exterior algebra $wedgespace (V)$ is a construction over any linear
+space $V$. In this section we want to quickly look at the specific linear
+space we are dealing with when modelling multiforms as element of an
+exterior algebra. But our implementation would work for any finite-dimensional
+real linear space $V$ with a given basis.
 
-If we choose an ordered basis $e_1,dots,e_n$ for our vector space $V$, this directly
-induces a lexicographically ordered basis for each exterior power $wedgespace^k V$.
-E.g. for $n=3,k=2$ we get an exterior basis $e_1 wedge e_2, e_1 wedge e_3, e_2, wedge e_3$.
-We can now just store a list of coefficents for each exterior basis element
-and represent in this way an element of an exterior algebra with just real numbers,
-which is computationally easily represented.
+In our particular case we have the exterior algebra of multiforms $wedgespace
+(T^*_p M)$ and the linear space $V$ is the cotangent space $T^*_p M$ of the
+manifold $M$ at a point $p in M$. It's the dual space $(T_p M)^*$ of the tangent
+space $T_p M$.
+The element of the cotangent space are covectors $a in T^*_p M$, linear
+functionals $a: T_p M -> RR$ on the tangent space.
+The tangent space $T_p M$ has the standard basis ${diff/(diff x^1)}_(i=1)^n$
+induced by some chart $phi: p in M |-> (x_1,dots,x_n)$. This gives rise
+to a dual basis ${dif x^i}_(i=1)^n$ of the cotangent space, defined by
+$dif x^i (diff/(diff x^j)) = delta^i_j$.
 
-
-We have dimensionality given by the binomial coefficent.
+There is a related space, called the space of multivectors $wedgespace (T_p M)$,
+which is the exterior algebra over the tangent space, instead of the cotangent space.
+The space of multivectors and multiforms are dual to each other.
 $
-  dim wedgespace^k (V) = binom(n,k)
+  wedgespace (T^*_p M) =^~ (wedgespace T_p M)^*
 $
+The space of multivectors only plays a minor role in exterior calculus, since it
+is not metric independent, we just wanted to quickly mentioned it here.
 
+It is common practice to call the elements of any exterior algebra
+multivectors, irregardless what the underlying linear space $V$ is.
+This is confusing when working with multiforms, which are dispinct from multivectors.
+To avoid confusion, we therefore just call the elements of the exterior algebra
+exterior elements or multielements, just like we say linear space instead of
+vector space.
 
+== The Numerical Exterior Algebra $wedgespace (RR^n)$
+
+When working with vectors from a finite-dimensional real linear space $V$, then
+we can always represent them computationally, by choosing a basis
+${e_i}_(i=1)^n subset.eq V$.
+This constructs an isomorphism $V =^~ RR^n$, where $n = dim V$.
+This allows us to work with elements $avec(v) in RR^n$, which have real
+values $v_i in RR$ as components, which are the basis coefficents.
+These real numbers are what we can work with on computers and allow
+us to do numerical linear algebra.
+This means that when working with any finite-dimensional real linear space $V$
+on a computer we always just use the linear space $RR^n$.
+
+The same idea can be used to computionally work with exterior algebras.
+By choosing a basis of $V$, we also get an isomorphism on the exterior algebra
+$wedgespace (V) =^~ wedgespace (RR^n)$.
+Therefore our implementation will be we directly on $wedgespace (RR^n)$.
+
+For our space of multiforms, we will be using the standard cotangent basis
+${dif x^i}_(i=1)^n$.
+
+== Representing Exterior Elements
+
+An exterior algebra is a graded algebra.
+$
+  wedgespace (V) = wedgespace^0 (V) plus.circle.big dots.c plus.circle.big wedgespace^n (V)
+$
+Each element $v in wedgespace (V)$
+has some particular exterior grade $k in {1,dots,n}$ and therefore lives in
+a particular exterior power $v in wedgespace^k (V)$.
+We make use of this fact in our implementation, by splitting the representation
+between these various grades.
 ```rust
-pub struct ExteriorElement<V: VarianceMarker> {
+pub type ExteriorGrade = usize;
+```
+
+For representing an element in a particular exterior power $wedgespace^k (V)$,
+we use the fact that, it itself is a linear space in it's own right.
+This means that by choosing a basis of this exterior power,
+we can just use a list of coefficents to represent an exterior element.
+```rust
+/// An element of an exterior algebra.
+#[derive(Debug, Clone)]
+pub struct ExteriorElement {
   coeffs: na::DVector<f64>,
   dim: Dim,
   grade: ExteriorGrade,
-  variance: PhantomData<V>,
+}
+```
+This struct represents an element of $wedgespace^k (RR^n)$ with
+`self.dim` $= n$ and `self.grade` $= k$.
+
+Due to the combinatorics of the anti-symmetric exterior algebra,
+we have $dim wedgespace^k (RR^n) = binom(n,k)$, meaning this is the
+size of our exterior basis as well as the number of coefficents
+`self.coeffs.len()` $= binom(n,k)$.
+
+This exterior basis ${e_I}_(I in cal(I)^n_k)$ is different from the basis
+${e_i}_(i=1)^n$ of the original linear space $V$, but is best subsequently
+constructed from it.
+We do this by creating elementary multielements from the
+exterior product of basis elements.
+$
+  e_I = wedge.big_(j=1)^k e_I_j = e_i_1 wedge dots.c wedge e_i_k
+$
+Here $I = (i_1,dots,i_k)$ is a multiindex, in particular a $k$-index, telling
+us which basis elements to wedge.
+
+Because of the anti-symmetry of the exterior product, there are certain conditions
+on the multiindices $I$ for ${e_I}$ to constitute a meaningful basis.
+First $I$ must not contain any duplicate indices, because otherwise $e_I = 0$
+and second there must not be any permutations of the same index in the
+basis set, otherwise we have linear dependence of the two elements.
+We therefore only consider strictly increasing multiindices $I in cal(I)^n_k$
+and denote there set by
+$cal(I)^n_k = {(i_1,dots,i_k) in NN^k mid(|) 1 <= i_1 < dots.c < i_k <= n}$.
+This is a good convention for supporting arbitrary dimensions.
+
+The basis also needs to be ordered, such that we can know which coefficent
+in `self.coeffs` corresponds to which basis. A natural choice here is
+a lexicographical ordering.
+
+Taking in all of this together we have as exterior basis for $wedge.big^2 (RR^3)$
+the elements $e_1 wedge e_2, e_1 wedge e_3, e_2 wedge e_3$.
+
+== Representing Exterior Terms
+
+It is helpful to represent these exterior basis wedges in our program.
+```rust
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ExteriorTerm {
+  indices: Vec<usize>,
+  dim: Dim,
+}
+impl ExteriorTerm {
+  pub fn dim(&self) -> Dim { self.dim }
+  pub fn grade(&self) -> ExteriorGrade { self.indices.len() }
+}
+```
+This struct allows for any multiindex, even if they are not strictly increasing.
+But we are of course able to check whether this is the case or not and
+then to convert it into a increasing representation plus the permutation sign.
+We call this representation, canonical.
+```rust
+pub fn is_basis(&self) -> bool {
+  self.is_canonical()
+}
+pub fn is_canonical(&self) -> bool {
+  let Some((sign, canonical)) = self.clone().canonicalized() else {
+    return false;
+  };
+  sign == Sign::Pos && canonical == *self
+}
+pub fn canonicalized(mut self) -> Option<(Sign, Self)> {
+  let sign = sort_signed(&mut self.indices);
+  let len = self.indices.len();
+  self.indices.dedup();
+  if self.indices.len() != len {
+    return None;
+  }
+  Some((sign, self))
 }
 ```
 
-We can implement an iterator yielding a wedge term together with it's coefficent.
+In the case of a strictly increasing term, we can also determine the lexicographical
+rank of it in the set of all increasing terms. And the other way constructing
+them from lexrank.
 ```rust
-pub fn basis_iter(&self) -> impl Iterator<Item = (f64, ExteriorBase<V>)> + use<'_, V> {
+pub fn lex_rank(&self) -> usize {
+  assert!(self.is_canonical(), "Must be canonical.");
+  let n = self.dim();
+  let k = self.indices.len();
+
+  let mut rank = 0;
+  for (i, &index) in self.indices.iter().enumerate() {
+    let start = if i == 0 { 0 } else { self.indices[i - 1] + 1 };
+    for s in start..index {
+      rank += binomial(n - s - 1, k - i - 1);
+    }
+  }
+  rank
+}
+
+pub fn from_lex_rank(dim: Dim, grade: ExteriorGrade, mut rank: usize) -> Self {
+  let mut indices = Vec::with_capacity(grade);
+  let mut start = 0;
+  for i in 0..grade {
+    let remaining = grade - i;
+    for x in start..=(dim - remaining) {
+      let c = binomial(dim - x - 1, remaining - 1);
+      if rank < c {
+        indices.push(x);
+        start = x + 1;
+        break;
+      } else {
+        rank -= c;
+      }
+    }
+  }
+  Self::new(indices, dim)
+}
+```
+
+Now that we have this we can implement a useful iterator on our `ExteriorElement`
+struct that allows us to iterate through the basis expansion consiting
+of both the coefficent and the exterior basis element.
+```rust
+pub fn basis_iter(&self) -> impl Iterator<Item = (f64, ExteriorTerm)> + '_ {
   let dim = self.dim;
   let grade = self.grade;
   self
@@ -1323,52 +1819,62 @@ pub fn basis_iter(&self) -> impl Iterator<Item = (f64, ExteriorBase<V>)> + use<'
     .copied()
     .enumerate()
     .map(move |(i, coeff)| {
-      let basis = IndexSet::from_lex_rank(dim, grade, i).ext(dim);
+      let basis = ExteriorTerm::from_lex_rank(dim, grade, i);
       (coeff, basis)
     })
+}
 ```
-
-All standard vector space operations, such
-as multivector addition and scalar multiplication have been implemented as well.
+We then implemented the addition and scalar multiplication of exterior elements
+by just applying the operation to the coefficents.
 
 == Exterior Product
 
+The most obvious operation on a `ExteriorElement` is of coures the exterior product.
+For this we rely on the exterior product of two `ExteriorTerm`s,
+which is just a concatination of the two multiindices.
+```rust
+pub fn wedge(mut self, mut other: Self) -> Self {
+  self.indices.append(&mut other.indices);
+  self
+}
+```
+
+For the `ExteriorElement` we just iterate over the all combinations of
+basis expansion and canonicalize the wedges of the individual terms.
 ```rust
 pub fn wedge(&self, other: &Self) -> Self {
   assert_eq!(self.dim, other.dim);
   let dim = self.dim;
 
   let new_grade = self.grade + other.grade;
-  assert!(new_grade <= dim);
+  if new_grade > dim {
+    return Self::zero(dim, 0);
+  }
 
-  let new_basis_size = binomial(self.dim, new_grade);
+  let new_basis_size = binomial(dim, new_grade);
   let mut new_coeffs = na::DVector::zeros(new_basis_size);
 
   for (self_coeff, self_basis) in self.basis_iter() {
     for (other_coeff, other_basis) in other.basis_iter() {
-      if self_basis == other_basis {
-        continue;
-      }
-      if self_coeff == 0.0 || other_coeff == 0.0 {
-        continue;
-      }
+      let self_basis = self_basis.clone();
 
-      if let Some(merged_basis) = self_basis
-        .indices()
-        .clone()
-        .union(other_basis.indices().clone())
-        .try_into_sorted_signed()
-      {
-        let sign = merged_basis.sign;
-        let merged_basis = merged_basis.set.lex_rank(dim);
-        new_coeffs[merged_basis] += sign.as_f64() * self_coeff * other_coeff;
+      let coeff_prod = self_coeff * other_coeff;
+      if self_basis == other_basis || coeff_prod == 0.0 {
+        continue;
+      }
+      if let Some((sign, merged_basis)) = self_basis.wedge(other_basis).canonicalized() {
+        let merged_basis = merged_basis.lex_rank();
+        new_coeffs[merged_basis] += sign.as_f64() * coeff_prod;
       }
     }
   }
 
-  Self::new(new_coeffs, self.dim, new_grade)
+  Self::new(new_coeffs, dim, new_grade)
 }
+```
 
+And we also implement a big wedge operator, that takes an iterator of factors.
+```rust
 pub fn wedge_big(factors: impl IntoIterator<Item = Self>) -> Option<Self> {
   let mut factors = factors.into_iter();
   let first = factors.next()?;
@@ -1377,43 +1883,42 @@ pub fn wedge_big(factors: impl IntoIterator<Item = Self>) -> Option<Self> {
 }
 ```
 
+== Inner product on Exterior Elements
 
-== Multivectors vs Multiforms
+For the weak formulations of our PDEs we rely on Hilbert spaces that require
+an $L^2$-inner product on differential forms.
+This is derived directly from the point-wise inner product on multiforms.
+Which itself is derived from the inner product on the tangent space,
+which comes from the Riemannian metric at the point.
 
-Space of alternating multilinear forms is an exterior algebra.
-It's the dual exterior algebra.
+This derivation from the inner product on the tangent space $g_p$
+to the inner product on the exterior fiber $wedge.big^k T^*_p (Omega)$, shall
+be computed.
 
-The $k$-th exterior algebra $wedgespace^k (V^*)$ over the dual space $V^*$ of $V$ is
-called the space of $k$-forms.\
-
-== Inner product
-
-
-Given a Riemannian metric $g$, we get an inner product on each fiber
-$wedge.big^k T^*_p (Omega)$.
-
-Computationally this is done using the basis and we compute an extended
-gramian matrix for the inner product on $k$-forms using the determinant.
-This can be further extended to an inner product on #strike[differential] $k$-forms
-with basis $dif x_i_1 wedge dots wedge dif x_i_k$.
+In general given an inner product on the vector space $V$, we can
+derive an inner product on the exterior power $wedgespace^k (V)$.
+The rule is the following:
 $
-  inner(dif x_I, dif x_J) = det [inner(dif x_I_i, dif x_I_j)]_(i,j)^k
+  inner(e_I, e_J) = det [inner(dif x_I_i, dif x_I_j)]_(i,j)^k
 $
 
+Computationally we represent inner products as gramian matrices on some basis.
+This means that we compute an extended gramian matrix as the inner product on
+multielements from the gramian matrix of single elements using the determinant.
 ```rust
 impl RiemannianMetricExt for RiemannianMetric {
   fn multi_form_gramian(&self, k: ExteriorGrade) -> na::DMatrix<f64> {
     let n = self.dim();
-    let combinations: Vec<_> = IndexSubsets::canonical(n, k).collect();
+    let bases: Vec<_> = exterior_bases(n, k).collect();
     let covector_gramian = self.covector_gramian();
 
-    let mut multi_form_gramian = na::DMatrix::zeros(combinations.len(), combinations.len());
+    let mut multi_form_gramian = na::DMatrix::zeros(bases.len(), bases.len());
     let mut multi_basis_mat = na::DMatrix::zeros(k, k);
 
-    for icomb in 0..combinations.len() {
-      let combi = &combinations[icomb];
-      for jcomb in icomb..combinations.len() {
-        let combj = &combinations[jcomb];
+    for icomb in 0..bases.len() {
+      let combi = &bases[icomb];
+      for jcomb in icomb..bases.len() {
+        let combj = &bases[jcomb];
 
         for iicomb in 0..k {
           let combii = combi[iicomb];
@@ -1432,14 +1937,19 @@ impl RiemannianMetricExt for RiemannianMetric {
 }
 ```
 
+We are already at the end of the implementation of the exterior algebra.
+There exist many operations that could be implemented as well, such as the
+Hodge star operator, based on an inner product, but it's just not necessary
+for the rest of the library to have such functionality, therefore we omit it
+here.
 
 = Discrete Differential Forms: Simplicial Cochains and Whitney Forms
 
 In this chapter we will introduce discrete differential forms, which we will
 represent as simplicial cochains.
-We will discuss projection of arbitrary continuum differential forms expressed
-in a global coordinate basis onto cochains and the finite element space of
-whitney forms and it's basis.
+We will discuss some basic cochain calculus and the projection
+and interpolation between arbitrary continuum differential forms expressed
+in a global coordinate basis and discrete cochains / whitney forms.
 
 This chapter corresponds exactly to the functionality of the `whitney` crate.
 
@@ -1780,6 +2290,16 @@ $
 
 We can write a test that verifies our implementation by checking this property.
 
+== Higher-Order Discrete Differential Forms
+
+The theoretical construction of finite element differential forms
+exist for all polynomial degrees.
+We don't support them in this implementation, but this
+a very obvious possible future extension to this implementation.
+One just needs to keep in mind that then higher-order manifold
+approixmations are also needed to not incur any non-admissable geometric
+variational crimes.
+
 
 = Finite Element Methods for Differential Forms
 
@@ -1929,7 +2449,8 @@ depends on the Riemannian metric.
 
 One could also understand the mass bilinear form as a weak hodge star operator.
 $
-  amat(M)_(i j) = integral_Omega phi_j wedge hodge phi_i = inner(phi_j, phi_i)_(L^2 Lambda^k)
+  amat(M)_(i j) = integral_Omega phi_j wedge hodge phi_i
+  = inner(phi_j, phi_i)_(L^2 Lambda^k (Omega))
 $
 
 We will not compute this using the hodge star operator, but instead directly
@@ -1941,17 +2462,18 @@ This can be done by inserting the defintion of a Whitney form (in terms of baryc
 coordiante functions) into the inner product.
 
 $
-  inner(lambda_(i_0 dots i_k), lambda_(j_0 dots j_k))_(L^2)
+  inner(lambda_(i_0 dots i_k), lambda_(j_0 dots j_k))_(L^2 Lambda^k (Omega))
   &= k!^2 sum_(l=0)^k sum_(m=0)^k (-)^(l+m) innerlines(
     lambda_i_l (dif lambda_i_0 wedge dots.c wedge hat(dif lambda)_i_l wedge dots.c wedge dif lambda_i_k),
     lambda_j_m (dif lambda_j_0 wedge dots.c wedge hat(dif lambda)_j_m wedge dots.c wedge dif lambda_j_k),
-  )_(L^2) \
+  )_(L^2 Lambda^k (Omega)) \
   &= k!^2 sum_(l,m) (-)^(l+m) innerlines(
     dif lambda_i_0 wedge dots.c wedge hat(dif lambda)_i_l wedge dots.c wedge dif lambda_i_k,
     dif lambda_j_0 wedge dots.c wedge hat(dif lambda)_j_m wedge dots.c wedge dif lambda_j_k,
-  )
+  )_(Lambda^k)
   integral_K lambda_i_l lambda_j_m vol \
 $
+
 
 We can now make use of the fact that the exterior derivative of the barycentric
 coordinate functions are constant. This makes the wedge big terms also constant.
