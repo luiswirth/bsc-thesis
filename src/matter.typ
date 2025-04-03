@@ -205,7 +205,7 @@ into multiple libraries than built on top of each other.
 We rely on a Cargo workspace to organize the various parts of our library ecosystem.
 
 We have the following crates:
-- multi-index
+- common
 - manifold
 - exterior
 - whitney
@@ -527,20 +527,6 @@ pub fn difbarys(&self) -> na::DMatrix<f64> {
 }
 ```
 
-TODO: consider moving to Riemannian geometry section...
-Using the euclidean geometry of the ambient space, we can compute the metric tensor
-expressed in this tangent space basis to do intrinsic Riemannian geometry.
-$
-  amat(G) = amat(E)^transp amat(E)
-$
-
-```rust
-pub fn metric_tensor(&self) -> RiemannianMetric {
-  let metric = self.spanning_vectors().gramian();
-  RiemannianMetric::new(metric)
-}
-```
-
 Furthermore these spanning vectors define a parallelepiped.
 This parallelipied can be used to compute the volume of the simplex, as a
 fraction $(n!)^(-1)$ of the volume of the parallelepiped, which is computed as
@@ -655,7 +641,7 @@ The ordering of the vertices _does_ matter, therefore we really have ordered tup
 and not just unordered sets. This makes our simplicies combinatorial objects and
 these combinatorics will be heart of our mesh datastructure.
 
-=== Canonical Representation: Sorted Simplex
+=== Sorted Simplicies
 
 Even though order does matter, simplicies that share the same vertices,
 are still pretty much the same. For this reason it is helpful,
@@ -1136,6 +1122,17 @@ pub fn from_cells(cells: Skeleton) -> Self {
 
 === Boundary Operator
 
+We have already seen the boundary operator for single simplicies.
+We can extend this operator to the whole skeleton.
+Here the boundary operator itself is returned as a linear operator
+from the $k$-skeleton to the $k-1$-skeleton.
+It is the signed incidence matrix of the simplicies in the upper skeleton
+in the lower skeleton.
+
+$
+  amat(D) in {-1,0,+1}^(N_(k-1) times N_k)
+$
+
 
 ```rust
 /// $diff^k: Delta_k -> Delta_(k-1)$
@@ -1160,18 +1157,7 @@ pub fn boundary_operator(&self, dim: Dim) -> SparseMatrix {
 }
 ```
 
-Simplicial complexes are objects that are studied in algebraic topology.
-
-One of the major theories relevant to FEEC is homology theory,
-which is rooted in algebraic topology.
-Informally speaking homology is all about identifying holes
-of a topological space, which in our case is our PDE domain manifold
-represented as a simplicial complex.
-
-The presence of holes has influence on the existance and uniqueness of
-PDE solutions and therefore is relevant and needs to be studied.
-
-=== Referencing Simplicies in the Mesh: Simplex Indices and Handles
+=== Simplicies in the Mesh: Simplex Indices and Handles
 
 To identify a simplex inside the mesh, we use an indexing system.
 If the context of a concrete dimension is given,
@@ -1253,17 +1239,18 @@ This allows us to switch between a coordinate-based embedded geometry and a coor
 intrinsic geometry based on a Riemannian metric.
 
 
-== Coordinate-Based Euclidean Geometry
+== Coordinate-Based Ambient Euclidean Geometry
 
 Let us first quickly look at the familiar coordinate-based euclidean geometry,
-that relies on an embedding.
+that relies on an embedding. It's an extrinsic description of the geometry
+of the manifold from the perspective of the ambient space.
 All we need is to know the coordinates of all vertices in the mesh.
 ```rust
 #[derive(Debug, Clone)]
-pub struct VertexCoords {
+pub struct MeshVertexCoords {
   coord_matrix: na::DMatrix<f64>,
 }
-impl VertexCoords {
+impl MeshVertexCoords {
   pub fn dim(&self) -> Dim { self.coord_matrix.nrows() }
   pub fn nvertices(&self) -> usize { self.coord_matrix.ncols() }
   pub fn coord(&self, ivertex: VertexIdx) -> CoordRef { self.coord_matrix.column(ivertex) }
@@ -1283,36 +1270,97 @@ which there would have been many duplicate coordinates, since the vertices are
 shared by many simplicies. So seperating topology and geometry is always very natural
 even in the case of the typical coordinate-based geometry.
 
-== Coordinate-Free Riemannian Geometry
+=== Coordinate Function Functors & Barycentric Quadrature
 
-Now we come to the more interesting coordinate-free Riemannian geometry
-representation, which is an intrinsic discription of the manifold geometry based
-only on a metric.
-This representation is not present in most FE implementations and is a specialy of this library.
-This geometry representation is the one the whole FE library is built around.
+Before differential geometry, calculus was done on euclidean space $RR^n$
+instead of on abstract manifolds. Euclidean space always has global coordinates.
+A point $avec(p) in RR^n$ is exactly it's own global coordinate $avec(x) = avec(p)$.
+This means that functions $f: p in Omega |-> f(p) in RR$ that take a point $avec(p)$
+of the space $Omega$ to a real number $f(avec(p))$, are usually specified by an evaluation rule
+$f: avec(x) in Omega |-> f(avec(x)) in RR$ based on coordinates, such as for example
+$f(avec(x)) = sin(x_1)$.
+This is a very useful and general representation of a function that
+relies solely on point evaluation and is very common in numerical codes.
+In programming languages this type of object is referred to as a functor.
+Functors are types that provide an evaluation operator.
+
+On manifolds the story is a little different. They admit no global coordinates
+in general. But instead we can rely on ambient coordinates $x in RR^N$, if an
+embedding is available, and work with functions defined on them.
+
+One common use-case that is also relevant to us for a such a point-evaluable
+functor is numerical integration of a real valued function via numerical
+quadrature.
+Since we are doing only 1st order FEEC, we restrict ourselves to
+quadrature rules of order 1, that integrate affine-linear functions exactly.
+The simplest of these that work on arbitrary-dimensional simplicies is
+the barycentric quadrature rule, that just does a single evaluation
+of the function at the barycenter of the simplex and multiples this
+value by the volume of the simplex, giving us a approximation of the
+integral.
+$
+  integral_sigma f vol approx |sigma| f(avec(m)_sigma)
+$
+
+We implement a simple routine in Rust that does exactly.
+```rust
+pub fn barycentric_quadrature<F>(f: &F, simplex: &SimplexCoords) -> f64
+where
+  F: Fn(CoordRef) -> f64,
+{
+  simplex.vol() * f(simplex.barycenter().as_view())
+}
+```
+
+Here `F` is a generic type, that implements the `Fn` trait, that
+supplies an evaluation operator, turning `F` into a functor.
+This trait is most prominently implemented by closures (analogs of lambdas in `C++`).
+
+This scalar quadrature can then be used for integrating
+coordinate differential form closures, since after evaluating
+the differential form on the tangent vectors, we obtain a simple
+scalar function.
+$
+  avec(x) in RR^N |-> omega_avec(x) (diff_1,dots,diff_n) in RR
+$
+
+
+== Coordinate-Free Intrinsic Riemannian Geometry
+
+The coordinate-based Euclidean geometry we've seen so far, is what
+is commonly used in almost all FEM implementations.
+In our implementation we go one step further and abstract away
+the coordinates of the manifold and instead make use of 
+coordinate-free Riemannian geometry for all of our FE algorithms.
 All FE algorithms only depend on this geometry representation and cannot operate
 directly on the coordinate-based geometry. Instead one should always derive a
-coordinate-free representation from the coordinate-based one. This can be easily
-done using a single function call.
-
-Most of the time one starts with a coordiante free representation
-that has been constructed for instance by some mesh generator like gmsh and
-then one computes the intrinisc geometry and forgets about the coordinates
+coordinate-free representation from the coordinate-based one.
+Most of the time one starts with a coordiante-based representation
+that has been constructed by some mesh generator like gmsh and
+then one computes the intrinsic geometry and forgets about the coordinates.
+Our library supports this exactly this functionality.
 
 === Riemannian Metric
 
-To do Riemannian geometry we need a structure over the manifold called
-a *Riemannian metric* $g$. 
+Riemannian geometry is an intrinsic description of the manifold,
+that doesn't need an ambient space at all. It relies purely on a structure
+over the manifold called a *Riemannian metric* $g$.
+
 It is a continuous function over the whole manifold, which at each point $p$
 gives us an inner product $g_p: T_p M times T_p M -> RR^+$ on the tangent space
 $T_p M$ at this point $p$.
-It is the analog to the standard euclidean inner product in euclidean geometry.
+It is the analog to the standard euclidean inner product (dot product) in
+euclidean geometry. The inner product on tangent vectors allows one to measure
+lengths $norm(v)_g = sqrt(g(v, v))$ angles $phi(v, w) = arccos((g_p (v, w))/(norm(v)_g norm(w)_g))$.
 While euclidean space is flat and the inner product is the same everywhere, a
 manifold is curved in general and therefore the inner product changes from point
 to point, reflecting the changing geometry.
 
-Given a chart-induced basis $diff/(diff x^1),dots,diff/(diff x^n)$ of the tangent space $T_p M$ at
-a point $p$, the inner product $g_p$ can be represented in this basis using components $(g_p)_(i j) in RR$.
+
+Given a basis $diff/(diff x^1),dots,diff/(diff x^n)$ of the tangent space
+$T_p M$ at a point $p$, induced by a chart map
+$phi: p in U subset.eq M |-> (x_1,dots,x_n)$, the inner product $g_p$ can be
+represented in this basis using components $(g_p)_(i j) in RR$.
 This is done by plugging in all combinations of basis vectors into the two
 arguments of the bilinear form.
 $
@@ -1329,64 +1377,117 @@ inner product of a linear space, given a basis.
 This matrix doesn't represent a linear map, which would be a $(1,1)$-tensor, but
 instead a bilinear form, which is a $(0,2)$-tensor.
 In the context of Riemannian geometry this is called a *metric tensor*.
-This will be the computational representation of a metric $g_p$ at a point $p$,
-we will be using.
+
+The inverse metric $g^(-1)_p$ at a point $p$ provides an inner product
+$g^(-1)_p: T^*_p M times T^*_p M -> RR^+$ on the
+cotangent space $T^*_p M$. It can be obtained by computing the inverse
+gramian matrix $amat(G)^(-1)$, which is then a new gramian matrix representing
+the inner product on the dual basis of covectors.
+$
+  amat(G)^(-1) = [g(dif x^i,dif x^j)]_(i,j=1)^(n times n)
+$
+The inverse metric is very important for us, since differential forms are
+covariant tensors, therefore they are measured by the inverse metric tensor.
+
+We introduce a struct to represent the Riemannian metric at a particular point
+as the gramian matrix and inverse gramian matrix.
 ```rust
 #[derive(Debug, Clone)]
 pub struct RiemannianMetric {
   metric_tensor: na::DMatrix<f64>,
   inverse_metric_tensor: na::DMatrix<f64>,
 }
+impl RiemannianMetric {
+  pub fn dim(&self) -> Dim { self.metric_tensor.nrows() }
+  pub fn inner(&self, i: usize, j: usize) -> f64 { self.metric_tensor[(i, j)] }
+  pub fn length_sq(&self, i: usize) -> f64 { self.inner(i, i) }
+  pub fn length(&self, i: usize) -> f64 { self.length_sq(i).sqrt() }
+  pub fn angle_cos(&self, i: usize, j: usize) -> f64 {
+    self.inner(i, j) / self.length(i) / self.length(j)
+  }
+  pub fn angle(&self, i: usize, j: usize) -> f64 { self.angle_cos(i, j).acos() }
 ```
 
-We also store the inverse metric tensor $amat(G)^(-1)$, which gives an inner
-product on the cotangent space, the covectors.
-When using the dual basis the inverse metric tensor represented as a gramian in
-this basis is just the matrix inverse of the metric gramian.
+The dot product is the standard inner product on flat Euclidean space.
+The standard basis vectors are orthonormal w.r.t. this inner product.
+Therefore the gram matrix (and it's inverse) are just identity matrices.
+```rust
+/// Orthonormal flat euclidean metric.
+pub fn standard(dim: Dim) -> Self {
+  let identity = na::DMatrix::identity(dim, dim);
+  let metric_tensor = identity.clone();
+  let inverse_metric_tensor = identity;
+  Self { metric_tensor, inverse_metric_tensor, }
+}
+```
+
+=== Deriving the Metric from an Immersion
+
+One can easily derive the Riemannian metric from an immersion $f: M -> RR^N$
+into an ambient space $RR^N$.
+It's differential is a function $dif f_p: T_p M -> T_p RR^N$, also called
+the push-forward and tells us how our intrinsic tangential vectors are being
+placed into the ambient space, giving them an extrinsic geometry.
+
+This immersion then induces a metric, that describes the same geometry
+intrinsically. For this we just take the standard euclidean inner product
+of our immersed tangent vectors. This then inherits the extrinsic ambient geometry
+and represents it intrinsically.
 $
-  amat(G)^(-1) = [g(dif x^i,dif x^j)]_(i,j=1)^(n times n)
+  g_p (u, v) = dif f_p (u) dot dif f_p (v)
 $
 
-$
-  g^(i j) = g(dif x^i,dif x^j)
-$
-
-$
-  g^(i k) g_(k j)​= delta_j^i
-$
-
-=== Deriving the Metric from an Embedding
-
-One can easily derive the Riemannian metric from
-an embedding (or even an immersion) $f: M -> RR^N$. It's differential is a
-function $dif f_p: T_p M -> T_p RR^n$, also called the push-forward and tells
-us how our intrinsic tangential vectors are being stretched when viewed
-geometrically.
-The differential tells us also how to take an inner product of our tangent
-vectors, by inducing a metric
-$
-  g(u, v) = dif f(u) dot dif f(v)
-$
-
-Computationally this differential $dif f$ can be represented, since it is a
-linear map, by a Jacobi Matrix $amat(J)$.
-The metric gramian can then be obtained by a simple matrix product.
+Computationally this differential $dif f_p$ can be represented, given a basis,
+since it is a linear map, by a Jacobi Matrix $amat(J)$.
+The metric is the then the gramian matrix of the Jacobian.
 $
   amat(G) = amat(J)^transp amat(J)
 $
 
+The Jacobian has as columns our immersed basis tangent vectors, therefore
+really we just need these to compute a metric.
+```rust
+pub fn from_tangent_basis(basis: na::DMatrix<f64>) -> Self {
+  let metric_tensor = basis.gramian();
+  Self::new(metric_tensor)
+}
+impl DMatrixExt for na::DMatrix<f64> {
+  fn gramian(&self) -> Self {
+    self.transpose() * self
+  }
+  // ...omitted
+}
+```
 
-=== Regge Metric
+=== Intrinsic Simplicial Geometry & Regge Metric
 
-The fact that our geometry is piecewise-flat over the cells, means that
-the metric is constant over each cell and changes only from cell to cell.
+So far our discussion of Riemannian geometry hasn't referenced
+our mesh. But we are of course doing geometry on a simplicial manifold.
 
-This piecewise-constant metric is known as the *Regge metric* and comes from
-Regge calculus, a theory for numerical general relativety that is about
-producing simplicial approximations of spacetimes that are solutions to the
-Einstein field equation.
+We have seen with our coordinate simplicies that our geometry is piecewise-flat
+over the cells. This means that our metric is constant over each cell
+and changes only from one cell to another.
 
-A global way to store the Regge metric is based of edge lengths. Instead
+This piecewise-constant metric over the simplicial mesh is known as the *Regge
+metric* and comes from Regge calculus, a theory for numerical general relativety
+that is about producing simplicial approximations of spacetimes that are
+solutions to the Einstein field equation.
+
+Our coordinate simplicies are an immersion of an abstract simplex
+and as such, we can compute the corresponding constant metric tensor on it.
+The spanning vectors constitute a basis of the tangent vectors.
+```rust
+impl SimplexCoords {
+  pub fn metric_tensor(&self) -> RiemannianMetric {
+    RiemannianMetric::from_tangent_basis(self.spanning_vectors())
+  }
+}
+```
+
+But just like storing coordinate simplicies is a memory-inefficent representation
+of the extrinsic geometry, storing the metric tensor on each cell
+is also inefficent.
+A global way to store the Regge metric is based on edge lengths. Instead
 of giving all vertices a global coordinate, as one would do in extrinsic
 geometry, we just give each edge in the mesh a positive length. Just knowing
 the lengths doesn't tell you the positioning of the mesh in an ambient space
@@ -1399,10 +1500,6 @@ $
   l: Delta_1 (mesh) -> RR^+
 $
 that gives each edge $e in Delta_1 (mesh)$ a positive length $l_e in RR^+$.
-
-As an interesting side-note: If we would allow for pseudo-Riemannian manifolds
-with a pseudo-metric, meaning we would drop the positive-definiteness requirement,
-the edge lengths could become zero or even negative.
 
 Computationally we repesent the edge lengths in a single struct
 that has all lengths stored continuously in memory in a nalgebra vector.
@@ -1417,12 +1514,62 @@ edges, which then gives us the indices into this nalgebra vector.
 Our topological simplicial manifold together with these edge lengths
 gives us a simplicial Riemannian manifold.
 
-One can reconstruct the constant Regge metric on each cell based on the edge lengths
-of this very cell. 
-It can be derived via the law of cosines:
+Our FE algorithms than usually take two arguments.
+```rust
+fn fe_algorithm(topology: &Complex, geometry: &MeshEdgeLengths)
+```
+
+We can derive a `MeshEdgeLengths` struct from a `MeshVertexCoords` struct.
+```rust
+impl MeshVertexCoords {
+  pub fn to_edge_lengths(&self, topology: &Complex) -> MeshEdgeLengths {
+    let edges = topology.edges();
+    let mut edge_lengths = na::DVector::zeros(edges.len());
+    for (iedge, edge) in edges.set_iter().enumerate() {
+      let [vi, vj] = edge.clone().try_into().unwrap();
+      let length = (self.coord(vj) - self.coord(vi)).norm();
+      edge_lengths[iedge] = length;
+    }
+    MeshEdgeLengths::new(edge_lengths)
+  }
+}
+```
+
+We can then restrict these edge lengths to just a single simplex and obtain
+a `SimplexEdgeLengths` struct. From this we can directly compute the metric
+gramian, from the law of cosines.
 $
   amat(G)_(i j) = 1/2 (l_(0 i)^2 + l_(0 j)^2 - l_(i j)^2)
 $
+
+```rust
+/// Builds regge metric tensor from edge lenghts of simplex.
+pub fn compute_regge_metric(&self) -> RiemannianMetric {
+  let dim = self.dim();
+  let nvertices = dim + 1;
+  let mut metric_tensor = na::DMatrix::zeros(dim, dim);
+  for i in 0..dim {
+    metric_tensor[(i, i)] = self[i].powi(2);
+  }
+  for i in 0..dim {
+    for j in (i + 1)..dim {
+      let l0i = self[i];
+      let l0j = self[j];
+
+      let vi = i + 1;
+      let vj = j + 1;
+      let eij = lex_rank(&[vi, vj], nvertices);
+      let lij = self[eij];
+
+      let val = 0.5 * (l0i.powi(2) + l0j.powi(2) - lij.powi(2));
+
+      metric_tensor[(i, j)] = val;
+      metric_tensor[(j, i)] = val;
+    }
+  }
+  RiemannianMetric::new(metric_tensor)
+}
+```
 
 == Higher Order Geometry
 
@@ -1452,29 +1599,22 @@ and therefore is admissable.
 
 == Mesh Generation and Loading
 
-=== Triangulation of Manifold
+=== Tensor-Product Domain Meshing
 
-The procedure of producing a skeleton from a manifold is called
-triangulation.
-The name stems from the 2D case, where a surface (2D topology)
-is approximated by a collection of triangles.
-We aren't too concerned with triangulating manifolds in this thesis
-as we mostly assume that we are already given such a triangulation.
-
-Nontheless formoniq features a triangulation algorithm for arbitrary dimensional
+Formoniq features a meshing algorithm for arbitrary dimensional
 tensor-product domains. These domains are $n$-dimensional cartesian products $[0,1]^n$
 of the unit interval $[0,1]$. The simplicial skeleton will be computed based on
 a cartesian grid that subdivides the domain into $l^n$ many $n$-cubes, which are
 generalizations of squares and cubes. Here $l$ is the number of subdivisions per axis.
-To obtain a simplicial skeleton, we need to split each $n$-cube into non-overlapping simplicies
-that make us it's volume. In 2D it's very natural to split a square into two triangles
+To obtain a simplicial skeleton, we need to split each $n$-cube into non-overlapping $n$-simplicies
+that make up it's volume. In 2D it's very natural to split a square into two triangles
 of equal volume. This can be generalized to higher dimensions. The trivial
 triangulation of a $n$-cube into $n!$ simplicies is based on the $n!$ many permutations
 of the $n$ coordinate axes.
 
-The $n$-cube has $2^n$ vertices, which can all be identified using a multi-indicies
+The $n$-cube has $2^n$ vertices, which can all be identified using multiindicies
 $
-  V = {(i_1,dots,i_n) mid(|) i_j in {0,1}}
+  V = {0,1}^n = {(i_1,dots,i_n) mid(|) i_j in {0,1}}
 $
 All $n!$ simplicies will be based on this vertex base set. To generate the list
 of vertices of the simplex, we start at the origin vertex $v_0 = 0 = (0)^n$.
@@ -1540,15 +1680,29 @@ $l^n$ cubes. So the overall computational complexity is dominated by $cal(O)(l^n
 a terrible result, due to the curse of dimensionality.
 The memory usage is dictated by the same scaling law.
 
+=== Gmsh Import
 
-== Further Functionality
+The formoniq manifold crate can read gmsh `.msh` files and turn them
+into a simplicial complex that we can work on.
+This is thanks to the `gmshio` crate.
 
-Formoniq implements some further functionality for the mesh,
-such as importing and exporting meshes.
-It supports loading gmsh meshes, as well as `.obj` meshes.
-We are also consider implementing Visualization Toolkit (VTK) export
-functionality.
+```rust
+pub fn gmsh2coord_cells(bytes: &[u8]) -> (Skeleton, MeshVertexCoords)
+```
 
+=== Blender IO: OBJ and MDD
+
+The formoniq manifold crate supports reading and writing of file formats related to blender,
+for the easy visualization of the 2-manifold embedded in $RR^3$.
+
+These two formats are OBJ and MDD. Thanks to the simplicity of these formats
+we don't rely on any external libraries, but just have very basic
+custom readers and writers for these.
+
+=== Custom Format for Arbitrary Dimensions
+
+We also have a maximally simple custom file format that works
+great for arbitrary dimensional manifolds.
 
 == Manifold Crate
 
@@ -1604,8 +1758,8 @@ it is of course crucial to be able to represent vectors in the program.
 This is usually the job of a basic linear algebra library such as Eigen in `C++`
 and nalgebra in Rust.\
 Since we want to implement FEEC, which uses exterior calculus,
-it is crucial, that we are able to represent multi-forms in our programs.
-For this there aren't any established libraries, so we do this ourselves
+it is crucial, that we are able to represent multiforms in our program.
+For this there aren't any established libraries. So we do this ourselves
 and develop a small module.
 
 == Exterior Algebra of Multiforms
@@ -1616,25 +1770,25 @@ space we are dealing with when modelling multiforms as element of an
 exterior algebra. But our implementation would work for any finite-dimensional
 real linear space $V$ with a given basis.
 
-In our particular case we have the exterior algebra of multiforms $wedgespace
-(T^*_p M)$ and the linear space $V$ is the cotangent space $T^*_p M$ of the
-manifold $M$ at a point $p in M$. It's the dual space $(T_p M)^*$ of the tangent
-space $T_p M$.
-The element of the cotangent space are covectors $a in T^*_p M$, linear
-functionals $a: T_p M -> RR$ on the tangent space.
+In our particular case we have the exterior algebra of alternating multilinear
+forms $wedgespace (T^*_p M)$. Here the linear space $V$ is the cotangent space
+$T^*_p M$ of the manifold $M$ at a point $p in M$. It's the dual space $(T_p
+M)^*$ of the tangent space $T_p M$.
+The elements of the cotangent space are covectors $a in T^*_p M$, which are
+linear functionals $a: T_p M -> RR$ on the tangent space.
 The tangent space $T_p M$ has the standard basis ${diff/(diff x^1)}_(i=1)^n$
-induced by some chart $phi: p in M |-> (x_1,dots,x_n)$. This gives rise
-to a dual basis ${dif x^i}_(i=1)^n$ of the cotangent space, defined by
-$dif x^i (diff/(diff x^j)) = delta^i_j$.
+induced by some chart map $phi: p in U subset.eq M |-> (x_1,dots,x_n)$. This
+gives rise to a dual basis ${dif x^i}_(i=1)^n$ of the cotangent space, defined
+by $dif x^i (diff/(diff x^j)) = delta^i_j$.
 
 There is a related space, called the space of multivectors $wedgespace (T_p M)$,
 which is the exterior algebra over the tangent space, instead of the cotangent space.
 The space of multivectors and multiforms are dual to each other.
 $
-  wedgespace (T^*_p M) =^~ (wedgespace T_p M)^*
+  wedgespace (T^*_p M) =^~ (wedgespace (T_p M))^*
 $
 The space of multivectors only plays a minor role in exterior calculus, since it
-is not metric independent, we just wanted to quickly mentioned it here.
+is not metric independent. We just wanted to quickly mentioned it here.
 
 It is common practice to call the elements of any exterior algebra
 multivectors, irregardless what the underlying linear space $V$ is.
@@ -1668,21 +1822,25 @@ ${dif x^i}_(i=1)^n$.
 
 An exterior algebra is a graded algebra.
 $
-  wedgespace (V) = wedgespace^0 (V) plus.circle.big dots.c plus.circle.big wedgespace^n (V)
+  wedgespace (RR^n) = wedgespace^0 (RR^n) plus.circle.big dots.c plus.circle.big wedgespace^n (RR^n)
 $
-Each element $v in wedgespace (V)$
+Each element $v in wedgespace (RR^n)$
 has some particular exterior grade $k in {1,dots,n}$ and therefore lives in
-a particular exterior power $v in wedgespace^k (V)$.
+a particular exterior power $v in wedgespace^k (RR^n)$.
 We make use of this fact in our implementation, by splitting the representation
 between these various grades.
 ```rust
 pub type ExteriorGrade = usize;
 ```
 
-For representing an element in a particular exterior power $wedgespace^k (V)$,
-we use the fact that, it itself is a linear space in it's own right.
-This means that by choosing a basis of this exterior power,
-we can just use a list of coefficents to represent an exterior element.
+For representing an element in a particular exterior power
+$wedgespace^k (RR^n)$, we use the fact that, it itself is a linear space in it's
+own right.
+Due to the combinatorics of the anti-symmetric exterior algebra, we have $dim
+wedgespace^k (RR^n) = binom(n,k)$.
+This means that by choosing a basis ${e_I}$ of this exterior power, we can just
+use a list of $binom(n,k)$ coefficents to represent an exterior element, by
+using the isomorphism $wedgespace^k (RR^n) =^~ RR^binom(n,k)$.
 ```rust
 /// An element of an exterior algebra.
 #[derive(Debug, Clone)]
@@ -1692,13 +1850,8 @@ pub struct ExteriorElement {
   grade: ExteriorGrade,
 }
 ```
-This struct represents an element of $wedgespace^k (RR^n)$ with
-`self.dim` $= n$ and `self.grade` $= k$.
-
-Due to the combinatorics of the anti-symmetric exterior algebra,
-we have $dim wedgespace^k (RR^n) = binom(n,k)$, meaning this is the
-size of our exterior basis as well as the number of coefficents
-`self.coeffs.len()` $= binom(n,k)$.
+This struct represents an element `self` $in wedgespace^k (RR^n)$ with
+`self.dim` $= n$, `self.grade` $= k$ and `self.coeffs.len()` $= binom(n,k)$.
 
 This exterior basis ${e_I}_(I in cal(I)^n_k)$ is different from the basis
 ${e_i}_(i=1)^n$ of the original linear space $V$, but is best subsequently
@@ -1717,7 +1870,7 @@ First $I$ must not contain any duplicate indices, because otherwise $e_I = 0$
 and second there must not be any permutations of the same index in the
 basis set, otherwise we have linear dependence of the two elements.
 We therefore only consider strictly increasing multiindices $I in cal(I)^n_k$
-and denote there set by
+and denote their set by
 $cal(I)^n_k = {(i_1,dots,i_k) in NN^k mid(|) 1 <= i_1 < dots.c < i_k <= n}$.
 This is a good convention for supporting arbitrary dimensions.
 
@@ -1725,8 +1878,8 @@ The basis also needs to be ordered, such that we can know which coefficent
 in `self.coeffs` corresponds to which basis. A natural choice here is
 a lexicographical ordering.
 
-Taking in all of this together we have as exterior basis for $wedge.big^2 (RR^3)$
-the elements $e_1 wedge e_2, e_1 wedge e_3, e_2 wedge e_3$.
+Taking in all of this together we for example have as exterior basis for
+$wedge.big^2 (RR^3)$ the elements $e_1 wedge e_2, e_1 wedge e_3, e_2 wedge e_3$.
 
 == Representing Exterior Terms
 
@@ -1807,7 +1960,7 @@ pub fn from_lex_rank(dim: Dim, grade: ExteriorGrade, mut rank: usize) -> Self {
 ```
 
 Now that we have this we can implement a useful iterator on our `ExteriorElement`
-struct that allows us to iterate through the basis expansion consiting
+struct that allows us to iterate through the basis expansion consisting
 of both the coefficent and the exterior basis element.
 ```rust
 pub fn basis_iter(&self) -> impl Iterator<Item = (f64, ExteriorTerm)> + '_ {
@@ -1833,43 +1986,47 @@ The most obvious operation on a `ExteriorElement` is of coures the exterior prod
 For this we rely on the exterior product of two `ExteriorTerm`s,
 which is just a concatination of the two multiindices.
 ```rust
-pub fn wedge(mut self, mut other: Self) -> Self {
-  self.indices.append(&mut other.indices);
-  self
+impl ExteriorTerm {
+  pub fn wedge(mut self, mut other: Self) -> Self {
+    self.indices.append(&mut other.indices);
+    self
+  }
 }
 ```
 
 For the `ExteriorElement` we just iterate over the all combinations of
 basis expansion and canonicalize the wedges of the individual terms.
 ```rust
-pub fn wedge(&self, other: &Self) -> Self {
-  assert_eq!(self.dim, other.dim);
-  let dim = self.dim;
+impl ExteriorElement {
+  pub fn wedge(&self, other: &Self) -> Self {
+    assert_eq!(self.dim, other.dim);
+    let dim = self.dim;
 
-  let new_grade = self.grade + other.grade;
-  if new_grade > dim {
-    return Self::zero(dim, 0);
-  }
+    let new_grade = self.grade + other.grade;
+    if new_grade > dim {
+      return Self::zero(dim, 0);
+    }
 
-  let new_basis_size = binomial(dim, new_grade);
-  let mut new_coeffs = na::DVector::zeros(new_basis_size);
+    let new_basis_size = binomial(dim, new_grade);
+    let mut new_coeffs = na::DVector::zeros(new_basis_size);
 
-  for (self_coeff, self_basis) in self.basis_iter() {
-    for (other_coeff, other_basis) in other.basis_iter() {
-      let self_basis = self_basis.clone();
+    for (self_coeff, self_basis) in self.basis_iter() {
+      for (other_coeff, other_basis) in other.basis_iter() {
+        let self_basis = self_basis.clone();
 
-      let coeff_prod = self_coeff * other_coeff;
-      if self_basis == other_basis || coeff_prod == 0.0 {
-        continue;
-      }
-      if let Some((sign, merged_basis)) = self_basis.wedge(other_basis).canonicalized() {
-        let merged_basis = merged_basis.lex_rank();
-        new_coeffs[merged_basis] += sign.as_f64() * coeff_prod;
+        let coeff_prod = self_coeff * other_coeff;
+        if self_basis == other_basis || coeff_prod == 0.0 {
+          continue;
+        }
+        if let Some((sign, merged_basis)) = self_basis.wedge(other_basis).canonicalized() {
+          let merged_basis = merged_basis.lex_rank();
+          new_coeffs[merged_basis] += sign.as_f64() * coeff_prod;
+        }
       }
     }
-  }
 
-  Self::new(new_coeffs, dim, new_grade)
+    Self::new(new_coeffs, dim, new_grade)
+  }
 }
 ```
 
@@ -1892,7 +2049,7 @@ Which itself is derived from the inner product on the tangent space,
 which comes from the Riemannian metric at the point.
 
 This derivation from the inner product on the tangent space $g_p$
-to the inner product on the exterior fiber $wedge.big^k T^*_p (Omega)$, shall
+to the inner product on the exterior fiber $wedge.big^k T^*_p M$, shall
 be computed.
 
 In general given an inner product on the vector space $V$, we can
@@ -1945,13 +2102,38 @@ here.
 
 = Discrete Differential Forms: Simplicial Cochains and Whitney Forms
 
-In this chapter we will introduce discrete differential forms, which we will
-represent as simplicial cochains.
-We will discuss some basic cochain calculus and the projection
-and interpolation between arbitrary continuum differential forms expressed
-in a global coordinate basis and discrete cochains / whitney forms.
+Smooth Manifold discretizes to Simplicial Complex.
+Continuous Differential Forms on Manifold discretizes to Simplicial Cochain on
+Simplicial Complex.
+Discrete Differential $k$-form is Simplicial $k$-cochain, which
+are real values on the $k$-skeleton.
 
-This chapter corresponds exactly to the functionality of the `whitney` crate.
+Simplicial cochains are a structure preserving discretization
+and therefore retain the key topological and geometrical properties
+from diffgeo.
+This will become appart in our discussion of cochain calculus,
+where we will see coboundary operators.
+
+We will discuss the discretization procedure of arbitrary coordinate-based continuum
+differential forms by means of a cochain-projection via de Rham's map.
+And the reconstruction of a continuum differential form over the cells by means
+of cochain-interpolation via Whitney's map onto Whitney forms.
+
+
+Simplicial cochains arise naturally from the combinatorial structure of a
+simplicial complex and can be interpreted as discrete analogues of differential
+forms via integration. They form the algebraic backbone of discrete exterior
+calculus and finite element exterior calculus (FEEC), representing cohomology
+classes and supporting discrete versions of exterior operators.
+
+Whitney forms, on the other hand, are low-order, piecewise polynomial
+differential forms defined on each simplex. They interpolate cochain values into
+the continuous setting and serve as basis functions in finite element spaces
+of differential forms.
+Whitney map: Canonical map from cochains to differential forms.
+
+This chapter lays the foundation for the discrete variational formulations used
+n FEEC.
 
 == Cochains
 
@@ -2123,6 +2305,25 @@ $
     on equilateral triangle mesh $mesh$.
   ],
 ) <img:global_whitneys>
+
+
+Via linear combination of the global basis functions we can obtain
+any piecewise-linear differential-form from the Whitney space.
+
+#figure(
+  grid(
+    columns: (1fr, 1fr, 1fr),
+    rows: 1,
+    gutter: 3pt,
+    image("../res/triforce_constant.cochain.png", width: 100%),
+    image("../res/triforce_div.cochain.png", width: 100%),
+    image("../res/triforce_rot.cochain.png", width: 100%),
+  ),
+  caption: [
+    Vector proxies of some example FE functions on equilateral triangle mesh
+    $mesh$.
+  ],
+) <img:fe_whitneys>
 
 === Reconstruction: Whitney Interpolatoin via the Whitney map
 
@@ -2959,7 +3160,25 @@ pub fn solve_hodge_laplace_source(
 
 To verify the function of the library we solve a EVP and a source problem.
 
-== Source Problem
+== 1-Form EVP on Annulus
+
+The eigenvalues computed on the annulus correspond to the actual eigenvalues.
+
+#figure(
+  grid(
+    columns: (1fr, 1fr, 1fr),
+    rows: 1,
+    gutter: 3pt,
+    image("../res/evp0.png", width: 100%),
+    image("../res/evp5.png", width: 100%),
+    image("../res/evp6.png", width: 100%),
+  ),
+  caption: [
+    Three interesting computed eigenfunctions.
+  ],
+) <img:evp>
+
+== 1-Form Source Problem on $RR^n$
 
 We verify the source problem by means of the method of manufactured solution.
 Our manifactured solution is a 1-form that follows the same pattern for any
@@ -3076,12 +3295,30 @@ So almost order $alpha=2$ $L^2$ convergence, which is exactly what
 theory predicts, confirming the correct implementation.
 
 
+#figure(
+  grid(
+    columns: (1fr, 1fr, 1fr),
+    rows: 1,
+    gutter: 3pt,
+    [],
+    image("../res/source_problem.png", width: 100%),
+    [],
+  ),
+  caption: [
+    Computed solution to source problem.
+  ],
+) <img:evp>
+
+
 
 // Probably move this to post-face
 = Conclusion and Outlook
 
 - Summary of key contributions
-- Possible improvements and future work (e.g., efficiency, higher-order elements, more general manifolds)
+- Possible improvements and future work
+  - efficiency
+  - parametric FE
+  - higher-order FEEC and higher-order elements
 - Broader impact (e.g., Rust in scientific computing, FEEC extensions)
 - Discarded ideas and failed apporaches (generic dimensionality à la nalgebra/eigen)
 
