@@ -4,8 +4,8 @@
 
 = Software Design & Implementation Choices
 
-In this chapter we want to briefly mention and explain
-some software engineering decisions we made.
+In this chapter we want to briefly discuss some general software engineering
+decisions for our library.
 
 == Why Rust?
 
@@ -46,13 +46,6 @@ This allows for a more direct realization of ideas and concepts, making Rust
 particularly well-suited for capturing precise mathematical structures and
 expressing complex logic in a natural way. Below, we highlight some of the
 features that the author finds particularly valuable.
-
-- *Powerful Type System*: Rust features a strong, static type system that
-  enables encoding invariants and constraints directly into the type system. This
-  ensures contract violations are caught at compile time, significantly reducing
-  runtime errors and proving correctness. Through techniques like type-level
-  state, one can represent the state of the program using types instead of
-  runtime variables, allowing a compile-time style of programming.
 
 - *Traits and Generics*: Rust's trait system facilitates powerful
   polymorphism, enabling code reuse and extensibility without the drawbacks of
@@ -97,7 +90,6 @@ safety and efficiency, making it an excellent choice for scientific computing
 and systems programming.
 
 
-
 === Infrastructure and Tooling
 
 Beyond its language features, Rust also stands out due to its exceptional
@@ -120,10 +112,6 @@ and productive development experience.
   while enforcing semantic versioning. Publishing a crate is equally simple via
   `cargo publish`, which we have also used to distribute the libraries developed
   for this thesis.
-- *Rust Analyzer* is Rust's official Language Server Protocol (LSP)
-  implementation, providing advanced IDE support, including real-time feedback,
-  type hints, and code completion. This significantly enhances the ergonomics of
-  Rust development.
 - *Clippy* is Rust's official linter, offering valuable suggestions for
   improving code quality, adhering to best practices, and catching common
   mistakes. Our codebase does not produce a single warning or lint, passing all
@@ -152,6 +140,27 @@ for scientific computing and large-scale software development.
 
 There are many more good reasons to choose Rust, such as it's great ecosystem
 of libraries, which are some of the most impressive libraries the author has ever seen.
+
+
+=== Challenges
+
+We want to also mentioned some drawbacks of using Rust and challenges we've
+encoutered.
+
+- Rust is a relatively young programming language, as it had it's 1.0 release
+in 2015. Due to this the library ecosystem is still evolving and solutions
+that are available in `C++`, do not yet exist for Rust. A particular instance
+that affects us, is the absence of sophisticated sparse linear algebra implementation.
+Only basic sparse matrix implementation are available, but for solvers, we
+we're forced to rely on `C/C++` libraries.
+
+- Rust has a high learning curve and has a non-standard syntax
+  with many concepts, that might make it hard for people unfamiliar with the language
+  to read and understand it.
+
+- One can become too obsessed with expressing concepts in the powerful type system,
+  leading to over-engineering, which badly influences the project.
+- Rust can become very verbose due to it's many abstraction features.
 
 
 == External libraries
@@ -356,8 +365,8 @@ pub fn is_bary_inside<'a>(bary: impl Into<CoordRef<'a>>) -> bool {
   bary.into().iter().all(|&b| (0.0..=1.0).contains(&b))
 }
 ```
-Outside the simplex $avec(x) in.not sigma$, $lambda^i$ may be greater than one
-or even negative. \
+Outside the simplex $avec(x) in.not sigma$, $lambda^i$ will be greater than one
+or negative. \
 The barycenter $avec(m) = 1/(n+1) sum_(i=0)^n avec(v)_i$ always has the special
 barycentric coordinates $psi(avec(m)) = [1/n]^(n+1)$.
 ```rust
@@ -460,8 +469,11 @@ pub fn apply_forward(&self, coord: na::DVectorView<f64>) -> na::DVector<f64> {
 ```
 
 Reversing the transformation, is more subtle, as due to floating point inaccuracies,
-we almost never exactly lie in the affine subspace. Therefore we rely on the
-Moore-Penrose pseudo-inverse, computed via SVD, to get a least-square solution.
+we almost never exactly lie in the affine subspace.
+Furthermore, when the ambient dimension $N$ is greater than the intrinsic dimension $n < N$,
+then we have a underdetermined linear system.
+Therefore we rely on the Moore-Penrose pseudo-inverse, computed via SVD, to get
+a least-square solution.
 $
   avec(lambda)^- = phi(avec(x))
   = amat(E)^dagger (avec(x) - avec(v)_0)
@@ -1388,6 +1400,12 @@ $
 $
 The inverse metric is very important for us, since differential forms are
 covariant tensors, therefore they are measured by the inverse metric tensor.
+
+Computing the inverse is numerically unstable and instead it would
+be better to rely on matrix factorization to do computation
+invovling the inverse metric. However this quickly becomes
+intractable. For this reason we chose here to rely on the directly
+computed inverse matrix nontheless.
 
 We introduce a struct to represent the Riemannian metric at a particular point
 as the Gramian matrix and inverse Gramian matrix.
