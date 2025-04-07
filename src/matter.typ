@@ -79,7 +79,7 @@ features that the author finds particularly valuable.
   values rather than merely executing statements. For example, an `if` expression
   evaluates to the value of its selected branch, eliminating redundant variable
   assignments. Combined with Rust’s powerful pattern matching system, which allows
-  destructuring of composite types like enums, this leads to concise and readable
+  destructing of composite types like enums, this leads to concise and readable
   code while enabling functional-style composition.
 
 - *Functional Programming and Iterators*: Rust embraces functional programming
@@ -109,7 +109,7 @@ fragmentation and prevents competing tools from creating confusion over choices,
 in contrast to the `C++` ecosystem. This consistency fosters a more streamlined
 and productive development experience.
 
-- *Cargo* is Rust's offical package manager and build system, which is one of
+- *Cargo* is Rust's official package manager and build system, which is one of
   the most impressive pieces of tooling. It eliminates the need for traditional
   build tools like Makefiles and CMake, which are often complex and difficult
   to maintain—not to mention the dozens of other build systems for `C++`.
@@ -163,7 +163,7 @@ we will be using in our project.
 
 For implementing numerical algorithms linear algebra libraries are invaluable.
 `C++` has set a high standard with `Eigen` as it's major linear algebra library.
-Rust offers a very direct euivalent called `nalgebra`, which just as Eigen
+Rust offers a very direct equivalent called `nalgebra`, which just as Eigen
 relies heavily on generics to represent both statically and dynamically know
 matrix dimensions.
 All basic matrix and vector operations are available.
@@ -176,7 +176,7 @@ For this we will be using `nalgebra-sparse`.
 
 === PETSc & SLEPc (solvers)
 
-Unfortunatly the rust sparse linear algebra ecosystem is rather immature.
+Unfortunately the rust sparse linear algebra ecosystem is rather immature.
 Only very few sparse solvers are available in Rust.
 For this reason we will be using one of the big `C/C++` sparse matrix libraries
 called PETSc. We will be using direct solvers.
@@ -216,12 +216,12 @@ All of which have been published to `crates.io`.
 ===  Type safety
 
 The implementation has a big emphasis on providing safety through the introduction
-of many types that uphold gurantees regarding the contained data.
+of many types that uphold guarantees regarding the contained data.
 Constructed instances of types should always be valid.
 
 === Performance considerations
 
-All datastructures are written with performance in mind.
+All data structures are written with performance in mind.
 
 We are also always focused on a memory-economic representation of information.
 
@@ -286,7 +286,7 @@ $
 $ <def-simplex>
 
 We call such an object a *coordinate simplex*, since it depends on global coordinates of
-the vertices and lives in a possible higher-dimensinal ambient space $RR^N$. It therefore
+the vertices and lives in a possible higher-dimensional ambient space $RR^N$. It therefore
 relies on an embedding.
 This object is uniquely determined by the coordinates $avec(v)_i$ of each vertex,
 inspiring a simple computational representation based on a struct, that
@@ -303,7 +303,7 @@ impl SimplexCoords {
 
 We implement two methods to compute both the intrinsic dimension $n$, which
 is one less the number of vertices and the ambient dimension $N$ of the global coordinates.
-A special and particulary simple case is when intrinsic dimension and ambient dimension
+A special and particularly simple case is when intrinsic dimension and ambient dimension
 match up $n=N$.
 ```rust
 pub type Dim = usize;
@@ -315,16 +315,16 @@ pub fn is_same_dim(&self) -> bool { self.dim_intrinsic() == self.dim_embedded() 
 #v(0.5cm)
 === Barycentric Coordinates
 
-The coefficents $avec(lambda) = [lambda^i]_(i=0)^n$ in @def-simplex are called
+The coefficients $avec(lambda) = [lambda^i]_(i=0)^n$ in @def-simplex are called
 *barycentric coordinates*.
 They appear inside the convex combination / weighted average $sum_(i=0)^n lambda^i avec(v)_i$
 as weights $lambda^i in [0,1]$ with condition $sum_(i=0)^n lambda^i = 1$ in front of
-each cartesian vertex coordinate $avec(v)_i in RR^N$.
-They constitute an intrinsic local coordiante representation with respect to the simplex $sigma in RR^N$,
+each Cartesian vertex coordinate $avec(v)_i in RR^N$.
+They constitute an intrinsic local coordinate representation with respect to the simplex $sigma in RR^N$,
 which is independent from the embedding in $RR^N$ and only relies on the convex combination
 of vertices. \
 The coordinate transformation $psi: avec(lambda) |-> avec(x)$ from intrinsic
-barycentric $avec(lambda) in RR^n$ to ambient cartesian $avec(x) in RR^N$ coordinate is
+barycentric $avec(lambda) in RR^n$ to ambient Cartesian $avec(x) in RR^N$ coordinate is
 given by
 $
   avec(x) = psi (avec(lambda))
@@ -383,18 +383,18 @@ pub fn base_vertex(&self) -> CoordRef { self.coord(0) }
 
 We can then leave off the redundant $lambda^0 = 1 - sum_(i=1)^n lambda^i$
 corresponding to $avec(v)_0$.
-Then the reduced barycentric coordiantes $avec(lambda)^- = [lambda^i]_(i=1)^n$
+Then the reduced barycentric coordinates $avec(lambda)^- = [lambda^i]_(i=1)^n$
 constitutes a proper coordinate system without any redundant information.
 We also call this the *local coordinate system*.
 This coordinate system also works for the whole affine subspace, but now
-the coordinates are completly free and there is a bijection between
+the coordinates are completely free and there is a bijection between
 the affine subspace and the whole of $RR^n$. There is a unique representation
 for both ways.
 
 #v(0.5cm)
 === Spanning Vectors
 
-If we consider the edges eminating from the base vertex, we get the
+If we consider the edges emanating from the base vertex, we get the
 *spanning vectors* $[avec(e)_i]_(i=1)^n$ with $avec(e)_i = avec(v)_i - avec(v)_0 in RR^N$.
 We can define a matrix $amat(E) in RR^(N times n)$ that has these
 spanning vectors as columns.
@@ -428,9 +428,9 @@ $
   = avec(v)_0 + sum_(i=1)^n lambda^i (avec(v)_i - avec(v)_0)
   = avec(v)_0 + amat(E) avec(lambda)^-
 $
-This makes it very apparant that this transformation is an affine map, with
+This makes it very apparent that this transformation is an affine map, with
 translation by $avec(v)_0$ and linear map $avec(lambda)^- |-> amat(E) vvec(lambda)^-$, between
-the local coordinates $avec(lambda)^-$ and the cartesian coordinates $avec(x)$ of the
+the local coordinates $avec(lambda)^-$ and the Cartesian coordinates $avec(x)$ of the
 affine subspace spanned up by the spanning vectors positioned at the base
 vertex.
 
@@ -459,7 +459,7 @@ pub fn apply_forward(&self, coord: na::DVectorView<f64>) -> na::DVector<f64> {
 }
 ```
 
-Reversing the transformation, is more subtle, as due to floating point inaccuricies,
+Reversing the transformation, is more subtle, as due to floating point inaccuracies,
 we almost never exactly lie in the affine subspace. Therefore we rely on the
 Moore-Penrose pseudo-inverse, computed via SVD, to get a least-square solution.
 $
@@ -494,7 +494,7 @@ pub fn pseudo_inverse(&self) -> Self {
 By computing derivatives of the affine parametrization of the simplex, we
 find that the spanning vectors are a very natural frame/basis for the tangent space
 $T_p sigma$ of the simplex $sigma$ at each point $p in sigma$.
-The jacobian of the affine map is exactly the linear map represented by $amat(E)$.
+The Jacobian of the affine map is exactly the linear map represented by $amat(E)$.
 $
   (diff avec(x))/(diff lambda^i)
   = avec(e)_i
@@ -528,10 +528,10 @@ pub fn difbarys(&self) -> na::DMatrix<f64> {
 ```
 
 Furthermore these spanning vectors define a parallelepiped.
-This parallelipied can be used to compute the volume of the simplex, as a
+This parallelepiped can be used to compute the volume of the simplex, as a
 fraction $(n!)^(-1)$ of the volume of the parallelepiped, which is computed as
 the determinant of the spanning vectors in the case $n=N$ and otherwise using
-the square root of the gramian determinant
+the square root of the Gramian determinant
 $sqrt(det(amat(E)^transp amat(E)))$.
 ```rust
 pub fn det(&self) -> f64 {
@@ -612,7 +612,7 @@ The barycentric coordinate functions are since they are intrinsic affine-invaria
 After studying coordinate simplicies, the reader has hopefully developed
 some intuitive understanding of simplicies. We will now shed the coordinates
 and represent simplicies in a more abstract way, by just considering
-them as a list of vertex indicies, without any vertex coordinates.
+them as a list of vertex indices, without any vertex coordinates.
 A $n$-simplex $sigma$ is a $(n+1)$-tuple of natural numbers, which represent vertex
 indices.
 $
@@ -639,7 +639,7 @@ impl Simplex {
 
 The ordering of the vertices _does_ matter, therefore we really have ordered tuples
 and not just unordered sets. This makes our simplicies combinatorial objects and
-these combinatorics will be heart of our mesh datastructure.
+these combinatorics will be heart of our mesh data structure.
 
 === Sorted Simplicies
 
@@ -679,7 +679,7 @@ but without any coordinates this is no longer possible.
 
 However we can still have a notion of relative orientation.
 We have seen that with coordinate simplicies that swapping of two vertices
-flips the orientation, due to the properties of the determiant.
+flips the orientation, due to the properties of the determinant.
 The same behavior is present in abstract simplicies, based on the
 ordering of the vertices.
 All permutations can be divided into two equivalence classes.
@@ -728,7 +728,7 @@ pub fn sort_count_swaps<T: Ord>(a: &mut [T]) -> usize {
 
 Two simplicies that are made up of the same vertices, have equal orientation iff
 their two permutations fall into the same (even or odd) permutation equivalence
-class. Using the transivity of this equivalence relation, we can do the check
+class. Using the transitivity of this equivalence relation, we can do the check
 relative to the sorted permutation.
 ```rust
 pub fn orientation_eq(&self, other: &Self) -> bool {
@@ -755,14 +755,14 @@ pub fn is_superset_of(&self, other: &Self) -> bool {
 ```
 
 We can generate all subsets, for which we rely on a
-itertools implementation.
+Itertools implementation.
 ```rust
 pub fn subsets(&self, sub_dim: Dim) -> impl Iterator<Item = Self> {
   itertools::Itertools::permutations(self.clone().into_iter(), sub_dim + 1).map(Self::from)
 }
 ```
 
-The number of subsimplicies is given by the binomial coefficent.
+The number of subsimplicies is given by the binomial coefficient.
 ```rust
 pub fn nsubsimplicies(dim_cell: Dim, dim_sub: Dim) -> usize {
   binomial(dim_cell + 1, dim_sub + 1)
@@ -795,7 +795,7 @@ to instead have only one permutation per subset of vertices.
 For this we can instead consider the substrings of the original simplex.
 This then also preservers the vertex order.
 
-We have some methods to check wheter a simplex is a substring of another, based
+We have some methods to check whether a simplex is a substring of another, based
 on a naive substring check algorithm.
 ```rust
 pub fn is_substring_of(&self, other: &Self) -> bool {
@@ -822,7 +822,7 @@ pub fn substrings(&self, sub_dim: Dim) -> impl Iterator<Item = Self> {
 ```
 This implementation is nice, since it provides the substrings in a lexicographical
 order w.r.t. the local indices.
-If the original simplex was sorted, then the substrings are truely lexicographically ordered even
+If the original simplex was sorted, then the substrings are truly lexicographically ordered even
 w.r.t. the global indices.
 
 A very standard operation is to generate all substrings simplicies of the standard simplex.
@@ -858,16 +858,16 @@ pub fn superstrings(&self, super_dim: Dim, root: &Self) -> impl Iterator<Item = 
 There is a special operation related to substring simplicies, called the
 boundary operator.
 The boundary operator can be applied to any $n$-simplex $sigma in NN^(n+1)$ and
-is the fdefined as.
+is the defined as.
 $
   diff sigma = sum_i (-1)^i [v_0,dots,hat(v)_i,dots,v_n]
 $
 On the left we have a formal sum of simplicies.
-This formal sum consits of all the $(n-1)$-substrings of a $n$-simplex,
+This formal sum consists of all the $(n-1)$-substrings of a $n$-simplex,
 together with a sign, giving the boundary simplicies a meaningful orientation.
 
 When understanding this formal linear combinations as an element of the
-free albelian group generated by the basis of all simplicies,
+free Abelian group generated by the basis of all simplicies,
 then this operator is linear.
 
 For instance, the boundary of the triangle $sigma = [0,1,2]$ is
@@ -878,7 +878,7 @@ which is exactly what you get if you walk along the edges of the triangle.
 
 We introduce an additional convention here regarding the ordering of the boundary simplicies.
 We rely on the `subsimps` implementation that gives us a lexicographically ordered
-subsimps. This is exactly the opposite of the ordered suggested of the sum sign.
+subsimplicies. This is exactly the opposite of the ordered suggested of the sum sign.
 We need to make sure the sign is still the same for all boundary simplicies.
 ```rust
 pub fn boundary(&self) -> impl Iterator<Item = SignedSimplex> {
@@ -960,7 +960,7 @@ In provides unique identification of the simplicies
 through a global numbering.
 This is a bijective mapping between the simplex index
 and the abstract simplex itself. This represented through this `IndexSet` data structure
-from the `index-map` crate. It has the typical `Vec` funcitonality for retrieving
+from the `index-map` crate. It has the typical `Vec` functionality for retrieving
 a `Simplex` from it's `SimplexIdx`, but it also supports the reverse direction (through hashing)
 of retrieving the index from the `Simplex` itself.
 ```rust
@@ -973,7 +973,7 @@ pub fn kidx_by_simplex(&self, simp: &Simplex) -> KSimplexIdx {
 ```
 
 
-The skeleton constructor upholds various gurantees about the simplicies
+The skeleton constructor upholds various guarantees about the simplicies
 that are contained in it.
 ```rust
 pub fn new(simplicies: Vec<Simplex>) -> Self {
@@ -1219,7 +1219,7 @@ don't need to provide this argument ourselves.
       .collect()
   }
 ```
-Furthermore these functions always directly access the `IndexSet` and retreive
+Furthermore these functions always directly access the `IndexSet` and retrieve
 the corresponding index of the simplex and construct a new `SimplexHandle` out of
 it, such that we can easily apply subsequent method calls on the returned objects.
 
@@ -1234,7 +1234,7 @@ What we are still missing in our mesh data structure now, is any geometry.
 The geometry is missing, since we only store abstract simplicies and not
 something like coordinate simplicies.
 
-This was purposefully done, because we want to seperate the topology from the geometry.
+This was purposefully done, because we want to separate the topology from the geometry.
 This allows us to switch between a coordinate-based embedded geometry and a coordinate-free
 intrinsic geometry based on a Riemannian metric.
 
@@ -1259,15 +1259,15 @@ impl MeshVertexCoords {
 We once again store the coordinates of the vertices in the column of a matrix,
 just as we did for the `SimplexCoords` struct, but here we store the coordinates
 of all the vertices in the mesh, so this is usually a really wide matrix.
-The `dim` function here refrences the dimension of the ambient space. It
+The `dim` function here references the dimension of the ambient space. It
 is different from the topology dimension in general.
 
-Here we witness another benefit of seperating topology and geometry, which should be done
+Here we witness another benefit of separating topology and geometry, which should be done
 even when there are not multiple geometry representations supported:
-We avoid any redudancy in storing the vertex coordinates. For every vertex we
+We avoid any redundancy in storing the vertex coordinates. For every vertex we
 store it's coordinate exactly once. This is contrast to use a list of `SimplexCoords`, for
 which there would have been many duplicate coordinates, since the vertices are
-shared by many simplicies. So seperating topology and geometry is always very natural
+shared by many simplicies. So separating topology and geometry is always very natural
 even in the case of the typical coordinate-based geometry.
 
 === Coordinate Function Functors & Barycentric Quadrature
@@ -1335,7 +1335,7 @@ coordinate-free Riemannian geometry for all of our FE algorithms.
 All FE algorithms only depend on this geometry representation and cannot operate
 directly on the coordinate-based geometry. Instead one should always derive a
 coordinate-free representation from the coordinate-based one.
-Most of the time one starts with a coordiante-based representation
+Most of the time one starts with a coordinate-based representation
 that has been constructed by some mesh generator like gmsh and
 then one computes the intrinsic geometry and forgets about the coordinates.
 Our library supports this exactly this functionality.
@@ -1381,7 +1381,7 @@ In the context of Riemannian geometry this is called a *metric tensor*.
 The inverse metric $g^(-1)_p$ at a point $p$ provides an inner product
 $g^(-1)_p: T^*_p M times T^*_p M -> RR^+$ on the
 cotangent space $T^*_p M$. It can be obtained by computing the inverse
-gramian matrix $amat(G)^(-1)$, which is then a new gramian matrix representing
+Gramian matrix $amat(G)^(-1)$, which is then a new Gramian matrix representing
 the inner product on the dual basis of covectors.
 $
   amat(G)^(-1) = [g(dif x^i,dif x^j)]_(i,j=1)^(n times n)
@@ -1390,7 +1390,7 @@ The inverse metric is very important for us, since differential forms are
 covariant tensors, therefore they are measured by the inverse metric tensor.
 
 We introduce a struct to represent the Riemannian metric at a particular point
-as the gramian matrix and inverse gramian matrix.
+as the Gramian matrix and inverse Gramian matrix.
 ```rust
 #[derive(Debug, Clone)]
 pub struct RiemannianMetric {
@@ -1439,7 +1439,7 @@ $
 
 Computationally this differential $dif f_p$ can be represented, given a basis,
 since it is a linear map, by a Jacobi Matrix $amat(J)$.
-The metric is the then the gramian matrix of the Jacobian.
+The metric is the then the Gramian matrix of the Jacobian.
 $
   amat(G) = amat(J)^transp amat(J)
 $
@@ -1469,7 +1469,7 @@ over the cells. This means that our metric is constant over each cell
 and changes only from one cell to another.
 
 This piecewise-constant metric over the simplicial mesh is known as the *Regge
-metric* and comes from Regge calculus, a theory for numerical general relativety
+metric* and comes from Regge calculus, a theory for numerical general relativity
 that is about producing simplicial approximations of spacetimes that are
 solutions to the Einstein field equation.
 
@@ -1484,15 +1484,15 @@ impl SimplexCoords {
 }
 ```
 
-But just like storing coordinate simplicies is a memory-inefficent representation
+But just like storing coordinate simplicies is a memory-inefficient representation
 of the extrinsic geometry, storing the metric tensor on each cell
-is also inefficent.
+is also inefficient.
 A global way to store the Regge metric is based on edge lengths. Instead
 of giving all vertices a global coordinate, as one would do in extrinsic
 geometry, we just give each edge in the mesh a positive length. Just knowing
 the lengths doesn't tell you the positioning of the mesh in an ambient space
 but it's enough to give the whole mesh it's piecewise-flat geometry.
-Storing only the edge lengths of the whole mesh is a more memory efficent
+Storing only the edge lengths of the whole mesh is a more memory efficient
 representation of the geometry than storing all the metric tensors.
 
 Mathematically this is just a function on the edges to the positive real numbers.
@@ -1501,7 +1501,7 @@ $
 $
 that gives each edge $e in Delta_1 (mesh)$ a positive length $l_e in RR^+$.
 
-Computationally we repesent the edge lengths in a single struct
+Computationally we represent the edge lengths in a single struct
 that has all lengths stored continuously in memory in a nalgebra vector.
 ```rust
 pub struct MeshEdgeLengths {
@@ -1537,7 +1537,7 @@ impl MeshVertexCoords {
 
 We can then restrict these edge lengths to just a single simplex and obtain
 a `SimplexEdgeLengths` struct. From this we can directly compute the metric
-gramian, from the law of cosines.
+Gramian, from the law of cosines.
 $
   amat(G)_(i j) = 1/2 (l_(0 i)^2 + l_(0 j)^2 - l_(i j)^2)
 $
@@ -1589,12 +1589,12 @@ This is a piecewise-linear 1st order approximation of the geometry.
 But this is not only possible approximation. Higher-order mesh elements,
 such as quadratic or cubic elements allow for higher accuracy approximations
 of the mesh. In general any order polynomial elements can be used.
-We will restirct ourselves completly to first-order elements in this thesis.
-This approximation is sufficent for us, since it represents an
-*asmissable geometric variational crime*: The order of our FE method concides with
+We will restrict ourselves completely to first-order elements in this thesis.
+This approximation is sufficient for us, since it represents an
+*admissible geometric variational crime*: The order of our FE method coincides with
 the order of our mesh geometry; both are linear 1st order.
 This approximation doesn't affect the order of convergence in a negative way,
-and therefore is admissable.
+and therefore is admissible.
 
 
 == Mesh Generation and Loading
@@ -1602,9 +1602,9 @@ and therefore is admissable.
 === Tensor-Product Domain Meshing
 
 Formoniq features a meshing algorithm for arbitrary dimensional
-tensor-product domains. These domains are $n$-dimensional cartesian products $[0,1]^n$
+tensor-product domains. These domains are $n$-dimensional Cartesian products $[0,1]^n$
 of the unit interval $[0,1]$. The simplicial skeleton will be computed based on
-a cartesian grid that subdivides the domain into $l^n$ many $n$-cubes, which are
+a Cartesian grid that subdivides the domain into $l^n$ many $n$-cubes, which are
 generalizations of squares and cubes. Here $l$ is the number of subdivisions per axis.
 To obtain a simplicial skeleton, we need to split each $n$-cube into non-overlapping $n$-simplicies
 that make up it's volume. In 2D it's very natural to split a square into two triangles
@@ -1612,7 +1612,7 @@ of equal volume. This can be generalized to higher dimensions. The trivial
 triangulation of a $n$-cube into $n!$ simplicies is based on the $n!$ many permutations
 of the $n$ coordinate axes.
 
-The $n$-cube has $2^n$ vertices, which can all be identified using multiindicies
+The $n$-cube has $2^n$ vertices, which can all be identified using multiindices
 $
   V = {0,1}^n = {(i_1,dots,i_n) mid(|) i_j in {0,1}}
 $
@@ -1672,7 +1672,7 @@ pub fn compute_cell_skeleton(&self) -> Skeleton {
 }
 ```
 
-We can note here, that the computational complexity of this algorithm, grows extremly fast
+We can note here, that the computational complexity of this algorithm, grows extremely fast
 in the dimension $n$.
 We have a factorial scaling $cal(O)(n!)$ (worse than exponential scaling $cal(O)(e^n)$)
 for splitting the cube into simplicies. Given $l$ subdivisions per dimensions, we have
@@ -1792,7 +1792,7 @@ is not metric independent. We just wanted to quickly mentioned it here.
 
 It is common practice to call the elements of any exterior algebra
 multivectors, irregardless what the underlying linear space $V$ is.
-This is confusing when working with multiforms, which are dispinct from multivectors.
+This is confusing when working with multiforms, which are distinct from multivectors.
 To avoid confusion, we therefore just call the elements of the exterior algebra
 exterior elements or multielements, just like we say linear space instead of
 vector space.
@@ -1804,13 +1804,13 @@ we can always represent them computationally, by choosing a basis
 ${e_i}_(i=1)^n subset.eq V$.
 This constructs an isomorphism $V =^~ RR^n$, where $n = dim V$.
 This allows us to work with elements $avec(v) in RR^n$, which have real
-values $v_i in RR$ as components, which are the basis coefficents.
+values $v_i in RR$ as components, which are the basis coefficients.
 These real numbers are what we can work with on computers and allow
 us to do numerical linear algebra.
 This means that when working with any finite-dimensional real linear space $V$
 on a computer we always just use the linear space $RR^n$.
 
-The same idea can be used to computionally work with exterior algebras.
+The same idea can be used to computationally work with exterior algebras.
 By choosing a basis of $V$, we also get an isomorphism on the exterior algebra
 $wedgespace (V) =^~ wedgespace (RR^n)$.
 Therefore our implementation will be we directly on $wedgespace (RR^n)$.
@@ -1839,7 +1839,7 @@ own right.
 Due to the combinatorics of the anti-symmetric exterior algebra, we have $dim
 wedgespace^k (RR^n) = binom(n,k)$.
 This means that by choosing a basis ${e_I}$ of this exterior power, we can just
-use a list of $binom(n,k)$ coefficents to represent an exterior element, by
+use a list of $binom(n,k)$ coefficients to represent an exterior element, by
 using the isomorphism $wedgespace^k (RR^n) =^~ RR^binom(n,k)$.
 ```rust
 /// An element of an exterior algebra.
@@ -1874,7 +1874,7 @@ and denote their set by
 $cal(I)^n_k = {(i_1,dots,i_k) in NN^k mid(|) 1 <= i_1 < dots.c < i_k <= n}$.
 This is a good convention for supporting arbitrary dimensions.
 
-The basis also needs to be ordered, such that we can know which coefficent
+The basis also needs to be ordered, such that we can know which coefficient
 in `self.coeffs` corresponds to which basis. A natural choice here is
 a lexicographical ordering.
 
@@ -1922,7 +1922,7 @@ pub fn canonicalized(mut self) -> Option<(Sign, Self)> {
 
 In the case of a strictly increasing term, we can also determine the lexicographical
 rank of it in the set of all increasing terms. And the other way constructing
-them from lexrank.
+them from lexicographical rank.
 ```rust
 pub fn lex_rank(&self) -> usize {
   assert!(self.is_canonical(), "Must be canonical.");
@@ -1961,7 +1961,7 @@ pub fn from_lex_rank(dim: Dim, grade: ExteriorGrade, mut rank: usize) -> Self {
 
 Now that we have this we can implement a useful iterator on our `ExteriorElement`
 struct that allows us to iterate through the basis expansion consisting
-of both the coefficent and the exterior basis element.
+of both the coefficient and the exterior basis element.
 ```rust
 pub fn basis_iter(&self) -> impl Iterator<Item = (f64, ExteriorTerm)> + '_ {
   let dim = self.dim;
@@ -1978,13 +1978,13 @@ pub fn basis_iter(&self) -> impl Iterator<Item = (f64, ExteriorTerm)> + '_ {
 }
 ```
 We then implemented the addition and scalar multiplication of exterior elements
-by just applying the operation to the coefficents.
+by just applying the operation to the coefficients.
 
 == Exterior Product
 
-The most obvious operation on a `ExteriorElement` is of coures the exterior product.
+The most obvious operation on a `ExteriorElement` is of course the exterior product.
 For this we rely on the exterior product of two `ExteriorTerm`s,
-which is just a concatination of the two multiindices.
+which is just a concatenation of the two multiindices.
 ```rust
 impl ExteriorTerm {
   pub fn wedge(mut self, mut other: Self) -> Self {
@@ -2059,9 +2059,9 @@ $
   inner(e_I, e_J) = det [inner(dif x_I_i, dif x_I_j)]_(i,j)^k
 $
 
-Computationally we represent inner products as gramian matrices on some basis.
-This means that we compute an extended gramian matrix as the inner product on
-multielements from the gramian matrix of single elements using the determinant.
+Computationally we represent inner products as Gramian matrices on some basis.
+This means that we compute an extended Gramian matrix as the inner product on
+multielements from the Gramian matrix of single elements using the determinant.
 ```rust
 impl RiemannianMetricExt for RiemannianMetric {
   fn multi_form_gramian(&self, k: ExteriorGrade) -> na::DMatrix<f64> {
@@ -2103,15 +2103,15 @@ here.
 = Discrete Differential Forms: Simplicial Cochains and Whitney Forms
 
 Smooth Manifold discretizes to Simplicial Complex.
-Continuous Differential Forms on Manifold discretizes to Simplicial Cochain on
+Continuous Differential Forms on Manifold discretizes to Simplicial cochain on
 Simplicial Complex.
 Discrete Differential $k$-form is Simplicial $k$-cochain, which
 are real values on the $k$-skeleton.
 
 Simplicial cochains are a structure preserving discretization
 and therefore retain the key topological and geometrical properties
-from diffgeo.
-This will become appart in our discussion of cochain calculus,
+from differential geometry.
+This will become apart in our discussion of cochain calculus,
 where we will see coboundary operators.
 
 We will discuss the discretization procedure of arbitrary coordinate-based continuum
@@ -2156,7 +2156,7 @@ pub struct Cochain {
 ```
 
 
-=== Discretiation: Cochain-Projection via de Rham's map
+=== Discretization: Cochain-Projection via de Rham's map
 
 The discretization of the continuous differential forms is then just a projection
 onto this cochain space. This projection is the very geometric step of
@@ -2221,7 +2221,7 @@ $
   inner(dif omega, c) = inner(omega, diff c)
 $
 
-This inspires a defintion of the discrete exterior derivative as
+This inspires a definition of the discrete exterior derivative as
 the opposite of the boundary operator, the *coboundary* operator.
 $
   dif omega(c) = omega(diff c)
@@ -2244,7 +2244,7 @@ impl ManifoldComplexExt for Complex {
 }
 ```
 
-By construction Stokes' Theorem is fullfiled, which is crucial to many applications.
+By construction Stokes' Theorem is fulfilled, which is crucial to many applications.
 
 The exterior derivative is closed in the space of Whitney forms, because of the de Rham complex.
 
@@ -2325,7 +2325,7 @@ any piecewise-linear differential-form from the Whitney space.
   ],
 ) <img:fe_whitneys>
 
-=== Reconstruction: Whitney Interpolatoin via the Whitney map
+=== Reconstruction: Whitney Interpolation via the Whitney map
 
 Whitney forms are the piecewise-linear (over the cells) differential forms
 that can be uniquely reconstructed from cochains. This reconstruction
@@ -2342,7 +2342,7 @@ $
 $
 
 Each Whitney $k$-form is associated with a particular $k$-simplex.
-This simplex is the DOF and it's coefficent is the cochain value
+This simplex is the DOF and it's coefficient is the cochain value
 on this simplex.
 
 There is a isomorphism between Whitney $k$-forms and cochains.\
@@ -2357,7 +2357,7 @@ in the barycentric coordinate basis.
 
 Another important use for Whitney forms is the reconstruction
 of the global solution once we have computed the basis expansion--
-which is the cochain-- into a point-evaluatable differential form.
+which is the cochain--into a point-evaluable differential form.
 For this we will express Whitney forms in a global coordinate basis.
 
 For this we have a simple struct that represents a particular Whitney form
@@ -2369,8 +2369,8 @@ pub struct WhitneyForm<O: SetOrder> {
   difbarys: Vec<MultiForm>,
 }
 ```
-We store the the vertex coordiantes of the cell, the local subsimplex
-and additionaly store the precomputed constant exterior derivatives of the
+We store the the vertex coordinates of the cell, the local subsimplex
+and additionally store the precomputed constant exterior derivatives of the
 barycentric coordinate functions.
 ```rust
 impl<O: SetOrder> WhitneyForm<O> {
@@ -2498,7 +2498,7 @@ exist for all polynomial degrees.
 We don't support them in this implementation, but this
 a very obvious possible future extension to this implementation.
 One just needs to keep in mind that then higher-order manifold
-approixmations are also needed to not incur any non-admissable geometric
+approximations are also needed to not incur any non-admissible geometric
 variational crimes.
 
 
@@ -2509,7 +2509,7 @@ actual finite element library formoniq. \
 Here we will derive and implement the formulas for computing the element matrices
 of the various weak differential operators in FEEC.
 Furthermore we implement the assembly algorithm that will give us the
-final galerkin matrices.
+final Galerkin matrices.
 
 == Variational Formulation & Element Matrix Computation
 
@@ -2573,7 +2573,7 @@ $
 
 As usual in a FEM library, we define element matrix providers,
 that compute the element matrices on each cell of mesh and later on
-assemble the full galerkin matrices.
+assemble the full Galerkin matrices.
 
 We first define a element matrix provider trait
 ```rust
@@ -2584,7 +2584,7 @@ pub trait ElMatProvider {
   fn eval(&self, geometry: &SimplexGeometry) -> ElMat;
 }
 ```
-The `eval` method provies us with the element matrix on a
+The `eval` method provides us with the element matrix on a
 cell, given it's geometry. But we also need to know the exterior grade
 of the Whitney forms that correspond to the rows and columns.
 This information will be used by the assembly routine.
@@ -2648,19 +2648,19 @@ Now we need to implement the element matrix provider to the mass bilinear form.
 Here is where the geometry of the domain comes in, through the inner product, which
 depends on the Riemannian metric.
 
-One could also understand the mass bilinear form as a weak hodge star operator.
+One could also understand the mass bilinear form as a weak Hodge star operator.
 $
   amat(M)_(i j) = integral_Omega phi_j wedge hodge phi_i
   = inner(phi_j, phi_i)_(L^2 Lambda^k (Omega))
 $
 
-We will not compute this using the hodge star operator, but instead directly
+We will not compute this using the Hodge star operator, but instead directly
 using the inner product.
 
 We already have an inner product on constant multiforms. We now need to
 extend it to an $L^2$ inner product on Whitney forms.
-This can be done by inserting the defintion of a Whitney form (in terms of barycentric
-coordiante functions) into the inner product.
+This can be done by inserting the definition of a Whitney form (in terms of barycentric
+coordinate functions) into the inner product.
 
 $
   inner(lambda_(i_0 dots i_k), lambda_(j_0 dots j_k))_(L^2 Lambda^k (Omega))
@@ -2678,7 +2678,7 @@ $
 
 We can now make use of the fact that the exterior derivative of the barycentric
 coordinate functions are constant. This makes the wedge big terms also constant.
-We acn therefore pull them out of the integral inside the $L^2$-inner product
+We can therefore pull them out of the integral inside the $L^2$-inner product
 and now it's just an inner product on constant multiforms.
 What remains in the in the integral is the product of two barycentric
 coordinate functions. This integral is with respect to the metric and contains
@@ -2738,7 +2738,7 @@ impl ElMatProvider for HodgeMassElmat {
 }
 ```
 
-Now we are just missing an element matrix providre for the scalar mass
+Now we are just missing an element matrix provider for the scalar mass
 bilinear form.
 Luckily there exists a closed form solution, for
 this integral, which only depends on the volume of the cell.
@@ -3181,7 +3181,7 @@ The eigenvalues computed on the annulus correspond to the actual eigenvalues.
 == 1-Form Source Problem on $RR^n$
 
 We verify the source problem by means of the method of manufactured solution.
-Our manifactured solution is a 1-form that follows the same pattern for any
+Our manufactured solution is a 1-form that follows the same pattern for any
 dimensions.
 
 $
@@ -3320,7 +3320,7 @@ theory predicts, confirming the correct implementation.
   - parametric FE
   - higher-order FEEC and higher-order elements
 - Broader impact (e.g., Rust in scientific computing, FEEC extensions)
-- Discarded ideas and failed apporaches (generic dimensionality à la nalgebra/eigen)
+- Discarded ideas and failed approaches (generic dimensionality à la nalgebra/Eigen)
 
 A far more meaningful PDE system that has some really interesting applications in real-life
 are Maxwell's Equation describing Electromagnetism.

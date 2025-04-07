@@ -5,5 +5,5 @@
 
 #outline(
   title: "Table of Contents",
-  indent: auto,
+  indent: auto
 )

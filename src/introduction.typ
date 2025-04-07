@@ -11,7 +11,7 @@ The Finite Element Method (FEM) is one of the major methods employed to
 numerically solve PDEs on unstructured meshes inspired by ideas from functional
 analysis.
 
-While scalar-valued FEM is realtively easily constructed and studied using
+While scalar-valued FEM is relatively easily constructed and studied using
 Lagrangian FE spaces, vector-valued FEM is far more involved.
 #quote(block: true, attribution: [Hiptmair @hiptmair-whitney])[
 Without referring to differential geometry, several authors had devised vector
@@ -42,7 +42,7 @@ This is in stark contrast to FEM software implementations, which are usually
 hard-coded to 3 dimensions and rely on vector proxies instead of actual
 differential forms and exterior algebra.
 Furthermore almost all implementations make use of global coordinates on the
-manifolds, therefore relying on embeddings instead of the intrinisc geometry
+manifolds, therefore relying on embeddings instead of the intrinsic geometry
 nature of the manifold.
 
 This thesis takes a different approach to implementation of FEM.
@@ -53,7 +53,7 @@ coordinates but only an intrinsic Riemannian metric.
 
 We will restrict ourselves to 1st order piecewise linear FE and therefore
 also just piecewise-flat approximations of the underlying manifold
-(an admissable geometric variational crime).
+(an admissible geometric variational crime).
 
 The prototypical 2nd order elliptic differential operator in FEEC is the
 Hodge-Laplace operator, a generalization of the ordinary Laplace-Beltrami operator.
@@ -62,13 +62,13 @@ this operator, which will guide our implementation.
 For both these problems we rely on a mixed weak formulation of Hodge-Laplacian.
 
 For the treatment of arbitrary topologies, a big theme is homology and cohomology.
-Homology theory is topological disciple concerned with the couting of holes of
+Homology theory is topological disciple concerned with the counting of holes of
 a topological space, in our case the simplicial complex which approximates our
 PDE domain.
 The simplicial homology of our mesh is isomorphic to the de Rham cohomology of
 the space of differential forms.
-It makes statement about the existance of differential forms on our domain and
-therefore has influence on the existance and uniqueness of our PDE problem.
+It makes statement about the existence of differential forms on our domain and
+therefore has influence on the existence and uniqueness of our PDE problem.
 The ability of FEEC to treat arbitrary topologies is thanks to homology theory.
 In the concrete case of the Hodge-Laplace operator we are dealing with Hodge
 theory.
@@ -90,10 +90,10 @@ beginner friendly exposition of the main concepts.
 Furthermore we provide a implementation of a FEEC library that should be useable
 for solving real-life PDEs.
 It should also guide as a reference for future implementations of FEEC in other
-programming languages with different paradigmes.
+programming languages with different paradigms.
 We want to to lay out the necessary steps without relying too much on the vast
 and complicated mathematical framework that was created around FEEC.
-This thesis is more pragmatic and should appeal to a wider audiance than the
+This thesis is more pragmatic and should appeal to a wider audience than the
 original books and papers on FEEC.
 
 *Outline of the thesis structure*\
@@ -124,7 +124,7 @@ properties of them and also learn about their discrete counterparts called cocha
 
 Once we've explored al of these various theories relevant to the implementation,
 we will finally talk about the implementation of the heart of our FEEC library,
-which is the computation of the galerkin matrices for various weak differential operators.
+which is the computation of the Galerkin matrices for various weak differential operators.
 We will both be solving the Hodge-Laplace EVP and the Hodge-Laplace source problem.
 For this we will look at the Whitney basis functions and the Whitney FE space.
 
