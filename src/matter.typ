@@ -236,7 +236,7 @@ We are also always focused on a memory-economic representation of information.
 
 
 
-= Topology & Geometry of Simplicial Riemannian Manifolds
+= Topology & Geometry of\ Simplicial Riemannian Manifolds
 
 In this chapter we will develop various data structures and algorithms to
 represent and work with our Finite Element mesh.
@@ -2118,7 +2118,7 @@ Hodge star operator, based on an inner product, but it's just not necessary
 for the rest of the library to have such functionality, therefore we omit it
 here.
 
-= Discrete Differential Forms: Simplicial Cochains and Whitney Forms
+= Discrete Differential Forms:\ Simplicial Cochains and Whitney Forms
 
 Smooth Manifold discretizes to Simplicial Complex.
 Continuous Differential Forms on Manifold discretizes to Simplicial cochain on
@@ -2520,7 +2520,7 @@ approximations are also needed to not incur any non-admissible geometric
 variational crimes.
 
 
-= Finite Element Methods for Differential Forms
+= Finite Element Methods\ for Differential Forms
 
 We have now arrived at the chapter talking about the
 actual finite element library formoniq. \
@@ -3180,6 +3180,8 @@ To verify the function of the library we solve a EVP and a source problem.
 
 == 1-Form EVP on Annulus
 
+We meshed a 2D annulus $BB_1 (0) \\ BB_(1\/4) (0)$ using gmsh.
+
 The eigenvalues computed on the annulus correspond to the actual eigenvalues.
 
 #figure(
@@ -3196,7 +3198,7 @@ The eigenvalues computed on the annulus correspond to the actual eigenvalues.
   ],
 ) <img:evp>
 
-== 1-Form Source Problem on $RR^n$
+== 1-Form Source Problem on $RR^n, n >= 1$
 
 We verify the source problem by means of the method of manufactured solution.
 Our manufactured solution is a 1-form that follows the same pattern for any

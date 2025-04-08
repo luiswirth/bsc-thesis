@@ -13,7 +13,7 @@ analysis.
 
 While scalar-valued FEM is relatively easily constructed and studied using
 Lagrangian FE spaces, vector-valued FEM is far more involved.
-#quote(block: true, attribution: [Hiptmair @hiptmair-whitney])[
+#quote(block: true, attribution: [Hiptmair @hiptmair:whitneyforms])[
 Without referring to differential geometry, several authors had devised vector
 valued finite elements that can be regarded as special cases of discrete
 differential forms. Their constructions are formidably intricate and require

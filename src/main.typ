@@ -11,14 +11,19 @@
   #include "matter.typ"
 ]
 
-
 #appendix-style[
-  //= Rust Source Code
-  //= Typst Source Code
+  #include "appendix.typ"
 ]
 
 #postface-style[
-  #bibliography("bibliography.yaml")
-  //= Glossary
-  //= Declaration of originality
+  #bibliography("bibliography.bib")
+
+  #{
+    set page(margin: 0cm)
+  
+    show heading: none
+    heading(numbering: none)[Declaration of Originality]
+
+    image("../res/declaration-originality.svg")
+  }
 ]

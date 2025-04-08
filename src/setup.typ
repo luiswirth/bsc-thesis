@@ -5,8 +5,8 @@
 
 //#let fgcolor = white
 //#let bgcolor = black
-/#let fgcolor = black
-/#let bgcolor = white
+#let fgcolor = black
+#let bgcolor = white
 
 #let thesis-template(doc) = {
   show: math-template
@@ -16,12 +16,13 @@
   set text(fill: fgcolor)
 
   set page(paper: "a4")
-  set page(margin: 1cm)
+  set page(margin: 2cm)
+  set text(size: 10pt)
+
+  set par(justify: true)
 
   set text(font: "New Computer Modern Sans")
-  set text(size: 12pt)
-
-  //set par(justify: true)
+  //set text(font: "New Computer Modern")
  
   doc
 }
