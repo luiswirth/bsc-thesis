@@ -12,8 +12,8 @@ All source code of our implementation *Formoniq* is available on GitHub.\
 The main component of the Git repository is the Rust code.\
 In order to run the Rust code, the Rust toolchain needs to be installed on the
 machine.
-This is best done through the offical Rust installer and toolchain manager
-Rustup, which is easily installed by running a single command `curl` command
+This is best done through the official Rust installer and toolchain manager
+Rustup, which is easily installed by running a single `curl` command
 in the shell, which can be found on #weblink("https://rustup.rs/")[rustup.rs].
 
 In the repository root we have a `./Cargo.toml` file that specifies a Cargo
@@ -36,7 +36,7 @@ These examples can be run using the following command.
   cargo run --example <example>
   ```
 ]
-This command compliles all crates and runs the example in the shell.
+This command compiles all crates and runs the example in the shell.
 It is recommended to additionally add the `--release` flag to build in release
 mode, instead of debug mode to profit from optimizations.
 To figure out the names of the available examples one can look into the example
@@ -59,7 +59,7 @@ Rust code manages this itself.
 
 All the user has to do is to the small solver programs.
 For this both PETSc and SLEPc need to be installed on the system.
-We refer to the offical PETSc and SLEPc documentation on #weblink("https://petsc.org/")[petsc.org]
+We refer to the official PETSc and SLEPc documentation on #weblink("https://petsc.org/")[petsc.org]
 and #weblink("https://slepc.upv.es/")[slepc.upv.es], where installation
 of both software suites is explained. The steps that worked for
 the author are outlined in @appendix:petsc.
@@ -73,7 +73,7 @@ export SLEPC_DIR=<PATH_TO_SLEPC>
 ```
 
 Then we can navigate into the `./petsc-solver` directory and simply run `make`.
-This will produce two exectuables `ghiep.o` and `hils.o`. These executables
+This will produce two executables `ghiep.o` and `hils.o`. These executables
 will then be found and run by the Formoniq.
 
 == Plotting
@@ -107,7 +107,7 @@ options:
   --highlight           Disable highlighting of non-zero DOF edges
 ```
 
-In the directory `./plot/in/` various simple input are prepered for visualizing
+In the directory `./plot/in/` various simple input are prepared for visualizing
 local shape functions on the reference triangle and global shape functions on
 the equilateral "triforce" mesh.
 One can for example run the following command for some nice visuals that
@@ -122,7 +122,7 @@ uv run src/main.py --quiver-count=5 --heatmap-res=10 in/triforce/
 
 The thesis document itself has been written using the new modern type-setting language
 Typst, which can be found under #weblink("https://typst.app/")[typst.app].
-It is very similar to LaTeX, but aims to do things better and to eleviate
+It is very similar to LaTeX, but aims to do things better and to elevate
 various points of frustration that are common in LaTeX.
 
 The source code for this Typst document, is available on GitHub.
@@ -177,7 +177,7 @@ Now PETSc should be successfully installed.
 
 == SLEPc
 
-SLEPc dependes on PETSc and therefore needs to be installed after it
+SLEPc depends on PETSc and therefore needs to be installed after it
 and told it's location.
 For this we set the `PETSC_DIR` environment variable to point to the PETSc
 installation directory.
@@ -187,7 +187,7 @@ export PETSC_DIR=$(pwd)
 ```
 Also `PETSC_ARCH` has to be set to the architecture for which PETSc has been build.
 This is the name of one of the folder that was produced in the PETSc directory.
-For our linux debug build, we need to set the envvar to the following.
+For our Linux debug build, we need to set the envvar to the following.
 ```sh
 export PETSC_ARCH=arch-linux-c-debug
 ```
@@ -206,5 +206,5 @@ make
 make test
 ```
 
-If everything went well without any errors, SLEPc should be succesfully
+If everything went well without any errors, SLEPc should be successfully
 installed.

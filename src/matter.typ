@@ -7,7 +7,7 @@
 In this chapter we want to briefly discuss some general software engineering
 decisions for our library.
 
-== Why Rust?
+== Rust
 
 We have chosen Rust as the main programming language for the implementation of
 our Finite Element library.
@@ -142,7 +142,7 @@ There are many more good reasons to choose Rust, such as it's great ecosystem
 of libraries, which are some of the most impressive libraries the author has ever seen.
 
 
-=== Challenges
+=== Drawbacks
 
 We want to also mentioned some drawbacks of using Rust and challenges we've
 encoutered.
@@ -799,49 +799,45 @@ pub fn relative_to(&self, sup: &Self) -> Simplex {
 ```
 
 
-=== Substrings
+=== Subsequences
 
 When considering the facets of an $n$-simplex, there are multiple
 permutations with the same set of vertices. It would be nice
 to instead have only one permutation per subset of vertices.
-For this we can instead consider the substrings of the original simplex.
+For this we can instead consider the subsequences of the original simplex.
 This then also preservers the vertex order.
 
-We have some methods to check whether a simplex is a substring of another, based
-on a naive substring check algorithm.
+We have some methods to check whether a simplex is a subsequence of another,
+based on a naive subsequence check algorithm.
 ```rust
-pub fn is_substring_of(&self, other: &Self) -> bool {
-  let sub = self.clone().sorted();
-  let sup = other.clone().sorted();
-  sup
-    .vertices
-    .windows(self.nvertices())
-    .any(|w| w == sub.vertices)
+pub fn is_subsequence_of(&self, sup: &Self) -> bool {
+  let mut sup_iter = sup.iter();
+  self.iter().all(|item| sup_iter.any(|x| x == item))
 }
-pub fn is_superstring_of(&self, other: &Self) -> bool {
-  other.is_substring_of(other)
+pub fn is_supersequence_of(&self, other: &Self) -> bool {
+  other.is_subsequence_of(self)
 }
 ```
 
 We also have a method for generating all $k$-subsimplicies that
-are substrings of a $n$-simplex. For this we generate all $k+1$-substrings
+are subsequencess of a $n$-simplex. For this we generate all $k+1$-subsequences
 of the original $n+1$ vertices.
 We use here the implementation of provided by the itertools crate.
 ```rust
-pub fn substrings(&self, sub_dim: Dim) -> impl Iterator<Item = Self> {
+pub fn subsequences(&self, sub_dim: Dim) -> impl Iterator<Item = Self> {
   itertools::Itertools::combinations(self.clone().into_iter(), sub_dim + 1).map(Self::from)
 }
 ```
-This implementation is nice, since it provides the substrings in a lexicographical
+This implementation is nice, since it provides the subsequences in a lexicographical
 order w.r.t. the local indices.
-If the original simplex was sorted, then the substrings are truly lexicographically ordered even
+If the original simplex was sorted, then the subsequences are truly lexicographically ordered even
 w.r.t. the global indices.
 
-A very standard operation is to generate all substrings simplicies of the standard simplex.
+A very standard operation is to generate all subsequences simplicies of the standard simplex.
 We call these the standard subsimplicies.
 ```rust
 pub fn standard_subsimps(dim_cell: Dim, dim_sub: Dim) -> impl Iterator<Item = Simplex> {
-  Simplex::standard(dim_cell).substrings(dim_sub)
+  Simplex::standard(dim_cell).subsequences(dim_sub)
 }
 ```
 
@@ -854,20 +850,23 @@ pub fn graded_subsimps(dim_cell: Dim) -> impl Iterator<Item = impl Iterator<Item
 }
 ```
 
-We can also go the other directions and generate the superstrings of a given simplex,
-if we are given a root simplex that has both the original simplex and it's substrings as
-substrings.
+We can also go the other directions and generate the supersequences of a given simplex,
+if we are given a root simplex that has both the original simplex and it's subsequences as subsequences.
 ```rust
-pub fn superstrings(&self, super_dim: Dim, root: &Self) -> impl Iterator<Item = Self> + use<'_> {
+pub fn supersequences(
+  &self,
+  super_dim: Dim,
+  root: &Self,
+) -> impl Iterator<Item = Self> + use<'_> {
   root
-    .substrings(super_dim)
-    .filter(|sup| self.is_substring_of(sup))
+    .subsequences(super_dim)
+    .filter(|sup| self.is_subsequence_of(sup))
 }
 ```
 
 === Boundary
 
-There is a special operation related to substring simplicies, called the
+There is a special operation related to subsequence simplicies, called the
 boundary operator.
 The boundary operator can be applied to any $n$-simplex $sigma in NN^(n+1)$ and
 is the defined as.
@@ -875,7 +874,7 @@ $
   diff sigma = sum_i (-1)^i [v_0,dots,hat(v)_i,dots,v_n]
 $
 On the left we have a formal sum of simplicies.
-This formal sum consists of all the $(n-1)$-substrings of a $n$-simplex,
+This formal sum consists of all the $(n-1)$-subsequences of a $n$-simplex,
 together with a sign, giving the boundary simplicies a meaningful orientation.
 
 When understanding this formal linear combinations as an element of the
@@ -895,7 +894,7 @@ We need to make sure the sign is still the same for all boundary simplicies.
 ```rust
 pub fn boundary(&self) -> impl Iterator<Item = SignedSimplex> {
   let mut sign = Sign::from_parity(self.nvertices() - 1);
-  self.substrings(self.dim() - 1).map(move |simp| {
+  self.subsequences(self.dim() - 1).map(move |simp| {
     let this_sign = sign;
     sign.flip();
     SignedSimplex::new(simp, this_sign)
@@ -1086,7 +1085,7 @@ impl Complex {
 ```
 
 One of the main algorithms is to construct a simplicial complex from a top-level
-cell-skeleton. For this we generate the substrings of all lengths of the cells.
+cell-skeleton. For this we generate the subsequences of all lengths of the cells.
 While constructing we also precompute and store certain topological properties,
 such as in which cells the subsimplex is contained.
 Afterwards we do some topology checks, such as verifying that the topology of
@@ -1105,7 +1104,7 @@ pub fn from_cells(cells: Skeleton) -> Self {
 
   for (icell, cell) in cells.iter().enumerate() {
     for (dim_sub, (sub_skeleton, sub_skeleton_data)) in skeletons.iter_mut().enumerate() {
-      for sub in cell.substrings(dim_sub) {
+      for sub in cell.subsequences(dim_sub) {
         let (sub_idx, is_new) = sub_skeleton.insert(sub);
         let sub_data = if is_new {
           sub_skeleton_data.0.push(SimplexData::default());
@@ -1212,9 +1211,9 @@ is also available on the handle, but here we directly provide any relevant
 mesh information.
 
 For instance the `SimplexHandle::supersimps` gives us all supersimplicies that
-are also contained in the mesh, which are exactly all the superstring simplicies.
-The `Simplex::superstring` method however expects a `root: &Simplex`, which
-gives the context in which we are searching for superstrings. This context
+are also contained in the mesh, which are exactly all the supersequence simplicies.
+The `Simplex::supersequence` method however expects a `root: &Simplex`, which
+gives the context in which we are searching for supersequences. This context
 is directly provided to the method on the handle, since the mesh knows
 the cocells of each simplex, which is here chosen as the root, so we
 don't need to provide this argument ourselves.
@@ -1225,7 +1224,7 @@ don't need to provide this argument ourselves.
       .flat_map(|parent| {
         self
           .raw()
-          .superstrings(dim_super, parent.raw())
+          .supersequences(dim_super, parent.raw())
           .map(move |sup| self.complex.skeleton(dim_super).get_by_simplex(&sup))
       })
       .collect()
@@ -1251,7 +1250,7 @@ This allows us to switch between a coordinate-based embedded geometry and a coor
 intrinsic geometry based on a Riemannian metric.
 
 
-== Coordinate-Based Ambient Euclidean Geometry
+== Coordinate-Based Simplicial Euclidean Geometry
 
 Let us first quickly look at the familiar coordinate-based euclidean geometry,
 that relies on an embedding. It's an extrinsic description of the geometry
@@ -1337,7 +1336,7 @@ $
 $
 
 
-== Coordinate-Free Intrinsic Riemannian Geometry
+== Metric-Based Riemannian Geometry
 
 The coordinate-based Euclidean geometry we've seen so far, is what
 is commonly used in almost all FEM implementations.
@@ -1408,22 +1407,115 @@ intractable. For this reason we chose here to rely on the directly
 computed inverse matrix nontheless.
 
 We introduce a struct to represent the Riemannian metric at a particular point
-as the Gramian matrix and inverse Gramian matrix.
+as the Gramian matrix.
+
 ```rust
+/// A Gram Matrix represent an inner product expressed in a basis.
 #[derive(Debug, Clone)]
-pub struct RiemannianMetric {
-  metric_tensor: na::DMatrix<f64>,
-  inverse_metric_tensor: na::DMatrix<f64>,
+pub struct Gramian {
+  /// S.P.D. matrix
+  matrix: na::DMatrix<f64>,
 }
-impl RiemannianMetric {
-  pub fn dim(&self) -> Dim { self.metric_tensor.nrows() }
-  pub fn inner(&self, i: usize, j: usize) -> f64 { self.metric_tensor[(i, j)] }
-  pub fn length_sq(&self, i: usize) -> f64 { self.inner(i, i) }
-  pub fn length(&self, i: usize) -> f64 { self.length_sq(i).sqrt() }
-  pub fn angle_cos(&self, i: usize, j: usize) -> f64 {
-    self.inner(i, j) / self.length(i) / self.length(j)
+impl Gramian {
+  pub fn try_new(matrix: na::DMatrix<f64>) -> Option<Self> {
+    matrix.is_spd().then_some(Self { matrix })
   }
-  pub fn angle(&self, i: usize, j: usize) -> f64 { self.angle_cos(i, j).acos() }
+  pub fn new(matrix: na::DMatrix<f64>) -> Self {
+    Self::try_new(matrix).expect("Matrix must be s.p.d.")
+  }
+  pub fn new_unchecked(matrix: na::DMatrix<f64>) -> Self {
+    if cfg!(debug_assertions) {
+      Self::new(matrix)
+    } else {
+      Self { matrix }
+    }
+  }
+  pub fn from_euclidean_vectors(vectors: na::DMatrix<f64>) -> Self {
+    assert!(vectors.is_full_rank(1e-9), "Matrix must be full rank.");
+    let matrix = vectors.transpose() * vectors;
+    Self::new_unchecked(matrix)
+  }
+  /// Orthonormal euclidean metric.
+  pub fn standard(dim: Dim) -> Self {
+    let matrix = na::DMatrix::identity(dim, dim);
+    Self::new_unchecked(matrix)
+  }
+
+  pub fn matrix(&self) -> &na::DMatrix<f64> {
+    &self.matrix
+  }
+  pub fn dim(&self) -> Dim {
+    self.matrix.nrows()
+  }
+  pub fn det(&self) -> f64 {
+    self.matrix.determinant()
+  }
+  pub fn det_sqrt(&self) -> f64 {
+    self.det().sqrt()
+  }
+  pub fn inverse(self) -> Self {
+    let matrix = self
+      .matrix
+      .try_inverse()
+      .expect("Symmetric Positive Definite is always invertible.");
+    Self::new_unchecked(matrix)
+  }
+}
+
+/// Inner product functionality directly on the basis.
+impl Gramian {
+  pub fn basis_inner(&self, i: usize, j: usize) -> f64 {
+    self.matrix[(i, j)]
+  }
+  pub fn basis_norm_sq(&self, i: usize) -> f64 {
+    self.basis_inner(i, i)
+  }
+  pub fn basis_norm(&self, i: usize) -> f64 {
+    self.basis_norm_sq(i).sqrt()
+  }
+  pub fn basis_angle_cos(&self, i: usize, j: usize) -> f64 {
+    self.basis_inner(i, j) / self.basis_norm(i) / self.basis_norm(j)
+  }
+  pub fn basis_angle(&self, i: usize, j: usize) -> f64 {
+    self.basis_angle_cos(i, j).acos()
+  }
+}
+impl std::ops::Index<(usize, usize)> for Gramian {
+  type Output = f64;
+  fn index(&self, (i, j): (usize, usize)) -> &Self::Output {
+    &self.matrix[(i, j)]
+  }
+}
+```
+
+```rust
+/// Inner product functionality directly on any element.
+impl Gramian {
+  pub fn inner(&self, v: &na::DVector<f64>, w: &na::DVector<f64>) -> f64 {
+    (v.transpose() * self.matrix() * w).x
+  }
+  pub fn inner_mat(&self, v: &na::DMatrix<f64>, w: &na::DMatrix<f64>) -> na::DMatrix<f64> {
+    v.transpose() * self.matrix() * w
+  }
+  pub fn norm_sq(&self, v: &na::DVector<f64>) -> f64 {
+    self.inner(v, v)
+  }
+  pub fn norm_sq_mat(&self, v: &na::DMatrix<f64>) -> na::DMatrix<f64> {
+    self.inner_mat(v, v)
+  }
+  pub fn norm(&self, v: &na::DVector<f64>) -> f64 {
+    self.inner(v, v).sqrt()
+  }
+  pub fn norm_mat(&self, v: &na::DMatrix<f64>) -> na::DMatrix<f64> {
+    self.inner_mat(v, v).map(|v| v.sqrt())
+  }
+  pub fn angle_cos(&self, v: &na::DVector<f64>, w: &na::DVector<f64>) -> f64 {
+    self.inner(v, w) / self.norm(v) / self.norm(w)
+  }
+  pub fn angle(&self, v: &na::DVector<f64>, w: &na::DVector<f64>) -> f64 {
+    self.angle_cos(v, w).acos()
+  }
+}
 ```
 
 The dot product is the standard inner product on flat Euclidean space.
@@ -1477,10 +1569,11 @@ impl DMatrixExt for na::DMatrix<f64> {
 }
 ```
 
-=== Intrinsic Simplicial Geometry & Regge Metric
+== Simplicial Riemannian Geometry & Regge Metric
 
-So far our discussion of Riemannian geometry hasn't referenced
-our mesh. But we are of course doing geometry on a simplicial manifold.
+We have now discussed the of Riemannian geometry in general.
+Now we want to focus on the special case of simplicial geometry,
+where the Riemannian metric is defined on our mesh.
 
 We have seen with our coordinate simplicies that our geometry is piecewise-flat
 over the cells. This means that our metric is constant over each cell
@@ -1491,33 +1584,263 @@ metric* and comes from Regge calculus, a theory for numerical general relativity
 that is about producing simplicial approximations of spacetimes that are
 solutions to the Einstein field equation.
 
+
+=== Deriving the Regge Metric from Coordinate Simplicies
+
 Our coordinate simplicies are an immersion of an abstract simplex
 and as such, we can compute the corresponding constant metric tensor on it.
-The spanning vectors constitute a basis of the tangent vectors.
+We've seen that the local metric tensor is exactly the Gramian of the Jacobian of the immersion.
+The Jacobian of our affine-linear transformation, is the matrix $amat(E)$,
+that has the spanning vectors as columns.
+From a different perspective the spanning vectors just constitute our chosen basis of the tangent space
+and therefore it's Gramian w.r.t. the Euclidean inner product is the metric tensor.
+$
+  amat(G) = amat(E)^transp amat(E)
+$
 ```rust
 impl SimplexCoords {
-  pub fn metric_tensor(&self) -> RiemannianMetric {
-    RiemannianMetric::from_tangent_basis(self.spanning_vectors())
+  pub fn metric_tensor(&self) -> Gramian {
+    Gramian::from_euclidean_vectors(self.spanning_vectors())
   }
 }
 ```
 
-But just like storing coordinate simplicies is a memory-inefficient representation
-of the extrinsic geometry, storing the metric tensor on each cell
-is also inefficient.
-A global way to store the Regge metric is based on edge lengths. Instead
-of giving all vertices a global coordinate, as one would do in extrinsic
+=== Simplex Edge Lengths
+
+We have seen how to derive the Regge metric from coordinates,
+but of course the metric is independent of the specific coordinates.
+The metric is invariant under isometric transformations, such
+as translations, rotations and reflections.
+This begs the question, what the minimal geometric information necessary is
+to derive the metric.
+It turns out that, while vertex coordinates are over-specified, edge lengths
+in contrast are exactly the required information.
+Edge lengths are also invariant under isometric transformations.
+
+Instead of giving all vertices a global coordinate, as one would do in extrinsic
 geometry, we just give each edge in the mesh a positive length. Just knowing
-the lengths doesn't tell you the positioning of the mesh in an ambient space
-but it's enough to give the whole mesh it's piecewise-flat geometry.
-Storing only the edge lengths of the whole mesh is a more memory efficient
-representation of the geometry than storing all the metric tensors.
+the lengths doesn't tell you the positioning of the mesh in an ambient space but
+it's enough to give the whole mesh it's piecewise-flat geometry.
 
 Mathematically this is just a function on the edges to the positive real numbers.
 $
-  l: Delta_1 (mesh) -> RR^+
+  d: Delta_1 (mesh) -> RR^+
 $
-that gives each edge $e in Delta_1 (mesh)$ a positive length $l_e in RR^+$.
+that gives each edge $e in Delta_1 (mesh)$ a positive length $l_e in RR^+$. \
+We denote the edge length between vertices $i$ and $j$ by $d_(i j)$.
+
+```rust
+#[derive(Debug, Clone)]
+pub struct SimplexLengths {
+  lengths: na::DVector<f64>,
+  dim: Dim,
+}
+```
+
+```rust
+pub fn new(lengths: na::DVector<f64>, dim: Dim) -> Self {
+  assert_eq!(lengths.len(), nedges(dim), "Wrong number of edges.");
+  let this = Self { lengths, dim };
+  assert!(
+    this.is_coordinate_realizable(),
+    "Simplex must be coordiante realizable."
+  );
+  this
+}
+pub fn new_unchecked(lengths: na::DVector<f64>, dim: Dim) -> Self {
+  if cfg!(debug_assertions) {
+    Self::new(lengths, dim)
+  } else {
+    Self { lengths, dim }
+  }
+}
+pub fn standard(dim: Dim) -> SimplexLengths {
+  let nedges = nedges(dim);
+  let lengths: Vec<f64> = (0..dim)
+    .map(|_| 1.0)
+    .chain((dim..nedges).map(|_| SQRT_2))
+    .collect();
+
+  Self::new_unchecked(lengths.into(), dim)
+}
+pub fn from_coords(coords: &SimplexCoords) -> Self {
+  let dim = coords.dim_intrinsic();
+  let lengths = coords.edges().map(|e| e.vol()).collect_vec().into();
+  // SAFETY: Edge lengths stem from a realization already.
+  Self::new_unchecked(lengths, dim)
+}
+```
+
+The Regge metric on a single simplex and it's edge lengths
+are exactly equivalent and both define the geometry uniquely.
+This means one can be derived from the other.
+
+
+We can derive the edge lengths, from the Regge metric Gramian.
+$
+  d_(i j) = sqrt(amat(G)_(i i) + amat(G)_(j j) - 2 amat(G)_(i j))
+$
+```rust
+pub fn from_regge_metric(metric: &Gramian) -> Self {
+  let dim = metric.dim();
+  let length = |i, j| {
+    (metric.basis_inner(i, i) + metric.basis_inner(j, j) - 2.0 * metric.basis_inner(i, j)).sqrt()
+  };
+
+  let mut lengths = na::DVector::zeros(nedges(dim));
+  let mut iedge = 0;
+  for i in 0..dim {
+    for j in i..dim {
+      lengths[iedge] = length(i, j);
+      iedge += 1;
+    }
+  }
+
+  Self::new(lengths, dim)
+}
+```
+
+
+We can derive the Regge metric Gramian, from the edge lengths by using the law
+of cosines.
+$
+  amat(G)_(i j) = 1/2 (d_(0 i)^2 + d_(0 j)^2 - d_(i j)^2)
+$
+```rust
+pub fn into_regge_metric(&self) -> Gramian {
+  let mut metric_tensor = na::DMatrix::zeros(self.dim(), self.dim());
+  for i in 0..self.dim() {
+    metric_tensor[(i, i)] = self[i].powi(2);
+  }
+  for i in 0..self.dim() {
+    for j in (i + 1)..self.dim() {
+      let l0i = self[i];
+      let l0j = self[j];
+
+      let vi = i + 1;
+      let vj = j + 1;
+      let eij = lex_rank(&[vi, vj], self.nvertices());
+      let lij = self[eij];
+
+      let val = 0.5 * (l0i.powi(2) + l0j.powi(2) - lij.powi(2));
+
+      metric_tensor[(i, j)] = val;
+      metric_tensor[(j, i)] = val;
+    }
+  }
+  Gramian::try_new(metric_tensor).expect("Edge Lengths must be coordinate realizable.")
+}
+```
+
+
+=== Realizability Conditions
+
+Of course not all possible length assignment are valid. They need to fulfill certain
+critieria that evolve around the possibility of realizing these edge lengths
+as a real euclidean simplex. These are so called *Realizability Conditions*.
+Only edge lengths for which a coordinate simplex exists that actually
+produces these edge lengths are valid.
+
+One important condition on these edge lengths, is that they fulfill the
+triangle inequality: \
+All 2-simplicies (triangles) $sigma = [i, j, k] in Delta_2 (mesh)$ in the mesh $mesh$,
+must fulfill the usual triangle inequality
+$
+  d_(i j) + d_(j k) >= d_(i k) \
+  d_(j k) + d_(i k) >= d_(i j) \
+  d_(i k) + d_(i j) >= d_(j k) \
+$
+Otherwise our metric tensor is not positive-definite and we obtain a
+degenerate pseudo-Riemannian metric instead of a proper Riemannian metric. If we start from
+an immersed mesh, this is always the case.
+
+
+*Euclidean distance matrix*
+$
+  amat(A) = mat(
+    0, d_12^2, d_13^2, dots.c, d_(1 n)^2;
+    d_21^2, 0, d_23^2, dots.c, d_(2 n)^2;
+    d_31^2, d_32^2, 0, dots.c, d_(3 n)^2;
+    dots.v, dots.v, dots.v, dots.down, dots.v;
+    d_(n 1)^2, d_(n 2)^2, d_(n 3)^2, dots.c, 0;
+  )
+$
+
+```rust
+pub fn distance_matrix(&self) -> na::DMatrix<f64> {
+  let mut mat = na::DMatrix::zeros(self.nvertices(), self.nvertices());
+
+  let mut idx = 0;
+  for i in 0..self.nvertices() {
+    for j in (i + 1)..self.nvertices() {
+      let dist_sqr = self.lengths[idx].powi(2);
+      mat[(i, j)] = dist_sqr;
+      mat[(j, i)] = dist_sqr;
+      idx += 1;
+    }
+  }
+  mat
+}
+```
+
+*Cayley-Menger Matrix*
+
+$
+  amat(C M) = mat(
+    0, d_12^2, d_13^2, dots.c, d_(1 n)^2, 1;
+    d_21^2, 0, d_23^2, dots.c, d_(2 n)^2, 1;
+    d_31^2, d_32^2, 0, dots.c, d_(3 n)^2, 1;
+    dots.v, dots.v, dots.v, dots.down, dots.v, dots.v;
+    d_(n 1)^2, d_(n 2)^2, d_(n 3)^2, dots.c, 0, 1;
+    1, 1, 1, dots.c, 1, 0;
+  )
+$
+
+```rust
+pub fn cayley_menger_matrix(&self) -> na::DMatrix<f64> {
+  let mut mat = self.distance_matrix();
+  mat = mat.insert_row(self.nvertices(), 1.0);
+  mat = mat.insert_column(self.nvertices(), 1.0);
+  mat[(self.nvertices(), self.nvertices())] = 0.0;
+  mat
+}
+```
+
+*Cayley-Menger Determinant*
+$
+  c m = ((-1)^(n+1))/((n!)^2 2^n) det (amat(C M))
+$
+
+```rust
+impl SimplexLengths {
+pub fn cayley_menger_det(&self) -> f64 {
+  cayley_menger_factor(self.dim()) * self.cayley_menger_matrix().determinant()
+}
+pub fn cayley_menger_factor(dim: Dim) -> f64 {
+  (-1.0f64).powi(dim as i32 + 1) / factorial(dim).pow(2) as f64 / 2f64.powi(dim as i32)
+}
+```
+
+Realizability is equivalent to $c m >= 0$.
+
+```rust
+pub fn is_coordinate_realizable(&self) -> bool {
+  self.cayley_menger_det() >= 0.0
+}
+```
+
+If the simplex is realizable, then the positive volume of it is:
+$
+  vol = sqrt(c m)
+$
+
+```rust
+pub fn vol(&self) -> f64 {
+  self.cayley_menger_det().sqrt()
+}
+```
+
+=== Global Geometry
 
 Computationally we represent the edge lengths in a single struct
 that has all lengths stored continuously in memory in a nalgebra vector.
@@ -1553,41 +1876,6 @@ impl MeshVertexCoords {
 }
 ```
 
-We can then restrict these edge lengths to just a single simplex and obtain
-a `SimplexEdgeLengths` struct. From this we can directly compute the metric
-Gramian, from the law of cosines.
-$
-  amat(G)_(i j) = 1/2 (l_(0 i)^2 + l_(0 j)^2 - l_(i j)^2)
-$
-
-```rust
-/// Builds regge metric tensor from edge lenghts of simplex.
-pub fn compute_regge_metric(&self) -> RiemannianMetric {
-  let dim = self.dim();
-  let nvertices = dim + 1;
-  let mut metric_tensor = na::DMatrix::zeros(dim, dim);
-  for i in 0..dim {
-    metric_tensor[(i, i)] = self[i].powi(2);
-  }
-  for i in 0..dim {
-    for j in (i + 1)..dim {
-      let l0i = self[i];
-      let l0j = self[j];
-
-      let vi = i + 1;
-      let vj = j + 1;
-      let eij = lex_rank(&[vi, vj], nvertices);
-      let lij = self[eij];
-
-      let val = 0.5 * (l0i.powi(2) + l0j.powi(2) - lij.powi(2));
-
-      metric_tensor[(i, j)] = val;
-      metric_tensor[(j, i)] = val;
-    }
-  }
-  RiemannianMetric::new(metric_tensor)
-}
-```
 
 == Higher Order Geometry
 

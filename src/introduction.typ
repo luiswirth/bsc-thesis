@@ -33,7 +33,7 @@ differential forms instead of vector calculus to solve PDEs.
 FEEC provides structure-preserving discretizations that ensure stability,
 accuracy, and convergence.
 
-FEEC is the de facto standard for analyzing and constructing conforming
+FEEC is the facto standard for analyzing and constructing conforming
 FE spaces for arbitrary rank differential forms in arbitrary dimensions on
 arbitrary topologies.
 In modern FEM theory is therefore standard to embrace differential geometry
@@ -43,7 +43,7 @@ hard-coded to 3 dimensions and rely on vector proxies instead of actual
 differential forms and exterior algebra.
 Furthermore almost all implementations make use of global coordinates on the
 manifolds, therefore relying on embeddings instead of the intrinsic geometry
-nature of the manifold.
+of the manifold.
 
 This thesis takes a different approach to implementation of FEM.
 We want to fully embrace differential geometry and in this way provide a
@@ -62,12 +62,12 @@ this operator, which will guide our implementation.
 For both these problems we rely on a mixed weak formulation of Hodge-Laplacian.
 
 For the treatment of arbitrary topologies, a big theme is homology and cohomology.
-Homology theory is topological disciple concerned with the counting of holes of
+Homology theory is a topological disciple concerned with the counting of holes of
 a topological space, in our case the simplicial complex which approximates our
 PDE domain.
 The simplicial homology of our mesh is isomorphic to the de Rham cohomology of
 the space of differential forms.
-It makes statement about the existence of differential forms on our domain and
+It makes statements about the existence of differential forms on our domain and
 therefore has influence on the existence and uniqueness of our PDE problem.
 The ability of FEEC to treat arbitrary topologies is thanks to homology theory.
 In the concrete case of the Hodge-Laplace operator we are dealing with Hodge
@@ -80,7 +80,7 @@ The implementation of our FEM library will be done in the Rust programming langu
 Rust was chosen for its strong guarantees in memory safety, performance, and
 modern language features, making it ideal for high-performance computing tasks
 like finite elements. The Rust ownership model, borrow checker, and type system
-act as a proof system to ensure there are no memory bugs, race conditions, or
+act like a proof system to ensure there are no memory bugs, race conditions, or
 similar undefined behaviors in any program, while achieving performance levels
 comparable to C/C++.
 
@@ -96,12 +96,7 @@ and complicated mathematical framework that was created around FEEC.
 This thesis is more pragmatic and should appeal to a wider audience than the
 original books and papers on FEEC.
 
-*Outline of the thesis structure*\
-Our library is the core of the thesis, so the structure of it should parallel
-the structure of the library.
-The first chapter provide context: Rust choices and software architecture.
-- The next sections introduce the mathematical foundations that your crates encapsulate.
-- The final sections describe how Formoniq ties everything together and its practical application.
+TODO: DO THIS BETTER
 
 The structure of this thesis is as follows:
 
@@ -132,6 +127,7 @@ Lastly we will test our library and generate various results by solving
 model problems, visualizing them and looking at error convergences and other metrics.
 To this end we will use the method of manufactured solutions to verify
 the correctness of our FE solutions.
+
 
 
 #pagebreak()
