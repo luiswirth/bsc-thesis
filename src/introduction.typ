@@ -34,10 +34,11 @@ FEEC provides structure-preserving discretizations that ensure stability,
 accuracy, and convergence.
 
 FEEC is the facto standard for analyzing and constructing conforming
-FE spaces for arbitrary rank differential forms in arbitrary dimensions on
+FE spaces for arbitrary rank differential forms in arbitrary dimensions and on
 arbitrary topologies.
-In modern FEM theory is therefore standard to embrace differential geometry
+In modern FEM theory it is therefore standard to embrace differential geometry
 instead of vectors calculus.
+
 This is in stark contrast to FEM software implementations, which are usually
 hard-coded to 3 dimensions and rely on vector proxies instead of actual
 differential forms and exterior algebra.
@@ -46,9 +47,10 @@ manifolds, therefore relying on embeddings instead of the intrinsic geometry
 of the manifold.
 
 This thesis takes a different approach to implementation of FEM.
-We want to fully embrace differential geometry and in this way provide a
-implementation of FEEC that works in arbitrary dimensions for arbitrary
-Riemannian manifolds with arbitrary simplicial topology without any global
+We want to fully embrace differential geometry and in this way provide
+unparalleled generality.
+We create an implementation of FEEC that works in arbitrary dimensions
+for arbitrary simplicial Riemannian manifolds with arbitrary simplicial topology without any global
 coordinates but only an intrinsic Riemannian metric.
 
 We will restrict ourselves to 1st order piecewise linear FE and therefore

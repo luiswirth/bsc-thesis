@@ -217,7 +217,7 @@ We have the following crates:
 - common
 - manifold
 - exterior
-- whitney
+- ddf
 - formoniq
 
 All of which have been published to `crates.io`.
@@ -236,7 +236,7 @@ We are also always focused on a memory-economic representation of information.
 
 
 
-= Topology & Geometry of\ Simplicial Riemannian Manifolds
+= Topology & Geometry of Simplicial Riemannian Manifolds
 
 In this chapter we will develop various data structures and algorithms to
 represent and work with our Finite Element mesh.
@@ -1136,7 +1136,7 @@ pub fn from_cells(cells: Skeleton) -> Self {
 We have already seen the boundary operator for single simplicies.
 We can extend this operator to the whole skeleton.
 Here the boundary operator itself is returned as a linear operator
-from the $k$-skeleton to the $k-1$-skeleton.
+from the $k$-skeleton to the $(k-1)$-skeleton.
 It is the signed incidence matrix of the simplicies in the upper skeleton
 in the lower skeleton.
 
@@ -1332,7 +1332,7 @@ coordinate differential form closures, since after evaluating
 the differential form on the tangent vectors, we obtain a simple
 scalar function.
 $
-  avec(x) in RR^N |-> omega_avec(x) (diff_1,dots,diff_n) in RR
+  avec(x) in RR^N |-> omega_avec(x) (diff/(diff x^1),dots,diff/(diff x^n)) in RR
 $
 
 
@@ -2406,54 +2406,71 @@ Hodge star operator, based on an inner product, but it's just not necessary
 for the rest of the library to have such functionality, therefore we omit it
 here.
 
-= Discrete Differential Forms:\ Simplicial Cochains and Whitney Forms
 
-Smooth Manifold discretizes to Simplicial Complex.
-Continuous Differential Forms on Manifold discretizes to Simplicial cochain on
-Simplicial Complex.
-Discrete Differential $k$-form is Simplicial $k$-cochain, which
-are real values on the $k$-skeleton.
-
-Simplicial cochains are a structure preserving discretization
-and therefore retain the key topological and geometrical properties
-from differential geometry.
-This will become apart in our discussion of cochain calculus,
-where we will see coboundary operators.
-
-We will discuss the discretization procedure of arbitrary coordinate-based continuum
-differential forms by means of a cochain-projection via de Rham's map.
-And the reconstruction of a continuum differential form over the cells by means
-of cochain-interpolation via Whitney's map onto Whitney forms.
+= Discrete Differential Forms: Simplicial Cochains and Whitney Forms
 
 
-Simplicial cochains arise naturally from the combinatorial structure of a
-simplicial complex and can be interpreted as discrete analogues of differential
-forms via integration. They form the algebraic backbone of discrete exterior
-calculus and finite element exterior calculus (FEEC), representing cohomology
-classes and supporting discrete versions of exterior operators.
+Having discretized the smooth domain $Omega$ into a simplicial complex $mesh$,
+we now require a corresponding discretization for the differential forms
+$Lambda(Omega)$ defined upon it.
+FEEC relies on discrete counterparts, called discrete differential forms (DDF)
+$Lambda_h (mesh)$ defined on the simplicial complex $mesh$, that faithfully
+represent the structure of the continuous forms.
 
-Whitney forms, on the other hand, are low-order, piecewise polynomial
-differential forms defined on each simplex. They interpolate cochain values into
-the continuous setting and serve as basis functions in finite element spaces
-of differential forms.
-Whitney map: Canonical map from cochains to differential forms.
+Central to FEEC are two fundamental, closely related concepts:
+- *Simplicial Cochains*: These are the primary discrete objects. A $k$-cochain
+  assigns a real value (a degree of freedom) to each $k$-simplex of the mesh
+  $mesh$. They form the algebraic backbone, capturing the combinatorial topology
+  and enabling discrete versions of operators like the exterior derivative.
+- *Whitney Forms*: These constitute the lowest-order finite element space
+  for differential forms. Each Whitney $k$-form is a piecewise polynomial basis
+  function associated with a $k$-simplex. They provide a means to reconstruct a
+  field across the mesh by interpolating the cochain values and are essential for
+  defining the integrals required in weak formulations.
+
+We will demonstrate that the space of $k$-cochains and the space spanned by
+Whitney $k$-forms are isomorphic. The *projection* from continuous forms to
+cochains is realized by the *integration map*, while
+the *interpolation* from cochains to the Whitney space is achieved via the
+*Whitney map*.
+
+This chapter explores the representation and manipulation of these discrete
+differential forms. We will focus on two key processes:
+- *Discretization*: Projecting continuous differential forms onto the discrete
+  setting, yielding degrees of freedom associated with the mesh simplices.
+- *Reconstruction*: Interpolating these discrete degrees of freedom using basis
+  functions to obtain a continuous (albeit piecewise polynomial) representation
+  over the mesh, suitable for variational methods.
+
+
+Understanding these discrete structures and the maps connecting them is crucial,
+as they provide the foundation for constructing the finite element spaces and
+structure-preserving discrete operators used throughout FEEC.
 
 This chapter lays the foundation for the discrete variational formulations used
-n FEEC.
+in FEEC.
+Compute Basis Functions on any Coordinate Simplex, including Reference Simplex.
+
 
 == Cochains
 
-The discretization of differential forms on a mesh is of outmost importance.
-For 1st order FEEC, as we are doing, the representation of discrete differential
-forms is the same as in *discrete exterior calculus* (DEC) and is a
-so called cochain. Cochains are isomorphic to the FE functions in 1st order FEEC.
+A $k$-cochain $omega$ is a real-valued function $omega: Delta_k (mesh) -> RR$
+on the $k$-skeleton $Delta_k (mesh)$ of the mesh $mesh$.
 
-A discrete differential $k$-form on a mesh is a $k$-cochain defined on this mesh.
-This is a real-valued function $omega: Delta_k (mesh) -> RR$ defined on all
-$k$-simplicies $Delta_k (mesh)$ of the mesh $mesh$.
+A rank $k$ differential $k$-form, becomes a $k$-cochain, defined on the simplicies
+of dimension $k$ of the mesh.
+
+Simplicial cochains arise naturally from the combinatorial structure of a
+simplical complex.
+
+A simplicial cochain is dual to a simplicial chain.
+
+Simplicial cochains are also the fundamental combinatorial object
+in *discrete exterior calculus* (DEC).
+
+
 One can represent this function on the simplicies, using a list of real values
 that are ordered according to the global numbering of the simplicies.
-
 ```rust
 pub struct Cochain {
   pub coeffs: na::DVector<f64>,
@@ -2461,86 +2478,130 @@ pub struct Cochain {
 }
 ```
 
+Simplicial cochains are a structure preserving discretization
+and therefore retain the key topological and geometrical properties
+from differential topology/geometry.
 
-=== Discretization: Cochain-Projection via de Rham's map
 
-The discretization of the continuous differential forms is then just a projection
-onto this cochain space. This projection is the very geometric step of
-integration the continuous differential form over each $k$-simplex to obtain
-the real value, the function has as output.
-This map is called the *de Rham map*.
-It ensures that the homology is preserved.
+Cochains can be seen as the coefficents or DOFs of our FE spaces.
 
+=== Discretization: Cochain-Projection via Integration
+
+What is the interpretation of these cochain values?
+This question can be answered by looking at the discretization procedure
+of a continuous differential form to this discrete form.
+
+The discretization of differential forms happens by projection
+onto the cochain space. This cochain-projection is the simple operation
+of integration the given continuous differential $k$-form over every $k$-simplex
+of the mesh. This gives a real number for each $k$-simplex, which is exactly
+the cochain values.
+This projection is called the *integration map*.
 $
-  omega_sigma = integral_sigma omega
+  c_sigma = integral_sigma omega
   quad forall sigma in Delta_k (mesh)
 $
 
-```rust
-/// Discretize continuous coordinate-based differential k-form into
-/// discrete k-cochain on CoordComplex via de Rham map (integration over k-simplex).
-pub fn discretize_form_on_mesh(
-  form: &impl DifferentialMultiForm,
-  topology: &Complex,
-  coords: &MeshVertexCoords,
-) -> Cochain<Dim> {
-  let cochain = topology
-    .skeleton(form.grade())
-    .handle_iter()
-    .map(|simp| SimplexCoords::from_simplex_and_coords(simp.simplex_set(), coords))
-    .map(|simp| discretize_form_on_simplex(form, &simp))
-    .collect::<Vec<_>>()
-    .into();
-  Cochain::new(form.grade(), cochain)
-}
+$
+  I: Lambda^k (Omega) -> C^k (mesh; RR)
+$
 
-/// Approximates the integral of a differential k-form over a k-simplex,
-/// by means of barycentric quadrature.
-pub fn discretize_form_on_simplex(
-  differential_form: &impl DifferentialMultiForm,
-  simplex: &SimplexCoords,
-) -> f64 {
+$
+  I(omega) = (sigma |-> integral_sigma omega)
+$
+
+TODO: EXPLAIN INTEGRAL DEFINITION
+
+The integral of a differential $k$-form over a
+$k$-simplex is defined as:
+$
+  integral_sigma omega = integral_(sigma^"ref")(lambda^1,dots,lambda^k) ...
+$
+
+We approximate the integral of a coordinate differential form
+over a coordinate simplex by barycentric quadrature.
+$
+  integral_sigma omega approx |sigma| omega_(avec(m)_sigma) (avec(e)_1,dots,avec(e)_n)
+$
+
+And the implementation just looks like this:
+```rust
+pub fn integrate_form_simplex(form: &impl DifferentialMultiForm, simplex: &SimplexCoords) -> f64 {
   let multivector = simplex.spanning_multivector();
   let f = |coord: CoordRef| {
-    differential_form
-      .at_point(simplex.local_to_global_coord(coord).as_view())
-      .on_multivector(&multivector)
+    form
+      .at_point(simplex.local2global(coord).as_view())
+      .apply_form_on_multivector(&multivector)
   };
   let std_simp = SimplexCoords::standard(simplex.dim_intrinsic());
   barycentric_quadrature(&f, &std_simp)
 }
 ```
 
+And for the full cochain-projection, we just repeat this integration
+for each simplex in the $k$-skeleton. The implementation the looks like this.
+```rust
+pub fn cochain_projection(
+  form: &impl DifferentialMultiForm,
+  topology: &Complex,
+  coords: &MeshCoords,
+) -> Cochain {
+  let cochain = topology
+    .skeleton(form.grade())
+    .handle_iter()
+    .map(|simp| SimplexCoords::from_simplex_and_coords(&simp, coords))
+    .map(|simp| integrate_form_simplex(form, &simp))
+    .collect::<Vec<_>>()
+    .into();
+  Cochain::new(form.grade(), cochain)
+}
+```
+
 
 === Discrete Exterior Derivative via Stokes' Theorem
 
-The exterior derivative is the derivative in exterior calculus.
-We want to define a discrete exterior derivative for our discrete differential forms.
-This is done with some really simple cochain calculus.
-We make us of the famous *Stokes' Theorem* for chains, that relates the exterior
-derivative to the boundary of the chain.
+The exterior derivative is the unified derivative in exterior calculus.
+We want to find a discrete counterpart that works on our discrete cochains.
+For this we look at some really simple cochain calculus.
+
+A very important property of the exterior derivative is captured in *Stokes'
+Theorem* for chains, that realtes the exterior derivative to the boundary of
+a chain.
 $
   integral_c dif omega = integral_(diff c) omega
 $
-We can express this rule using a dual pairing
+
+We can introudce the dual pairing $inner(dot, dot)$ defined as
+$
+  inner(omega, sigma) := integral_sigma omega
+$
+
+and then Stokes' Theorem becomes
 $
   inner(dif omega, c) = inner(omega, diff c)
 $
 
-This inspires a definition of the discrete exterior derivative as
-the opposite of the boundary operator, the *coboundary* operator.
-$
-  dif omega(c) = omega(diff c)
-$
+Written in this way, we can see that the exterior derivative
+is the adjoint of the boundary operator, w.r.t. this dual pairing.
 
-From a computational standpoint, the boundary operator is a signed incidence matrix
-and this definition makes the coboundary operator be the transpose of this
-signed incidence matrix.
+This inspires a definition of the discrete exterior derivative as
+the adjoint of the boundary operator, the *coboundary* operator,
+which fulfills Stokes' Theorem by definition.
+
+TODO: EXPLAIN!
+
+From a computational standpoint, the boundary operator is a signed incidence matrix.
+This makes the coboundary operator be the transpose of the signed incidence matrix.
 $
   dif^k = diff_(k+1)^transp
 $
+
+This also perfectly demonstrates how the exterior derivative is a purely
+topological operator that doesn't depend on the geometry / metric of the manifold.
+
+Using an extension trait, we introduce a basic function that returns
+the matrix corresponding to the discrete exterior derivative.
 ```rust
-/// Extension trait
 pub trait ManifoldComplexExt { ... }
 impl ManifoldComplexExt for Complex {
   /// $dif^k: cal(W) Lambda^k -> cal(W) Lambda^(k+1)$
@@ -2550,28 +2611,61 @@ impl ManifoldComplexExt for Complex {
 }
 ```
 
-By construction Stokes' Theorem is fulfilled, which is crucial to many applications.
-
-The exterior derivative is closed in the space of Whitney forms, because of the de Rham complex.
-
-The local (on a single cell) exterior derivative is always the same for any cell.
-Therefore we can compute it on the reference cell.
-
-
 == Whitney Forms
 
-The basis we will be working with is called the Whitney basis.
-The Whitney space is the space of piecewise-linear (over the cells)
-differential forms.
+Now let's take a look at Whitney forms, which are the finite element
+differential forms that correspond to cochains.
+
+Whitney forms are the piecewise-linear (over the cells) differential forms
+defined over the simplicial manifold.
+
+They are our finite element differential forms. Our finite element function space
+is the space $cal(W) Lambda^k (mesh)$ of Whitney forms over our mesh $mesh$.
+
+The Whitney $k$-form basis function live on all $k$-simplicies of the mesh $mesh$.
+$
+  cal(W) Lambda^k (mesh) = "span" {lambda_sigma : sigma in Delta_k (mesh)}
+$
+
+Each Whitney $k$-form is associated with a particular $k$-simplex.
+This simplex is the DOF and it's coefficient is the cochain value
+on this simplex.
 
 
-To give an idea of the type of functions we are dealing with, we will
-look at visualizations of the basis functions in the 2 dimensional case.
+They are dispinct from the tensor-product space
+$[cal(S)^1 (Omega)]^k$ formed by taking $k$-copies of the Lagrangian FE space.
 
+=== Whitney Basis
+
+There is a special basis for the space of Whitney forms, called the Whitney basis.
+Just like there is a cochain value for each $k$-simplex, there
+is a Whitney basis function for each $k$-simplex.
+This is a necessary condition for the two spaces to be isomorphic.
+
+The basis functions are discontinuous from cell to cell, for this
+reason we will look at the local shape functions.
+
+The local Whitney form $lambda_(i_0 dots i_k)$ associated with the DOF simplex
+$sigma = [i_0 dots i_k] subset.eq tau$ on the cell $tau = [j_0 dots j_n]$ is
+defined using the barycentric coordinate functions $lambda_i_s$ of the cell.
+$
+  lambda_(i_0 dots i_k) =
+  k! sum_(l=0)^k (-1)^l lambda_i_l
+  (dif lambda_i_0 wedge dots.c wedge hat(dif lambda)_i_l wedge dots.c wedge dif lambda_i_k)
+$ <def:whitney>
+
+To get some intuition for the kind of fields this produces,
+let's look at some visualizations.
+
+We do this specifically for 1-forms, since we can visualize
+these using vector field proxies.
+
+We have the following formula for Whitney 1-forms.
 $
   lambda_(i j) = lambda_i dif lambda_j - lambda_j dif lambda_i
 $
 
+For the reference 2-simplex, we get the following Whitney basis 1-forms.
 $
   lambda_01 &= (1-y) dif x + x dif y
   \
@@ -2580,6 +2674,7 @@ $
   lambda_12 &= -y dif x + x dif y
 $
 
+Visualized on the reference triangle they look like:
 #figure(
   grid(
     columns: (1fr, 1fr, 1fr),
@@ -2595,6 +2690,12 @@ $
   ],
 ) <img:ref_whitneys>
 
+The global shape functions are obtained by combing the various
+local shape functions that are associated with the same DOF simplex.
+In general the GSF are discontinuous over cell boundaries.
+
+We visualize here the 3 GSF on a equilateral triangle mesh associated
+with the edges of the middle triangle.
 
 #figure(
   grid(
@@ -2612,10 +2713,11 @@ $
   ],
 ) <img:global_whitneys>
 
+Via linear combination of these GSF we can obtain
+any Whitney form.
 
-Via linear combination of the global basis functions we can obtain
-any piecewise-linear differential-form from the Whitney space.
-
+We can for instance construct the following constant, purely divergent,
+and purely rotational vector fields.
 #figure(
   grid(
     columns: (1fr, 1fr, 1fr),
@@ -2626,137 +2728,109 @@ any piecewise-linear differential-form from the Whitney space.
     image("../res/triforce_rot.cochain.png", width: 100%),
   ),
   caption: [
-    Vector proxies of some example FE functions on equilateral triangle mesh
+    Vector proxies of some example Whitney forms on equilateral triangle mesh
     $mesh$.
   ],
 ) <img:fe_whitneys>
 
-=== Reconstruction: Whitney Interpolation via the Whitney map
+We now implement some functionality to work with Whitney forms.
+The most important of which is the point evaluation of Whitney basis forms
+on a cell associated with one of it's subsimplicies. Which means
+implementing @def:whitney.
 
-Whitney forms are the piecewise-linear (over the cells) differential forms
-that can be uniquely reconstructed from cochains. This reconstruction
-is achieved by the so called *Whitney map*. It can be seen as a
-generalized interpolation (in an integral sense instead of a pointwise sense)
-operator.
+We do this implementation based on a coordinate simplex. But this doesn't
+mean that this relies on an embedding. It is multi-purpose!
+If we just choose the reference simplex as the coordinate simplex,
+then we just compute the reference Whitney basis forms.
+If we choose a coordinate simplex from an embedding, we compute the
+representation of a Whitney form in this embedding.
 
-They are our finite element differential forms. Our finite element function space
-is the space $cal(W) Lambda^k (mesh)$ of Whitney forms over our mesh $mesh$.
+We define a struct that stores the coordinate of the cell we are working on
+as well as the DOF subsimplex (in local indices) that the Whitney basis function
+is associated with.
 
-The Whitney $k$-form basis function live on all $k$-simplicies of the mesh $mesh$.
-$
-  cal(W) Lambda^k (mesh) = "span" {lambda_sigma : sigma in Delta_k (mesh)}
-$
-
-Each Whitney $k$-form is associated with a particular $k$-simplex.
-This simplex is the DOF and it's coefficient is the cochain value
-on this simplex.
-
-There is a isomorphism between Whitney $k$-forms and cochains.\
-Represented through the de Rham map (discretization) and Whitney interpolation:\
-- The integration of each Whitney $k$-form over its associated $k$-simplex yields a $k$-cochain.
-- The interpolation of a $k$-cochain yields a Whitney $k$-form.\
-
-
-Whitney forms are essential for us to compute our element matrices.
-For this we just need to express Whitney forms locally on a cell
-in the barycentric coordinate basis.
-
-Another important use for Whitney forms is the reconstruction
-of the global solution once we have computed the basis expansion--
-which is the cochain--into a point-evaluable differential form.
-For this we will express Whitney forms in a global coordinate basis.
-
-For this we have a simple struct that represents a particular Whitney form
-inside of a coordinatized cell associated with it's DOF subsimplex.
 ```rust
-pub struct WhitneyForm<O: SetOrder> {
+#[derive(Debug, Clone)]
+pub struct WhitneyLsf {
   cell_coords: SimplexCoords,
-  associated_subsimp: Simplex<O>,
-  difbarys: Vec<MultiForm>,
+  dof_simp: Simplex,
 }
-```
-We store the the vertex coordinates of the cell, the local subsimplex
-and additionally store the precomputed constant exterior derivatives of the
-barycentric coordinate functions.
-```rust
-impl<O: SetOrder> WhitneyForm<O> {
-  pub fn new(cell_coords: SimplexCoords, associated_subsimp: Simplex<O>) -> Self {
-    let difbarys = associated_subsimp
-      .vertices
-      .iter()
-      .map(|vertex| cell_coords.difbary(vertex))
-      .collect();
-
+impl WhitneyLsf {
+  pub fn from_coords(cell_coords: SimplexCoords, dof_simp: Simplex) -> Self {
     Self {
       cell_coords,
-      associated_subsimp,
-      difbarys,
+      dof_simp,
     }
   }
-}
-
+  pub fn standard(cell_dim: Dim, dof_simp: Simplex) -> Self {
+    Self::from_coords(SimplexCoords::standard(cell_dim), dof_simp)
+  }
+  pub fn grade(&self) -> ExteriorGrade { self.dof_simp.dim() }
 ```
 
-The local Whitney form $lambda_(i_0 dots i_k)$ associated with the DOF simplex
-$sigma = [i_0 dots i_k] subset.eq tau$ on the cell $tau = [j_0 dots j_n]$ is
-defined using the barycentric coordinate functions $lambda_i_s$ of the cell.
-$
-  lambda_(i_0 dots i_k) =
-  k! sum_(l=0)^k (-1)^l lambda_i_l
-  (dif lambda_i_0 wedge dots.c wedge hat(dif lambda)_i_l wedge dots.c wedge dif lambda_i_k)
-$
+The defining formula of a Whitney basis form, relies on the barycentric
+coordinate functions of the cell, but only those that are on the vertices
+of the DOF simplex.
+We write a function to get an iterator on exactly these.
+```rust
+  /// The difbarys of the vertices of the DOF simplex.
+  pub fn difbarys(&self) -> impl Iterator<Item = MultiForm> + use<'_> {
+    self
+      .cell_coords
+      .difbarys_ext()
+      .into_iter()
+      .enumerate()
+      .filter_map(|(ibary, difbary)| self.dof_simp.contains(ibary).then_some(difbary))
+  }
+```
 
 We can observe that the big wedge terms
 $dif lambda_i_0 wedge dots.c wedge hat(dif lambda)_i_l wedge dots.c wedge dif lambda_i_k$
-are constant. We write a method any of these terms.
+in @def:whitney are constant multiforms.
+We write a function that computes these constants.
 ```rust
-pub fn wedge_term(&self, iterm: usize) -> MultiForm {
-  let wedge_terms = self
-    .difbarys
-    .iter()
-    .enumerate()
-    // leave off i'th difbary
-    .filter_map(|(ipos, bary)| (ipos != iterm).then_some(bary.clone()));
-  MultiForm::wedge_big(wedge_terms).unwrap_or(MultiForm::one(self.dim()))
-}
-pub fn wedge_terms(&self) -> MultiFormList {
-  (0..self.difbarys.len())
-    .map(|i| self.wedge_term(i))
-    .collect()
-}
+  /// d𝜆_i_0 ∧⋯∧̂ omit(d𝜆_i_iwedge) ∧⋯∧ d𝜆_i_dim
+  pub fn wedge_term(&self, iterm: usize) -> MultiForm {
+    let dim_cell = self.cell_coords.dim_intrinsic();
+    let wedge = self
+      .difbarys()
+      .enumerate()
+      // leave off i'th difbary
+      .filter_map(|(pos, difbary)| (pos != iterm).then_some(difbary));
+    MultiForm::wedge_big(wedge).unwrap_or(MultiForm::one(dim_cell))
+  }
+  pub fn wedge_terms(&self) -> impl ExactSizeIterator<Item = MultiForm> + use<'_> {
+    (0..self.dof_simp.nvertices()).map(move |iwedge| self.wedge_term(iwedge))
+  }
 ```
-The Whitney forms as a whole however is not constant but varies over the cell.
-We write a function to evaluate the Whitney form at any coordinate.
-For this we implement the `ExteriorField` trait from our `exterior` crate
-for `WhitneyForm`.
+
+Now we can implement the `ExteriorField` trait for our `WhitneyLsf`
+struct to make it point evaluable, based on a coordiante.
 ```rust
-impl<O: SetOrder> ExteriorField for WhitneyForm<O> {
-  type Variance = variance::Co;
-  fn dim(&self) -> Dim { self.cell_coords.dim_embedded() }
-  fn grade(&self) -> ExteriorGrade { self.associated_subsimp.dim() }
+impl ExteriorField for WhitneyLsf {
+  fn dim_ambient(&self) -> exterior::Dim { self.cell_coords.dim_ambient() }
+  fn dim_intrinsic(&self) -> exterior::Dim { self.cell_coords.dim_intrinsic() }
+  fn grade(&self) -> ExteriorGrade { self.grade() }
+  fn at_point<'a>(&self, coord: impl Into<CoordRef<'a>>) -> MultiForm {
+    let barys = self.cell_coords.global2bary(coord);
+    assert!(is_bary_inside(&barys), "Point is outside cell.");
 
-  fn at_point<'a>(
-    &self,
-    coord_global: impl Into<CoordRef<'a>>
-  ) -> ExteriorElement<Self::Variance> {
-    let coord_global = coord_global.into();
-    assert_eq!(coord_global.len(), self.dim());
-    let barys = self.cell_coords.global_to_bary_coord(coord_global);
-
-    let dim = self.dim();
+    let dim = self.dim_intrinsic();
     let grade = self.grade();
     let mut form = MultiForm::zero(dim, grade);
-    for (i, vertex) in self.associated_subsimp.vertices.iter().enumerate() {
-      let sign = Sign::from_parity(i);
-      let wedge = self.wedge_term(i);
+    for (iterm, &vertex) in self.dof_simp.vertices.iter().enumerate() {
+      let sign = Sign::from_parity(iterm);
+      let wedge = self.wedge_term(iterm);
 
       let bary = barys[vertex];
       form += sign.as_f64() * bary * wedge;
     }
-    factorial(grade) as f64 * form
+    (factorial(grade) as f64) * form
   }
 }
 ```
+
+We can implement one more functionality.
 
 Since the Whitney form is a linear differential form over the cell,
 it's exterior derivative must be a constant multiform.
@@ -2772,15 +2846,16 @@ $
   &= (k+1)! dif lambda_i_0 wedge dots.c wedge dif lambda_i_k
 $
 
-We implement another function to compute it as well.
+This is the corresponding implementation.
 ```rust
-pub fn dif(&self) -> MultiForm {
-  if self.grade() == self.dim() {
-    return MultiForm::zero(self.dim(), self.grade() + 1);
+  pub fn dif(&self) -> MultiForm {
+    let dim = self.cell_coords.dim_intrinsic();
+    let grade = self.grade();
+    if grade == dim {
+      return MultiForm::zero(dim, grade + 1);
+    }
+    factorialf(grade + 1) * MultiForm::wedge_big(self.difbarys()).unwrap()
   }
-  let factorial = factorial(self.grade() + 1) as f64;
-  let difbarys = self.difbarys.clone();
-  factorial * MultiForm::wedge_big(difbarys).unwrap()
 }
 ```
 
@@ -2796,6 +2871,107 @@ $
 $
 
 We can write a test that verifies our implementation by checking this property.
+```rust
+#[test]
+fn whitney_basis_property() {
+  for dim in 0..=4 {
+    let topology = Complex::standard(dim);
+    let coords = MeshCoords::standard(dim);
+
+    for grade in 0..=dim {
+      for dof_simp in topology.skeleton(grade).handle_iter() {
+        let whitney_form = WhitneyLsf::standard(dim, (*dof_simp).clone());
+
+        for other_simp in topology.skeleton(grade).handle_iter() {
+          let are_same_simp = dof_simp == other_simp;
+          let other_simplex = other_simp.coord_simplex(&coords);
+          let discret = integrate_form_simplex(&whitney_form, &other_simplex);
+          let expected = are_same_simp as u8 as f64;
+          let diff = (discret - expected).abs();
+          const TOL: f64 = 10e-9;
+          let equal = diff <= TOL;
+          assert!(equal, "for: computed={discret} expected={expected}");
+          if other_simplex.nvertices() >= 2 {
+            let other_simplex_rev = other_simplex.clone().flipped_orientation();
+            let discret_rev = integrate_form_simplex(&whitney_form, &other_simplex_rev);
+            let expected_rev = Sign::Neg.as_f64() * are_same_simp as usize as f64;
+            let diff_rev = (discret_rev - expected_rev).abs();
+            let equal_rev = diff_rev <= TOL;
+            assert!(
+              equal_rev,
+              "rev: computed={discret_rev} expected={expected_rev}"
+            );
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+=== Reconstruction: Whitney-Interpolation via the Whitney map
+
+There is a one-to-one correspondance between $k$-cochain and Whitney $k$-form.
+
+We have already seen how to obtain a cochain from a continuous differential form via
+cochain-projection. This is how we can obtain the cochain corresponding to a Whitney
+form.
+But what about the other way? How can we reconstruct a continuous differential form
+from a cochain. How can we obtain the Whitney form corresponding to this cochain?
+
+
+This reconstruction is achieved by the so called *Whitney map*.
+
+$
+  W: C^k (mesh; RR) -> cal(W)^k (mesh) subset.eq Lambda^k (Omega)
+$
+
+$
+  W(c) = sum_(sigma in mesh_k) c(sigma) omega_sigma
+$
+It can be seen as a generalized interpolation operator.
+Instead of pointwise interpolation, we have interpolation in an integral sense.
+It takes cochains to differential forms that have the cochains values as integral
+values.
+
+The isomorphism between Whitney forms and cochains can now be constructed
+$
+  W compose I = id_(cal(W)^k (mesh)) \
+  I compose W = id_(C^k (mesh; RR))
+$
+
+On our implementation side, we introduce a routine that takes
+a cochain and let's us evaluate the corresponding Whitney form
+at any point on the simplicial manifold.
+```rust
+pub fn whitney_form_eval<'a>(
+  coord: impl Into<CoordRef<'a>>,
+  cochain: &Cochain,
+  mesh_cell: SimplexHandle,
+  mesh_coords: &MeshCoords,
+) -> MultiForm {
+  let coord = coord.into();
+
+  let cell_coords = mesh_cell.coord_simplex(mesh_coords);
+
+  let dim_intrinsic = mesh_cell.dim();
+  let grade = cochain.dim;
+
+  let mut value = MultiForm::zero(dim_intrinsic, grade);
+  for dof_simp in mesh_cell.mesh_subsimps(grade) {
+    let local_dof_simp = dof_simp.relative_to(&mesh_cell);
+
+    let lsf = WhitneyLsf::from_coords(cell_coords.clone(), local_dof_simp);
+    let lsf_value = lsf.at_point(coord);
+    let dof_value = cochain[dof_simp];
+    value += dof_value * lsf_value;
+  }
+  value
+}
+```
+We shall provide the cell on which the point lives,
+to avoid searching over all the cells for the one containing
+the point.
 
 == Higher-Order Discrete Differential Forms
 
@@ -2808,7 +2984,7 @@ approximations are also needed to not incur any non-admissible geometric
 variational crimes.
 
 
-= Finite Element Methods\ for Differential Forms
+= Finite Element Methods for Differential Forms
 
 We have now arrived at the chapter talking about the
 actual finite element library formoniq. \
@@ -3619,16 +3795,27 @@ theory predicts, confirming the correct implementation.
 
 
 
-// Probably move this to post-face
 = Conclusion and Outlook
 
-- Summary of key contributions
-- Possible improvements and future work
-  - efficiency
-  - parametric FE
-  - higher-order FEEC and higher-order elements
-- Broader impact (e.g., Rust in scientific computing, FEEC extensions)
-- Discarded ideas and failed approaches (generic dimensionality à la nalgebra/Eigen)
+== Failed Ideas
+
+Discarded ideas and failed approaches
+
+=== Compile-Time Type-Level Programming
+
+Tried to introduce generic (static and dynamic) dimensionality à la nalgebra/Eigen.
+
+=== Abstracting over `Simplex` and `ExteriorTerm` using `MultiIndex`
+
+Overabstraction is worse than minor code duplication.
+
+== Future Work
+
+=== Varying-Coefficents & Quadrature
+=== Higher-Order FEEC: Higher-Order Manifold & Higher-Order Elements
+
+
+===  Maxwell's Equations
 
 A far more meaningful PDE system that has some really interesting applications in real-life
 are Maxwell's Equation describing Electromagnetism.
@@ -3637,3 +3824,129 @@ is also formulated in terms of differential geometry as is general relativity.
 This means that purely thanks to the generality of the library we are able to solve
 Maxwell's equations on the curved 4D spacetime manifold.
 
+== Comparison to Other Implementations
+
+We researched which other implementation related to FEEC exist.
+There are other major libraries.
+Formoniq didn't draw any inspiration from them.
+Only after the fact we looked at them.
+
+We want to quickly do a comparison of formoniq and these other implementations.
+
+=== Formoniq
+
+Focus on FEEC (FEM)
+Arbitrary Dimensions
+Simplicial Complexes
+Differential Forms & Exterior Algebra
+1st order whitney form
+Intrinsic Geometry
+
+Available on
+#weblink(
+  "https://github.com/luiswirth/formoniq.jl",
+  [github:luiswirth/formoniq]
+).
+
+=== PyDEC
+
+Focus on DEC + some FEEC
+Arbitrary Dimensions
+Simplicial and Cubical Complexes
+Intrinsic and Extrinsic Geometry (Embedded and abstract complexes)
+1st order whitney forms
+
+
+Simplicial Complexes of any dimension. Embedded or Intrinsic.
+Cubical Cpmples of any dimension.
+
+PyDEC seems to be the most mature implementation of DEC and 1st order FEEC.
+It implements 1st order Whitney Forms and a Hodge Mass matrix.
+Is support simplicial and cubical complexes (maybe not for FEEC?)
+It can compute cohomology and Hodge decompositions.
+
+Available on
+#weblink(
+  "https://github.com/hirani/pydec",
+  [github:hirani/pydec],
+).
+@pydec
+
+=== FEEC++ / simplefem
+
+
+Focus on FEEC
+Hardcoded 2D and 3D
+Intrinsic geometry
+Arbitrary order polynomial differential forms
+
+By Martin Licht from EPFL.
+Work in progress.
+
+FEEC++ implements finite element spaces of *arbitrary (uniform) polynomial degree*
+over simplicial meshes, including Whitney forms.
+
+Hard-coded Simplicial meshes in dimensions 1, 2, and 3.
+
+Available on
+#weblink(
+  "https://github.com/martinlicht/simplefem",
+  [github:martinlicht/simplefem]
+).
+@feecpp
+
+=== DDF.jl
+
+No focus on PDEs, but mostly DEC and FEEC
+Arbitrary dimensions
+Simplicial mesh
+Intrinsic geometry
+Higher-order discretizations
+
+Work in progres..
+
+Simplicial meshes of arbitrary dimension.
+Arbitrary order?
+
+In Julia there is quite an ecosystem for Exterior Algebra/Calculus.
+
+
+It builds on top of this library.
+https://github.com/eschnett/DifferentialForms.jl/tree/master
+
+Available on
+#weblink(
+  "https://github.com/eschnett/DDF.jl",
+  [github:eschnett/DDF.jl]
+).
+@ddfjl
+
+=== dexterior
+
+The dexterior library is a Rust-based toolkit for Discrete Exterior Calculus
+(DEC), developed by Mikael Myyrä. It offers foundational components for
+discretizing partial differential equations (PDEs) using DEC principles.
+
+dexterior provides building blocks for the discretization of partial
+differential equations using the mathematical framework of Discrete Exterior
+Calculus (DEC). These building blocks are sparse matrix operators (exterior
+derivative, Hodge star) and vector operands (cochains) associated with
+a simplicial mesh of any dimension. An effort is made to provide as many
+compile-time checks and type inference opportunities as possible to produce
+concise and correct code.
+
+Any dimensions.
+Simplicial Complex.
+Extrinsic Geometry based on Embedding
+Focus on DEC, no FEEC.
+
+Visualization using wgpu
+
+Heavily inspired by PyDEC, but in Rust.
+
+Available on
+#weblink(
+  "https://github.com/m0lentum/dexterior",
+  [github:m0lentum/dexterior]
+).
+@dexterior
