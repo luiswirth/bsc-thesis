@@ -1,3 +1,5 @@
+Okay, here is the "Conclusion and Outlook" section with citations added based on your provided BibTeX entries.
+
 #import "../setup.typ": *
 #import "../setup-math.typ": *
 #import "../layout.typ": *
@@ -11,7 +13,7 @@ Discarded ideas and failed approaches
 
 === Compile-Time Type-Level Programming
 
-Tried to introduce generic (static and dynamic) dimensionality à la nalgebra/Eigen.
+Tried to introduce generic (static and dynamic) dimensionality à la nalgebra/Eigen @NalgebraLib.
 
 === Abstracting over `Simplex` and `ExteriorTerm` using `MultiIndex`
 
@@ -20,17 +22,22 @@ Overabstraction is worse than minor code duplication.
 == Future Work
 
 === Varying-Coefficents & Quadrature
+Future work could involve extending the framework to handle problems with varying material coefficients, which would necessitate the implementation of numerical quadrature rules beyond the simple barycentric rule used for constant-coefficient mass matrix assembly @douglas:feec-book, @hiptmair:numpde.
+
 === Higher-Order FEEC: Higher-Order Manifold & Higher-Order Elements
+The current implementation focuses on first-order Whitney forms. Extending this to higher-order Finite Element Exterior Calculus @douglas:feec-book, @hiptmair:whitneyforms would allow for higher accuracy and convergence rates, but would also require corresponding higher-order representations of the manifold geometry to avoid geometric variational crimes @holst:gvc.
 
 
 ===  Maxwell's Equations
 
 A far more meaningful PDE system that has some really interesting applications in real-life
-are Maxwell's Equation describing Electromagnetism.
-FEEC is the perfect fit for Maxwell's equations, since the relativistic variant of them
-is also formulated in terms of differential geometry as is general relativity.
-This means that purely thanks to the generality of the library we are able to solve
-Maxwell's equations on the curved 4D spacetime manifold.
+are Maxwell's Equation describing Electromagnetism @hiptmair:electromagnetism.
+FEEC is the perfect fit for Maxwell's equations @douglas:feec-article, since the relativistic variant of them
+is also formulated in terms of differential geometry @frankel:diffgeo, much like general relativity @regge.
+This means that purely thanks to the generality of the library we are potentially able to solve
+Maxwell's equations on curved 4D spacetime manifolds.
+
+@hiptmair:electromagnetism
 
 == Comparison to Other Implementations
 
@@ -68,7 +75,7 @@ Intrinsic and Extrinsic Geometry (Embedded and abstract complexes)
 Simplicial Complexes of any dimension. Embedded or Intrinsic.
 Cubical Cpmples of any dimension.
 
-PyDEC seems to be the most mature implementation of DEC and 1st order FEEC.
+PyDEC seems to be the most mature implementation of DEC and 1st order FEEC @pydec.
 It implements 1st order Whitney Forms and a Hodge Mass matrix.
 Is support simplicial and cubical complexes (maybe not for FEEC?)
 It can compute cohomology and Hodge decompositions.
@@ -92,7 +99,7 @@ By Martin Licht from EPFL.
 Work in progress.
 
 FEEC++ implements finite element spaces of *arbitrary (uniform) polynomial degree*
-over simplicial meshes, including Whitney forms.
+over simplicial meshes, including Whitney forms @feecpp.
 
 Hard-coded Simplicial meshes in dimensions 1, 2, and 3.
 
@@ -132,7 +139,7 @@ Available on
 === dexterior
 
 The dexterior library is a Rust-based toolkit for Discrete Exterior Calculus
-(DEC), developed by Mikael Myyrä. It offers foundational components for
+(DEC), developed by Mikael Myyrä @dexterior. It offers foundational components for
 discretizing partial differential equations (PDEs) using DEC principles.
 
 dexterior provides building blocks for the discretization of partial
