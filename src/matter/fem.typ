@@ -2,42 +2,41 @@
 #import "../setup-math.typ": *
 #import "../layout.typ": *
 
-
 = Finite Element Methods for Differential Forms
 
 We have now arrived at the chapter talking about the
 actual finite element library formoniq. \
 Here we will derive and implement the formulas for computing the element matrices
-of the various weak differential operators in FEEC.
+of the various weak differential operators in Finite Element Exterior Calculus (FEEC) @douglas:feec-article, @douglas:feec-book.
 Furthermore we implement the assembly algorithm that will give us the
-final Galerkin matrices.
+final Galerkin matrices @hiptmair:numpde.
 
 == Variational Formulation & Element Matrix Computation
 
 There are only 4 types of variational operators that
-are relevant to the mixed weak formulation of the Hodge-Laplace operator.
-All of them are based on the inner product on Whitney forms.
+are relevant to the mixed weak formulation of the Hodge-Laplace operator @douglas:feec-book.
+All of them are based on the inner product on Whitney forms @whitney:geointegration, @douglas:feec-article.
 
 Above all is the mass bilinear form, which really is just
-the inner product.
+the $L^2$ inner product @frankel:diffgeo.
 $
   m^k (u, v) &= inner(u, v)_(L^2 Lambda^k (Omega))
   quad
   u in L^2 Lambda^k, v in L^2 Lambda^k
 $
 
-The next bilinear form is the one for the exterior derivative
+The next bilinear form involves the exterior derivative @frankel:diffgeo
 $
   d^k (u, v) &= inner(dif u, v)_(L^2 Lambda^k (Omega))
   quad
   u in H Lambda^(k-1), v in L^2 Lambda^k
 $
 
-Also relevant is the bilinear form of the codifferential
+Also relevant is the bilinear form of the codifferential @frankel:diffgeo
 $
   c(u, v) &= inner(delta u, v)_(L^2 Lambda^k (Omega))
 $
-Using the adjoint property we can rewrite it using the exterior derivative
+Using the adjoint property of the codifferential relative to the exterior derivative under the $L^2$ inner product @frankel:diffgeo, @douglas:feec-book, we can rewrite it using the exterior derivative
 applied to the test function.
 $
   c^k (u, v) &= inner(u, dif v)_(L^2 Lambda^k (Omega))
@@ -45,17 +44,16 @@ $
   u in L^2 Lambda^k, v in H Lambda^(k-1)
 $
 
-Lastly there is the bilinear form in the style of the scalar Laplacian, with
-exterior derivatives on both arguments. It's $delta dif u$, which for a 0-form
-is $div grad u = Delta u$.
+Lastly there is the bilinear form analogous to the scalar Laplacian, involving
+exterior derivatives on both arguments. It corresponds to the $delta dif$ part of the Hodge-Laplacian @frankel:diffgeo.
 $
   l^k (u, v) &= inner(dif u, dif v)_(L^2 Lambda^(k+1) (Omega))
   quad
   u in H Lambda^k, v in H Lambda^k
 $
 
-After Galerkin discretization, by means of the Whitney finite element space
-with the Whitney basis, we arrive at the following Galerkin matrices for our
+After Galerkin discretization @hiptmair:numpde, by means of the Whitney finite element space @whitney:geointegration, @douglas:feec-article
+with the Whitney basis ${phi_i^k}$, we arrive at the following Galerkin matrices for our
 four weak operators.
 $
   amat(M)^k &= [inner(phi^k_i, phi^k_j)]_(i j) \
@@ -65,14 +63,14 @@ $
 $
 
 We can rewrite the 3 operators that involve the exterior derivative
-using the mass matrix and the discrete exterior derivative (incidence matrix).
+using the mass matrix and the discrete exterior derivative (coboundary/incidence matrix) @douglas:feec-article, @crane:ddg.
 $
   amat(D)^k &= amat(M)^k amat(dif)^(k-1) \
   amat(C)^k &= (amat(dif)^(k-1))^transp amat(M)^k \
   amat(L)^k &= (amat(dif)^k)^transp amat(M)^(k+1) amat(dif)^k \
 $
 
-As usual in a FEM library, we define element matrix providers,
+As usual in a FEM library @hiptmair:numpde, we define element matrix providers,
 that compute the element matrices on each cell of mesh and later on
 assemble the full Galerkin matrices.
 
@@ -95,7 +93,7 @@ based on the element matrix provider of the mass bilinear form.
 
 The local exterior derivative only depends on the local topology, which is the same
 for any simplex of the same dimension. So we use a global variable that stores
-the transposed incidence matrix for any $k$-skeleton of a $n$-complex.
+the transposed incidence matrix (coboundary operator) for any $k$-skeleton of a $n$-complex @crane:ddg.
 
 ```rust
 pub struct DifElmat(pub ExteriorGrade);
@@ -147,9 +145,9 @@ This was really easy.
 
 Now we need to implement the element matrix provider to the mass bilinear form.
 Here is where the geometry of the domain comes in, through the inner product, which
-depends on the Riemannian metric.
+depends on the Riemannian metric @frankel:diffgeo.
 
-One could also understand the mass bilinear form as a weak Hodge star operator.
+One could also understand the mass bilinear form as a weak Hodge star operator @douglas:feec-book.
 $
   amat(M)_(i j) = integral_Omega phi_j wedge hodge phi_i
   = inner(phi_j, phi_i)_(L^2 Lambda^k (Omega))
@@ -159,7 +157,7 @@ We will not compute this using the Hodge star operator, but instead directly
 using the inner product.
 
 We already have an inner product on constant multiforms. We now need to
-extend it to an $L^2$ inner product on Whitney forms.
+extend it to an $L^2$ inner product on Whitney forms @douglas:feec-article.
 This can be done by inserting the definition of a Whitney form (in terms of barycentric
 coordinate functions) into the inner product.
 
@@ -178,7 +176,7 @@ $
 
 
 We can now make use of the fact that the exterior derivative of the barycentric
-coordinate functions are constant. This makes the wedge big terms also constant.
+coordinate functions are constant @douglas:feec-article. This makes the wedge big terms also constant.
 We can therefore pull them out of the integral inside the $L^2$-inner product
 and now it's just an inner product on constant multiforms.
 What remains in the in the integral is the product of two barycentric
@@ -242,12 +240,12 @@ impl ElMatProvider for HodgeMassElmat {
 Now we are just missing an element matrix provider for the scalar mass
 bilinear form.
 Luckily there exists a closed form solution, for
-this integral, which only depends on the volume of the cell.
+this integral, which only depends on the volume of the cell @hiptmair:numpde, @douglas:feec-book.
 $
   integral_K lambda_i lambda_j vol
   = abs(K)/((n+2)(n+1)) (1 + delta_(i j))
 $
-derived from this more general integral formula for powers of barycentric coordinate functions
+derived from this more general integral formula for powers of barycentric coordinate functions @hiptmair:numpde
 $
   integral_K lambda_0^(alpha_0) dots.c lambda_n^(alpha_n) vol
   =
@@ -276,6 +274,7 @@ impl ElMatProvider for ScalarMassElmat {
 The element matrix provider tells the assembly routine,
 what the exterior grade is of the arguments into the bilinear forms,
 based on this the right dimension of simplicies are used to assemble.
+The assembly process itself is a standard FEM technique @hiptmair:numpde.
 
 ```rust
 pub fn assemble_galmat(
