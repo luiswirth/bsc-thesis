@@ -1,22 +1,24 @@
+Okay, here is the section with citations added. I've focused on citing the introduction of key concepts and the specific formulations used.
+
 #import "../setup.typ": *
 #import "../setup-math.typ": *
 #import "../layout.typ": *
 
 = Hodge-Laplacian
 
-In this chapter we now solve some PDEs based on the Hodge-Laplace operator.
+In this chapter we now solve some PDEs based on the Hodge-Laplace operator @frankel:diffgeo.
 We consider the Hodge-Laplace eigenvalue problem and the Hodge-Laplace source
 problem (analog of Poisson equation).
 
 The Hodge-Laplace operator generalizes the scalar (0-form) Laplace-Beltrami operator,
-to an operator acting on any differential $k$-form. As such the 0-form Hodge-Laplacian
+to an operator acting on any differential $k$-form @frankel:diffgeo, @douglas:feec-book. As such the 0-form Hodge-Laplacian
 $Delta^0$ is exactly the Laplace-Beltrami operator and we can write it using
 the exterior derivative $dif$ and the codifferential $delta$.
 $
   Delta^0 f = -div grad f = delta^1 dif^0 f
 $
 
-The $k$-form Hodge-Laplacian $Delta^k$ is defined as
+The $k$-form Hodge-Laplacian $Delta^k$ is defined as @frankel:diffgeo, @douglas:feec-book
 $
   Delta^k: Lambda^k (Omega) -> Lambda^k (Omega)
   \
@@ -28,7 +30,7 @@ $
 We first consider the Eigenvalue problem, because it's a bit simpler
 and the source problem, relies on the eigenvalue problem.
 
-The strong primal form of the Hodge-Laplace eigenvalue problem is\
+The strong primal form of the Hodge-Laplace eigenvalue problem is @douglas:feec-book\
 Find $lambda in RR, u in Lambda^k (Omega)$, s.t.
 $
   (dif delta + delta dif) u = lambda u
@@ -38,9 +40,9 @@ $
 In FEM we don't solve the PDE based on the strong form, but instead we rely
 on a weak variational form.
 The primal weak form is not suited for discretization, so instead we make use of
-a mixed variational form that includes an auxiliary variable $sigma$.
+a mixed variational form that includes an auxiliary variable $sigma$ @douglas:feec-article, @douglas:feec-book.
 
-The mixed weak form is\
+The mixed weak form is @douglas:feec-article, @douglas:feec-book\
 Find $lambda in RR$, $(sigma, u) in (H Lambda^(k-1) times H Lambda^k \\ {0})$, s.t.
 $
   inner(sigma, tau) - inner(u, dif tau) &= 0
@@ -55,7 +57,7 @@ in one of the previous chapters.
 
 We now perform Galerkin discretization of this variational problem by choosing
 as finite dimensional subspace of our function space $H Lambda^k$ the space of Whitney forms
-$cal(W) lambda^k subset.eq H Lambda^k$ and as basis the Whitney basis ${phi^k_i}$.
+$cal(W) lambda^k subset.eq H Lambda^k$ @douglas:feec-article and as basis the Whitney basis ${phi^k_i}$ @whitney:geointegration, @hiptmair:whitneyforms.
 We then replace $sigma$ and $u$ by basis expansions $sigma = sum_j sigma_j phi^(k-1)_j$,
 $u = sum_i u_i phi^k_i$ and arrive at the linear system of equations.
 $
@@ -103,7 +105,7 @@ $
 
 This is a symmetric indefinite sparse generalized matrix eigenvalue problem,
 that can be solved by an iterative eigensolver such as Krylov-Schur.
-In SLEPc terminology this is called a GHIEP problem.
+In SLEPc @SLEPcPaper2005 terminology this is called a GHIEP problem.
 
 ```rust
 pub struct MixedGalmats {
@@ -188,23 +190,23 @@ pub fn solve_hodge_laplace_evp(
 == Source Problem
 
 The Hodge-Laplace Source Problem is the generalization of the Poisson equation
-to arbitrary differential $k$-forms. In strong form it is\
+to arbitrary differential $k$-forms @douglas:feec-book. In strong form it is\
 Find $u in Lambda^k (Omega)$, given $f in Lambda^k (Omega)$, s.t.
 $
   Delta u = f - P_frak(H) f, quad u perp frak(H)
 $
 This equation is not quite as simple as the normal Poisson equation $Delta u = f$.
 Instead it includes two additional parts involving $frak(H)$, which is the space
-of harmonic forms $frak(H)^k = ker Delta = { v in Lambda^k mid(|) Delta v = 0}$.
+of harmonic forms $frak(H)^k = ker Delta = { v in Lambda^k mid(|) Delta v = 0}$ @frankel:diffgeo.
 The first change is that we remove the harmonic part $P_frak(H) f$ of $f$. The second
 difference is that we require that our solution $u$ is orthogonal to harmonic forms.
 
-The harmonic forms give a concrete realizations of the cohomology.
+The harmonic forms give a concrete realizations of the cohomology @hatcher:algtop, @frankel:diffgeo.
 They are a representative of the cohomology quotient group $cal(H)^k = (ker dif)/(im dif)$
 and as such they are isomorphic $frak(H)^k = cal(H)^k$.
 
 We once again tackle a mixed weak formulation based on the auxiliary variable $sigma$
-and this time a second one $p$ that represents $f$ without harmonic component.\
+and this time a second one $p$ that represents $f$ without harmonic component @douglas:feec-article, @douglas:feec-book.\
 Given $f in L^2 Lambda^k$, find $(sigma,u,p) in (H Lambda^(k-1) times H Lambda^k times frak(H)^k)$ s.t.
 $
   inner(sigma,tau) - inner(u,dif tau) &= 0
@@ -217,7 +219,7 @@ $
   quad &&forall q in frak(H)^k
 $
 
-We once again perform Galerkin discretization.
+We once again perform Galerkin discretization @douglas:feec-article.
 $
   sum_j sigma_j inner(phi^(k-1)_j,phi^(k-1)_i) - sum_j u_j inner(phi^k_j,dif phi^(k-1)_i) &= 0
   \
