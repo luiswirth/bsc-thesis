@@ -25,7 +25,7 @@ Discarded ideas and failed approaches
 
 === Compile-Time Type-Level Programming
 
-Tried to introduce generic (static and dynamic) dimensionality à la nalgebra/Eigen @NalgebraLib.
+Tried to introduce generic (static and dynamic) dimensionality à la nalgebra/Eigen @crate:nalgebra.
 
 === Abstracting over `Simplex` and `ExteriorTerm` using `MultiIndex`
 

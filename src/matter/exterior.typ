@@ -16,7 +16,7 @@ have a constant *multiform* $omega_p in wedgespace (T^*_p M)$ as value @frankel:
 If one were to implement something related to vector calculus
 it is of course crucial to be able to represent vectors in the program.
 This is usually the job of a basic linear algebra library such as Eigen in `C++`
-and nalgebra in Rust @NalgebraLib.\
+and nalgebra in Rust @crate:nalgebra.\
 Since we want to implement FEEC @douglas:feec-article, which uses exterior calculus,
 it is crucial, that we are able to represent multiforms in our program.
 For this there aren't any established libraries. So we do this ourselves

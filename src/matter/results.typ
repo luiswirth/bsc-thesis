@@ -72,7 +72,7 @@ $
   div avec(u) != 0
 $
 
-The implementation uses the libraries `nalgebra` @NalgebraLib, `PETSc` @PETScManualRecent, and `SLEPc` @SLEPcPaper2005 for numerical computations and solving the resulting linear systems.
+The implementation uses the libraries `nalgebra` @crate:nalgebra, `PETSc` @PETScManualRecent, and `SLEPc` @SLEPcPaper2005 for numerical computations and solving the resulting linear systems.
 ```rust
 fn main() -> Result<(), Box<dyn std::error::Error>> {
   let dim = 2;

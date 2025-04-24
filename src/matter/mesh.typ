@@ -1611,7 +1611,7 @@ pub fn vol(&self) -> f64 {
 === Global Geometry
 
 Computationally we represent the edge lengths in a single struct
-that has all lengths stored continuously in memory in a nalgebra vector @NalgebraLib.
+that has all lengths stored continuously in memory in a nalgebra vector @crate:nalgebra.
 ```rust
 pub struct MeshEdgeLengths {
   vector: na::DVector<f64>,
