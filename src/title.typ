@@ -50,7 +50,7 @@
   ]
   \
   #weblink("mailto:luwirth@ethz.ch", "luwirth@ethz.ch") \
-  #weblink("https://ethz.lwirth.com", "ethz.lwirth.com")
+  #weblink("http://ethz.lwirth.com", "ethz.lwirth.com")
   
   #v(0.5cm)
   Supervised by\
