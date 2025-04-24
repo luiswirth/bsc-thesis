@@ -7,18 +7,18 @@ In this chapter we will develop various data structures and algorithms to
 represent and work with our Finite Element mesh.
 It will store the topological and geometrical properties of our arbitrary
 dimensional discrete PDE domain.
-A simplicial complex will be used to represent the topology (incidence and
+A simplicial complex @hatcher:algtop will be used to represent the topology (incidence and
 adjacency) of the mesh and double as the container for all the mesh entities,
 which are all simplicies. It will also provide unique identification through a
 global numbering, and iteration of all these entities.
 For the geometry, all edge lengths of the mesh will be stored to compute the
-piecewise-flat (over the cells) Riemannian metric, known as the Regge metric.
+piecewise-flat (over the cells) Riemannian metric @frankel:diffgeo, known as the Regge metric @regge.
 We also support the optional storage of global vertex coordinates, if an
 embedding were to be known.
 
 == Coordinate Simplicies
 
-Finite Element Methods benefit from their ability to work on unstructured meshes.
+Finite Element Methods benefit from their ability to work on unstructured meshes @hiptmair:numpde.
 So instead of subdividing a domain into a regular grid, FEM works on potentially
 highly non-uniform meshes.
 The simplest type of mesh that works for such non-uniform meshes are simplicial
@@ -36,7 +36,7 @@ For didactics it's however useful to start with coordinates.
 #v(0.5cm)
 
 The generalization of 2D triangles and 3D tetrahedra to $n$D
-is called a $n$-simplex.
+is called a $n$-simplex @hatcher:algtop.
 There is a type of simplex for every dimension.
 These are first 4 kinds:
 - A 0-simplex is a point,
@@ -90,7 +90,7 @@ pub fn is_same_dim(&self) -> bool { self.dim_intrinsic() == self.dim_embedded() 
 === Barycentric Coordinates
 
 The coefficients $avec(lambda) = [lambda^i]_(i=0)^n$ in @def-simplex are called
-*barycentric coordinates*.
+*barycentric coordinates* @frankel:diffgeo @hiptmair:numpde.
 They appear inside the convex combination / weighted average $sum_(i=0)^n lambda^i avec(v)_i$
 as weights $lambda^i in [0,1]$ with condition $sum_(i=0)^n lambda^i = 1$ in front of
 each Cartesian vertex coordinate $avec(v)_i in RR^N$.
@@ -237,7 +237,7 @@ Reversing the transformation, is more subtle, as due to floating point inaccurac
 we almost never exactly lie in the affine subspace.
 Furthermore, when the ambient dimension $N$ is greater than the intrinsic dimension $n < N$,
 then we have a underdetermined linear system.
-Therefore we rely on the Moore-Penrose pseudo-inverse, computed via SVD, to get
+Therefore we rely on the Moore-Penrose pseudo-inverse @hiptmair:numcse, computed via SVD, to get
 a least-square solution.
 $
   avec(lambda)^- = phi(avec(x))
@@ -270,7 +270,7 @@ pub fn pseudo_inverse(&self) -> Self {
 
 By computing derivatives of the affine parametrization of the simplex, we
 find that the spanning vectors are a very natural frame/basis for the tangent space
-$T_p sigma$ of the simplex $sigma$ at each point $p in sigma$.
+$T_p sigma$ of the simplex $sigma$ at each point $p in sigma$ @frankel:diffgeo.
 The Jacobian of the affine map is exactly the linear map represented by $amat(E)$.
 $
   (diff avec(x))/(diff lambda^i)
@@ -283,7 +283,7 @@ $
 Furthermore we can also compute the total differential of the barycentric coordinate
 functions based on the pseudo-inverse.
 This constitutes a natural basis for cotangent space $T^*_p sigma$ of the simplex $sigma$
-at each point $p in sigma$. It is in fact the dual basis.
+at each point $p in sigma$. It is in fact the dual basis @frankel:diffgeo.
 $
   (diff avec(lambda))/(diff avec(x))
   = amat(E)^dagger
@@ -309,7 +309,7 @@ This parallelepiped can be used to compute the volume of the simplex, as a
 fraction $(n!)^(-1)$ of the volume of the parallelepiped, which is computed as
 the determinant of the spanning vectors in the case $n=N$ and otherwise using
 the square root of the Gramian determinant
-$sqrt(det(amat(E)^transp amat(E)))$.
+$sqrt(det(amat(E)^transp amat(E)))$ @frankel:diffgeo.
 ```rust
 pub fn det(&self) -> f64 {
   let det = if self.is_same_dim() {
@@ -339,7 +339,7 @@ As a consequence swapping to vertices in the simplex, will swap the orientation 
 by the properties of the determinant.
 
 Every simplex has two orientations positive and negative, just like the determinant
-always has only two signs.
+always has only two signs @hatcher:algtop.
 #table(
   columns: 4,
   stroke: fgcolor,
@@ -353,7 +353,7 @@ always has only two signs.
 #v(0.5cm)
 === Reference Simplex
 
-There is a special simplex, called the *reference simplex*, which has exactly the
+There is a special simplex, called the *reference simplex* @hiptmair:numpde, which has exactly the
 local coordinates (reduced barycentric coordinates) also as global coordinates.
 $
   sigma_"ref"^n = {(lambda_1,dots,lambda_n) in RR^n mid(|) lambda_i >= 0, quad sum_(i=1)^n lambda_i <= 1 }
@@ -391,7 +391,7 @@ some intuitive understanding of simplicies. We will now shed the coordinates
 and represent simplicies in a more abstract way, by just considering
 them as a list of vertex indices, without any vertex coordinates.
 A $n$-simplex $sigma$ is a $(n+1)$-tuple of natural numbers, which represent vertex
-indices.
+indices @hatcher:algtop.
 $
   sigma = [v_0,dots,v_n] in NN^(n+1)
   quad quad
@@ -461,7 +461,7 @@ The same behavior is present in abstract simplicies, based on the
 ordering of the vertices.
 All permutations can be divided into two equivalence classes.
 Given a reference ordering of the vertices of a simplex,
-we can call these even and odd permutations.
+we can call these even and odd permutations @hatcher:algtop.
 We call simplicies with even permutations, positively oriented and
 simplicies with odd permutations negatively oriented.
 Therefore every abstract simplex has exactly two orientations, positive
@@ -515,7 +515,7 @@ pub fn orientation_eq(&self, other: &Self) -> bool {
 
 === Subsets
 
-Another important notion is the idea of a subsimplex or a face of a simplex.
+Another important notion is the idea of a subsimplex or a face of a simplex @hatcher:algtop.
 
 A subsimplex is just a subset of a simplex.
 
@@ -632,7 +632,7 @@ pub fn supersequences(
 === Boundary
 
 There is a special operation related to subsequence simplicies, called the
-boundary operator.
+boundary operator @hatcher:algtop.
 The boundary operator can be applied to any $n$-simplex $sigma in NN^(n+1)$ and
 is the defined as.
 $
@@ -690,7 +690,7 @@ If we, in contrast, build our mesh only from abstract simplicies, then
 we are missing this full geometric information.
 since, abstract simplicies only specify the vertices (as indices) that they are made of.
 This information however fully defines the topology of our discrete
-$n$-manifold.
+$n$-manifold @hatcher:algtop.
 If two simplicies share the same vertices, then these are connected, by either
 being adjacent or by being incident.
 This makes the topology purely combinatorial.
@@ -703,7 +703,7 @@ structures and algorithms related to it.
 To define the topology of our simplicial $n$-manifold, we just need
 to store the $n$-simplicies that make it up.
 This defines the topology of the mesh at the top-level.
-We call such a collection of $n$-simplicies that share the same vertices a $n$-skeleton.
+We call such a collection of $n$-simplicies that share the same vertices a $n$-skeleton @hatcher:algtop.
 
 ```rust
 /// A container for sorted simplicies of the same dimension.
@@ -794,7 +794,7 @@ simplicies are exactly just the vertices and we want them sorted.
 
 == Simplicial Complex
 
-A $n$-skeleton alone doesn't suffice as data structure for our FEEC implementation,
+A $n$-skeleton alone doesn't suffice as data structure for our FEEC implementation @douglas:feec-book,
 since it is missing the topology of the lower-dimensional subsimplicies of our cells.
 But our FE basis functions are associated with these subsimplicies, so we need to represent them.
 
@@ -803,7 +803,7 @@ also needs to reference the lower-level simplicies $Delta_k (mesh)$, since these
 also mesh entities on which the DOFs of our FE space live.
 
 
-Enter the simplicial complex. It stores not only the top-level cells, but also all
+Enter the simplicial complex @hatcher:algtop. It stores not only the top-level cells, but also all
 $k$-subsimplicies with $0 <= k <= n$.
 So a simplicial $n$-complex is made up of $n+1$ skeletons of dimensions $0,dots,n$.
 
@@ -819,7 +819,7 @@ It will be the main topological data structure that we will, pass as argument
 into all FEEC algorithm routines.
 
 In general a simplicial complex need not have manifold topology, since it can
-represent more general topological spaces beyond manifolds.
+represent more general topological spaces beyond manifolds @hatcher:algtop.
 Our PDE framework however needs domains to be manifold.
 For this reason we will restrict our data structure to this. As a consequence
 our simplicial complex will be pure, meaning every $k$-subsimplex is contained in at
@@ -835,7 +835,7 @@ will be checking when building the complex.
 
 For a simplicial complex to be manifold, the neighborhood of each vertex (i.e. the
 set of simplices that contain that point as a vertex) needs to be homeomorphic
-to a $n$-ball.
+to a $n$-ball @hatcher:algtop.
 
 
 ```rust
@@ -901,7 +901,7 @@ pub fn from_cells(cells: Skeleton) -> Self {
 We have already seen the boundary operator for single simplicies.
 We can extend this operator to the whole skeleton.
 Here the boundary operator itself is returned as a linear operator
-from the $k$-skeleton to the $(k-1)$-skeleton.
+from the $k$-skeleton to the $(k-1)$-skeleton @hatcher:algtop.
 It is the signed incidence matrix of the simplicies in the upper skeleton
 in the lower skeleton.
 
@@ -1049,7 +1049,7 @@ even in the case of the typical coordinate-based geometry.
 === Coordinate Function Functors & Barycentric Quadrature
 
 Before differential geometry, calculus was done on euclidean space $RR^n$
-instead of on abstract manifolds. Euclidean space always has global coordinates.
+instead of on abstract manifolds @frankel:diffgeo. Euclidean space always has global coordinates.
 A point $avec(p) in RR^n$ is exactly it's own global coordinate $avec(x) = avec(p)$.
 This means that functions $f: p in Omega |-> f(p) in RR$ that take a point $avec(p)$
 of the space $Omega$ to a real number $f(avec(p))$, are usually specified by an evaluation rule
@@ -1061,12 +1061,12 @@ In programming languages this type of object is referred to as a functor.
 Functors are types that provide an evaluation operator.
 
 On manifolds the story is a little different. They admit no global coordinates
-in general. But instead we can rely on ambient coordinates $x in RR^N$, if an
+in general @frankel:diffgeo. But instead we can rely on ambient coordinates $x in RR^N$, if an
 embedding is available, and work with functions defined on them.
 
 One common use-case that is also relevant to us for a such a point-evaluable
 functor is numerical integration of a real valued function via numerical
-quadrature.
+quadrature @hiptmair:numpde.
 Since we are doing only 1st order FEEC, we restrict ourselves to
 quadrature rules of order 1, that integrate affine-linear functions exactly.
 The simplest of these that work on arbitrary-dimensional simplicies is
@@ -1107,12 +1107,12 @@ The coordinate-based Euclidean geometry we've seen so far, is what
 is commonly used in almost all FEM implementations.
 In our implementation we go one step further and abstract away
 the coordinates of the manifold and instead make use of 
-coordinate-free Riemannian geometry for all of our FE algorithms.
+coordinate-free Riemannian geometry @frankel:diffgeo for all of our FE algorithms.
 All FE algorithms only depend on this geometry representation and cannot operate
 directly on the coordinate-based geometry. Instead one should always derive a
 coordinate-free representation from the coordinate-based one.
 Most of the time one starts with a coordinate-based representation
-that has been constructed by some mesh generator like gmsh and
+that has been constructed by some mesh generator like gmsh @GmshPaper2009 and
 then one computes the intrinsic geometry and forgets about the coordinates.
 Our library supports this exactly this functionality.
 
@@ -1120,7 +1120,7 @@ Our library supports this exactly this functionality.
 
 Riemannian geometry is an intrinsic description of the manifold,
 that doesn't need an ambient space at all. It relies purely on a structure
-over the manifold called a *Riemannian metric* $g$.
+over the manifold called a *Riemannian metric* $g$ @frankel:diffgeo.
 
 It is a continuous function over the whole manifold, which at each point $p$
 gives us an inner product $g_p: T_p M times T_p M -> RR^+$ on the tangent space
@@ -1148,11 +1148,11 @@ $
   amat(G) = [g_(i j)]_(i,j=1)^(n times n)
 $
 
-This is called a Gram matrix or Gramian and is the discretization of a
+This is called a Gram matrix or Gramian @hiptmair:numcse and is the discretization of a
 inner product of a linear space, given a basis.
 This matrix doesn't represent a linear map, which would be a $(1,1)$-tensor, but
 instead a bilinear form, which is a $(0,2)$-tensor.
-In the context of Riemannian geometry this is called a *metric tensor*.
+In the context of Riemannian geometry this is called a *metric tensor* @frankel:diffgeo.
 
 The inverse metric $g^(-1)_p$ at a point $p$ provides an inner product
 $g^(-1)_p: T^*_p M times T^*_p M -> RR^+$ on the
@@ -1163,11 +1163,11 @@ $
   amat(G)^(-1) = [g(dif x^i,dif x^j)]_(i,j=1)^(n times n)
 $
 The inverse metric is very important for us, since differential forms are
-covariant tensors, therefore they are measured by the inverse metric tensor.
+covariant tensors, therefore they are measured by the inverse metric tensor @frankel:diffgeo.
 
 Computing the inverse is numerically unstable and instead it would
 be better to rely on matrix factorization to do computation
-invovling the inverse metric. However this quickly becomes
+invovling the inverse metric @hiptmair:numcse. However this quickly becomes
 intractable. For this reason we chose here to rely on the directly
 computed inverse matrix nontheless.
 
@@ -1299,7 +1299,7 @@ pub fn standard(dim: Dim) -> Self {
 === Deriving the Metric from an Immersion
 
 One can easily derive the Riemannian metric from an immersion $f: M -> RR^N$
-into an ambient space $RR^N$.
+into an ambient space $RR^N$ @frankel:diffgeo.
 It's differential is a function $dif f_p: T_p M -> T_p RR^N$, also called
 the push-forward and tells us how our intrinsic tangential vectors are being
 placed into the ambient space, giving them an extrinsic geometry.
@@ -1345,7 +1345,7 @@ over the cells. This means that our metric is constant over each cell
 and changes only from one cell to another.
 
 This piecewise-constant metric over the simplicial mesh is known as the *Regge
-metric* and comes from Regge calculus, a theory for numerical general relativity
+metric* @regge and comes from Regge calculus @regge, a theory for numerical general relativity
 that is about producing simplicial approximations of spacetimes that are
 solutions to the Einstein field equation.
 
@@ -1375,11 +1375,11 @@ impl SimplexCoords {
 We have seen how to derive the Regge metric from coordinates,
 but of course the metric is independent of the specific coordinates.
 The metric is invariant under isometric transformations, such
-as translations, rotations and reflections.
+as translations, rotations and reflections @frankel:diffgeo.
 This begs the question, what the minimal geometric information necessary is
 to derive the metric.
 It turns out that, while vertex coordinates are over-specified, edge lengths
-in contrast are exactly the required information.
+in contrast are exactly the required information @regge.
 Edge lengths are also invariant under isometric transformations.
 
 Instead of giving all vertices a global coordinate, as one would do in extrinsic
@@ -1437,7 +1437,7 @@ pub fn from_coords(coords: &SimplexCoords) -> Self {
 ```
 
 The Regge metric on a single simplex and it's edge lengths
-are exactly equivalent and both define the geometry uniquely.
+are exactly equivalent and both define the geometry uniquely @regge.
 This means one can be derived from the other.
 
 
@@ -1502,7 +1502,7 @@ pub fn into_regge_metric(&self) -> Gramian {
 
 Of course not all possible length assignment are valid. They need to fulfill certain
 critieria that evolve around the possibility of realizing these edge lengths
-as a real euclidean simplex. These are so called *Realizability Conditions*.
+as a real euclidean simplex. These are so called *Realizability Conditions* @distgeo.
 Only edge lengths for which a coordinate simplex exists that actually
 produces these edge lengths are valid.
 
@@ -1520,7 +1520,7 @@ degenerate pseudo-Riemannian metric instead of a proper Riemannian metric. If we
 an immersed mesh, this is always the case.
 
 
-*Euclidean distance matrix*
+*Euclidean distance matrix* @distgeo
 $
   amat(A) = mat(
     0, d_12^2, d_13^2, dots.c, d_(1 n)^2;
@@ -1548,7 +1548,7 @@ pub fn distance_matrix(&self) -> na::DMatrix<f64> {
 }
 ```
 
-*Cayley-Menger Matrix*
+*Cayley-Menger Matrix* @distgeo
 
 $
   amat(C M) = mat(
@@ -1571,7 +1571,7 @@ pub fn cayley_menger_matrix(&self) -> na::DMatrix<f64> {
 }
 ```
 
-*Cayley-Menger Determinant*
+*Cayley-Menger Determinant* @distgeo
 $
   c m = ((-1)^(n+1))/((n!)^2 2^n) det (amat(C M))
 $
@@ -1586,7 +1586,7 @@ pub fn cayley_menger_factor(dim: Dim) -> f64 {
 }
 ```
 
-Realizability is equivalent to $c m >= 0$.
+Realizability is equivalent to $c m >= 0$ @distgeo.
 
 ```rust
 pub fn is_coordinate_realizable(&self) -> bool {
@@ -1608,7 +1608,7 @@ pub fn vol(&self) -> f64 {
 === Global Geometry
 
 Computationally we represent the edge lengths in a single struct
-that has all lengths stored continuously in memory in a nalgebra vector.
+that has all lengths stored continuously in memory in a nalgebra vector @NalgebraLib.
 ```rust
 pub struct MeshEdgeLengths {
   vector: na::DVector<f64>,
@@ -1646,7 +1646,7 @@ impl MeshVertexCoords {
 
 The original PDE problem, before discretization, is posed on a smooth manifold, which
 we then discretized in the form of a mesh.
-This smooth manifold has a non-zero curvature everywhere in general.
+This smooth manifold has a non-zero curvature everywhere in general @frankel:diffgeo.
 This is in contrast to the simplex geometry we've chosen here,
 that approximates the geometry, by a *piecewise-flat geometry* over the cells.
 Each cell is a flat simplex that has no curvature change inside of it.
@@ -1659,13 +1659,13 @@ over each cell.
 This is a piecewise-linear 1st order approximation of the geometry.
 But this is not only possible approximation. Higher-order mesh elements,
 such as quadratic or cubic elements allow for higher accuracy approximations
-of the mesh. In general any order polynomial elements can be used.
+of the mesh @hiptmair:numpde. In general any order polynomial elements can be used.
 We will restrict ourselves completely to first-order elements in this thesis.
 This approximation is sufficient for us, since it represents an
-*admissible geometric variational crime*: The order of our FE method coincides with
+*admissible geometric variational crime* @holst:gvc: The order of our FE method coincides with
 the order of our mesh geometry; both are linear 1st order.
 This approximation doesn't affect the order of convergence in a negative way,
-and therefore is admissible.
+and therefore is admissible @holst:gvc.
 
 
 == Mesh Generation and Loading
@@ -1681,7 +1681,7 @@ To obtain a simplicial skeleton, we need to split each $n$-cube into non-overlap
 that make up it's volume. In 2D it's very natural to split a square into two triangles
 of equal volume. This can be generalized to higher dimensions. The trivial
 triangulation of a $n$-cube into $n!$ simplicies is based on the $n!$ many permutations
-of the $n$ coordinate axes.
+of the $n$ coordinate axes @hiptmair:numpde.
 
 The $n$-cube has $2^n$ vertices, which can all be identified using multiindices
 $
@@ -1753,7 +1753,7 @@ The memory usage is dictated by the same scaling law.
 
 === Gmsh Import
 
-The formoniq manifold crate can read gmsh `.msh` files and turn them
+The formoniq manifold crate can read gmsh `.msh` files @GmshPaper2009 and turn them
 into a simplicial complex that we can work on.
 This is thanks to the `gmshio` crate.
 
@@ -1812,4 +1812,3 @@ manifold/src
     ├── gmsh.rs
     └── vtk.rs
 ```
-
