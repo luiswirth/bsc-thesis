@@ -4,11 +4,11 @@
 
 = Results
 
-To verify the function of the library we solve a EVP and a source problem.
+To verify the function of the library we solve a EVP and a source problem based on the Hodge-Laplacian operator, using the Finite Element Exterior Calculus framework @douglas:feec-book, @douglas:feec-article.
 
 == 1-Form EVP on Annulus
 
-We meshed a 2D annulus $BB_1 (0) \\ BB_(1\/4) (0)$ using gmsh.
+We meshed a 2D annulus $BB_1 (0) \\ BB_(1\/4) (0)$ using Gmsh @GmshPaper2009.
 
 The eigenvalues computed on the annulus correspond to the actual eigenvalues.
 
@@ -22,13 +22,13 @@ The eigenvalues computed on the annulus correspond to the actual eigenvalues.
     image("../../res/evp6.png", width: 100%),
   ),
   caption: [
-    Three interesting computed eigenfunctions.
+    Three interesting computed eigenfunctions for the Hodge-Laplacian eigenvalue problem on an annulus.
   ],
 ) <img:evp>
 
 == 1-Form Source Problem on $RR^n, n >= 1$
 
-We verify the source problem by means of the method of manufactured solution.
+We verify the source problem by means of the method of manufactured solution @hiptmair:numpde.
 Our manufactured solution is a 1-form that follows the same pattern for any
 dimensions.
 
@@ -53,24 +53,26 @@ $
   )
 $
 
+The corresponding source term $f = Delta^1 u$ is computed analytically:
 $
   (Delta^1 avec(u))_i = Delta^0 u_i = -(2 cos(2 x^i) - (n-1) sin^2(x^i)) product_(j != i) cos(x^j)
 $
 
-Homogeneous boundary conditions.
+Homogeneous boundary conditions are imposed.
 $
   trace_(diff Omega) u = 0
   quad quad
   trace_(diff Omega) dif u = 0
 $
 
-Non-trivial
+The manufactured solution is chosen such that it is non-trivial, meaning it is neither curl-free nor divergence-free in general.
 $
   curl avec(u) != 0
   quad quad
   div avec(u) != 0
 $
 
+The implementation uses the libraries `nalgebra` @NalgebraLib, `PETSc` @PETScManualRecent, and `SLEPc` @SLEPcPaper2005 for numerical computations and solving the resulting linear systems.
 ```rust
 fn main() -> Result<(), Box<dyn std::error::Error>> {
   let dim = 2;
@@ -140,7 +142,7 @@ refinement=7 | L2_error=8.21e-4 | conv_rate= 1.42
 ```
 
 So almost order $alpha=2$ $L^2$ convergence, which is exactly what
-theory predicts, confirming the correct implementation.
+theory predicts for lowest-order Whitney form elements @douglas:feec-article, confirming the correct implementation.
 
 
 #figure(
@@ -153,7 +155,6 @@ theory predicts, confirming the correct implementation.
     [],
   ),
   caption: [
-    Computed solution to source problem.
+    Computed solution $u$ to the 1-form source problem using the method of manufactured solutions.
   ],
-) <img:evp>
-
+) <img:source_problem>
