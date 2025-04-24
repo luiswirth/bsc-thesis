@@ -1,4 +1,4 @@
-= Introduction 
+= Introduction
 
 Partial Differential Equations (PDEs) are the mathematical language we use to
 model continuum problems across physics and engineering.
@@ -9,7 +9,7 @@ computational science.
 
 The Finite Element Method (FEM) is one of the major methods employed to
 numerically solve PDEs on unstructured meshes inspired by ideas from functional
-analysis.
+analysis @hiptmair:numpde, @hiptmair:numcse.
 
 While scalar-valued FEM is relatively easily constructed and studied using
 Lagrangian FE spaces, vector-valued FEM is far more involved.
@@ -29,13 +29,13 @@ This can be done for simplicial meshes in arbitrary dimension.
 Finite Element Exterior Calculus (FEEC) is this unified mathematical framework
 for scalar- and vector-valued FEM, making use of the far more general
 and elegant theory of differential geometry and the exterior calculus of
-differential forms instead of vector calculus to solve PDEs.
+differential forms instead of vector calculus to solve PDEs @douglas:feec-article, @douglas:feec-book.
 FEEC provides structure-preserving discretizations that ensure stability,
-accuracy, and convergence.
+accuracy, and convergence @douglas:feec-article.
 
 FEEC is the facto standard for analyzing and constructing conforming
 FE spaces for arbitrary rank differential forms in arbitrary dimensions and on
-arbitrary topologies.
+arbitrary topologies @douglas:feec-book.
 In modern FEM theory it is therefore standard to embrace differential geometry
 instead of vectors calculus.
 
@@ -55,30 +55,30 @@ coordinates but only an intrinsic Riemannian metric.
 
 We will restrict ourselves to 1st order piecewise linear FE and therefore
 also just piecewise-flat approximations of the underlying manifold
-(an admissible geometric variational crime).
+(an admissible geometric variational crime @holst:gvc).
 
 The prototypical 2nd order elliptic differential operator in FEEC is the
-Hodge-Laplace operator, a generalization of the ordinary Laplace-Beltrami operator.
+Hodge-Laplace operator @frankel:diffgeo, a generalization of the ordinary Laplace-Beltrami operator.
 We will work to solve the eigenvalue problem and source problem corresponding to
-this operator, which will guide our implementation.
-For both these problems we rely on a mixed weak formulation of Hodge-Laplacian.
+this operator, which will guide our implementation @douglas:feec-article.
+For both these problems we rely on a mixed weak formulation of Hodge-Laplacian @douglas:feec-article.
 
 For the treatment of arbitrary topologies, a big theme is homology and cohomology.
 Homology theory is a topological disciple concerned with the counting of holes of
 a topological space, in our case the simplicial complex which approximates our
-PDE domain.
+PDE domain @hatcher:algtop.
 The simplicial homology of our mesh is isomorphic to the de Rham cohomology of
-the space of differential forms.
+the space of differential forms @frankel:diffgeo.
 It makes statements about the existence of differential forms on our domain and
 therefore has influence on the existence and uniqueness of our PDE problem.
 The ability of FEEC to treat arbitrary topologies is thanks to homology theory.
 In the concrete case of the Hodge-Laplace operator we are dealing with Hodge
-theory.
+theory @frankel:diffgeo.
 We will not explain homology in detail in this thesis, since in the implementation
 it has only a very small part.
 
 *Rust*\
-The implementation of our FEM library will be done in the Rust programming language.
+The implementation of our FEM library will be done in the Rust programming language @RustLang.
 Rust was chosen for its strong guarantees in memory safety, performance, and
 modern language features, making it ideal for high-performance computing tasks
 like finite elements. The Rust ownership model, borrow checker, and type system
@@ -103,33 +103,31 @@ TODO: DO THIS BETTER
 The structure of this thesis is as follows:
 
 We first learn about the building blocks of our mesh,
-which are simplicies and look at some algebraic topology.
+which are simplicies and look at some algebraic topology @hatcher:algtop.
 
-We first start with some topology and differential geometry
+We first start with some topology and differential geometry @frankel:diffgeo
 and develope a mesh data structure.
-The topology of the mesh is represented as a simplicial complex
+The topology of the mesh is represented as a simplicial complex @hatcher:algtop
 and the geometry is given coordinate-free in the form of a
-Riemannian metric, in our case the Regge metric, which solely
+Riemannian metric @frankel:diffgeo, in our case the Regge metric @regge, which solely
 relies on the edge lengths of the mesh.
 
-Then we take a look at exterior algebra and exterior calculus.
+Then we take a look at exterior algebra and exterior calculus @frankel:diffgeo.
 Exterior algebra is to exterior calculus, what vector algebra is to
 vector calculus.
 In this section we will learn about differential forms, which are
 the values our PDEs will take. We will learn about the most important
-properties of them and also learn about their discrete counterparts called cochains.
+properties of them and also learn about their discrete counterparts called cochains @crane:ddg.
 
 Once we've explored al of these various theories relevant to the implementation,
 we will finally talk about the implementation of the heart of our FEEC library,
-which is the computation of the Galerkin matrices for various weak differential operators.
+which is the computation of the Galerkin matrices for various weak differential operators @douglas:feec-article.
 We will both be solving the Hodge-Laplace EVP and the Hodge-Laplace source problem.
-For this we will look at the Whitney basis functions and the Whitney FE space.
+For this we will look at the Whitney basis functions @whitney:geointegration, @douglas:feec-article and the Whitney FE space.
 
 Lastly we will test our library and generate various results by solving
 model problems, visualizing them and looking at error convergences and other metrics.
 To this end we will use the method of manufactured solutions to verify
-the correctness of our FE solutions.
-
-
+the correctness of our FE solutions @hiptmair:numpde.
 
 #pagebreak()
