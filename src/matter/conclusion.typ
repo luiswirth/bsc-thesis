@@ -7,6 +7,18 @@ Okay, here is the "Conclusion and Outlook" section with citations added based on
 
 = Conclusion and Outlook
 
+== Insights
+
+Even though in the mathematical theory of FEEC the use of the Hodge star
+operator is ubiquitous, in the implementation it is nowhere used.
+This is because we can work purely in terms of $L^2$-inner-products
+of differential forms.
+
+The primal weak form is not something that can be implemented,
+since it's FE discretization is not well-defined.
+One characterization of this is the fact, that the
+primal codifferential operator is not closed in the space of Whitney forms.
+
 == Failed Ideas
 
 Discarded ideas and failed approaches
@@ -23,12 +35,16 @@ Overabstraction is worse than minor code duplication.
 
 === Varying-Coefficents & Quadrature
 Future work could involve extending the framework to handle problems with varying material coefficients, which would necessitate the implementation of numerical quadrature rules beyond the simple barycentric rule used for constant-coefficient mass matrix assembly @douglas:feec-book, @hiptmair:numpde.
+Functor-like coefficient functions 
 
 === Higher-Order FEEC: Higher-Order Manifold & Higher-Order Elements
 The current implementation focuses on first-order Whitney forms. Extending this to higher-order Finite Element Exterior Calculus @douglas:feec-book, @hiptmair:whitneyforms would allow for higher accuracy and convergence rates, but would also require corresponding higher-order representations of the manifold geometry to avoid geometric variational crimes @holst:gvc.
 
+=== More PDEs
 
-===  Maxwell's Equations
+==== Hodge- Heat & Wave Equation
+
+====  Maxwell's Equations
 
 A far more meaningful PDE system that has some really interesting applications in real-life
 are Maxwell's Equation describing Electromagnetism @hiptmair:electromagnetism.
@@ -36,6 +52,11 @@ FEEC is the perfect fit for Maxwell's equations @douglas:feec-article, since the
 is also formulated in terms of differential geometry @frankel:diffgeo, much like general relativity @regge.
 This means that purely thanks to the generality of the library we are potentially able to solve
 Maxwell's equations on curved 4D spacetime manifolds.
+
+=== Stokes' Equation
+
+=== Elasticity Equations
+
 
 @hiptmair:electromagnetism
 

@@ -1500,6 +1500,9 @@ pub fn into_regge_metric(&self) -> Gramian {
 
 === Realizability Conditions
 
+
+HIPTMAIR TODO: die Kantenlängen müssen die Dreiecksungleichung erfüllen, damit sie eine lokal-konstante Riemannsche Metrik induzieren. Ansonsten erhält man eine pseudo-Riemannsche Metrik
+
 Of course not all possible length assignment are valid. They need to fulfill certain
 critieria that evolve around the possibility of realizing these edge lengths
 as a real euclidean simplex. These are so called *Realizability Conditions* @distgeo.
@@ -1775,40 +1778,3 @@ custom readers and writers for these.
 We also have a maximally simple custom file format that works
 great for arbitrary dimensional manifolds.
 
-== Manifold Crate
-
-Our mesh implementation comes in the form of a Rust crate (library)
-that has been published (TODO!) to https://crates.io/crate/manifold.
-It could be used for other libraries or applications that built on top of it,
-that are not necessarily FEEC related.
-
-The structure of the crate is as follows:
-```
-manifold/src
-├── lib.rs
-├── topology.rs
-├── topology
-│   ├── simplex.rs
-│   ├── skeleton.rs
-│   ├── complex.rs
-│   └── complex
-│       ├── dim.rs
-│       ├── attribute.rs
-│       └── handle.rs
-├── geometry.rs
-├── geometry
-│   ├── metric.rs
-│   ├── coord.rs
-│   └── coord
-│       ├── local.rs
-│       └── quadrature.rs
-├── dim3.rs
-├── gen.rs
-├── gen
-│   └── cartesian.rs
-├── io.rs
-└── io
-    ├── blender.rs
-    ├── gmsh.rs
-    └── vtk.rs
-```
