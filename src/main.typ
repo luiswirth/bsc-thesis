@@ -8,7 +8,14 @@
 ]
 
 #body-style[
-  #include "matter.typ"
+  #include "matter/software.typ"
+  #include "matter/mesh.typ"
+  #include "matter/exterior.typ"
+  #include "matter/ddf.typ"
+  #include "matter/fem.typ"
+  #include "matter/lapacian.typ"
+  #include "matter/results.typ"
+  #include "matter/conclusion.typ"
 ]
 
 #appendix-style[
