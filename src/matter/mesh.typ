@@ -3,51 +3,47 @@
 
 = Topology & Geometry of Simplicial Riemannian Manifolds
 
-In this chapter we will develop various data structures and algorithms to
-represent and work with our Finite Element mesh.
-It will store the topological and geometrical properties of our arbitrary
-dimensional discrete PDE domain.
-A simplicial complex @hatcher:algtop will be used to represent the topology (incidence and
-adjacency) of the mesh and double as the container for all the mesh entities,
-which are all simplicies. It will also provide unique identification through a
-global numbering, and iteration of all these entities.
-For the geometry, all edge lengths of the mesh will be stored to compute the
-piecewise-flat (over the cells) Riemannian metric @frankel:diffgeo, known as the Regge metric @regge.
-We also support the optional storage of global vertex coordinates, if an
-embedding were to be known.
+In this chapter, we develop various data structures and algorithms to represent
+and work with our Finite Element mesh. This mesh stores the topological and
+geometrical properties of our arbitrary-dimensional discrete PDE domain. A
+simplicial complex @hatcher:algtop will represent the topology (incidence and
+adjacency) of the mesh and serve as the container for all mesh entities, which
+are simplices. It also provides unique identification through global numbering
+and iteration over these entities. For the geometry, edge lengths are stored to
+compute the piecewise-flat (over the cells) Riemannian metric @frankel:diffgeo,
+known as the Regge metric @regge. We also support the optional storage of global
+vertex coordinates if an embedding is known.
 
 == Coordinate Simplicies
 
-Finite Element Methods benefit from their ability to work on unstructured meshes @hiptmair:numpde.
-So instead of subdividing a domain into a regular grid, FEM works on potentially
-highly non-uniform meshes.
-The simplest type of mesh that works for such non-uniform meshes are simplicial
-meshes.
-In 2D these are triangular meshes as known from computer graphics.
-A 3D simplicial mesh is made up from tetrahedrons.
-These building blocks need to be generalized to our arbitrary dimensional
-implementation.
+Finite Element Methods benefit from their ability to work on unstructured meshes
+@hiptmair:numpde. Instead of subdividing a domain into a regular grid, FEM
+operates on potentially highly non-uniform meshes. The simplest mesh type
+suitable for such non-uniform domains are simplicial meshes. In 2D, these are
+the familiar triangular meshes from computer graphics, while 3D simplicial
+meshes are composed of tetrahedra. These building blocks must be generalized for
+our arbitrary-dimensional implementation.
 
-We begin the exposition of the mesh topic with a coordinate-based object
-that relies on an embedding in an ambient space.
-Later on we will shed the coordinates and only rely on intrinsic geometry.
-For didactics it's however useful to start with coordinates.
+We begin the discussion of mesh representation with a coordinate-based object
+that relies on an embedding in an ambient space. Later, we will discard the
+coordinates and rely solely on intrinsic geometry. However, for didactic
+purposes, starting with coordinates is helpful.
 
 #v(0.5cm)
 
-The generalization of 2D triangles and 3D tetrahedra to $n$D
-is called a $n$-simplex @hatcher:algtop.
-There is a type of simplex for every dimension.
-These are first 4 kinds:
-- A 0-simplex is a point,
-- a 1-simplex is a line segment,
-- a 2-simplex is a triangle, and
-- a 3-simplex is a tetrahedron.
-The idea here is that an $n$-simplex is the polytope with the fewest vertices
-that spans a $n$-dimensional affine subspace of $RR^N$. It's the simplest $n$-polytope there is.
-A $n$-simplex $sigma$ always has $n+1$ vertices $avec(v)_0,dots,avec(v)_n in RR^N$ in a possibly higher dimensional
-space $RR^N, N >= n$ and the simplex is the patch of space
-bounded by the convex hull of the vertices.
+The generalization of 2D triangles and 3D tetrahedra to $n$ dimensions is called
+an $n$-simplex @hatcher:algtop. There is a type of simplex for every dimension;
+the first four kinds are:
+- A 0-simplex is a point.
+- A 1-simplex is a line segment.
+- A 2-simplex is a triangle.
+- A 3-simplex is a tetrahedron.
+
+The underlying idea is that an $n$-simplex is the convex hull of $n+1$ affinely
+independent points, forming the simplest possible $n$-dimensional polytope. An
+$n$-simplex $sigma$ is defined by $n+1$ vertices $avec(v)_0, dots, avec(v)_n in
+RR^N$ in a possibly higher-dimensional space $RR^N$ (where $N >= n$). The
+simplex itself is the region bounded by the convex hull of these vertices:
 $
   Delta(RR^n) in.rev sigma =
   "convex" {avec(v)_0,dots,avec(v)_n} =
@@ -59,12 +55,12 @@ $
   }
 $ <def-simplex>
 
-We call such an object a *coordinate simplex*, since it depends on global coordinates of
-the vertices and lives in a possible higher-dimensional ambient space $RR^N$. It therefore
-relies on an embedding.
-This object is uniquely determined by the coordinates $avec(v)_i$ of each vertex,
-inspiring a simple computational representation based on a struct, that
-stores the coordinates of each vertex in the columns of a matrix.
+We call such an object a *coordinate simplex* because it depends on the global
+coordinates of its vertices and resides within a potentially higher-dimensional
+ambient space $RR^N$, thus relying on an embedding. This object is uniquely
+determined by the vertex coordinates $avec(v)_i$. This inspires a straightforward
+computational representation using a struct that stores the coordinates of each
+vertex as columns in a matrix:
 ```rust
 pub struct SimplexCoords {
   pub vertices: na::DMatrix<f64>,
@@ -75,10 +71,10 @@ impl SimplexCoords {
 }
 ```
 
-We implement two methods to compute both the intrinsic dimension $n$, which
-is one less the number of vertices and the ambient dimension $N$ of the global coordinates.
-A special and particularly simple case is when intrinsic dimension and ambient dimension
-match up $n=N$.
+We implement methods to retrieve both the intrinsic dimension $n$ (one less than
+the number of vertices) and the ambient dimension $N$ (the dimension of the
+coordinate vectors). A special and particularly simple case occurs when the
+intrinsic and ambient dimensions coincide, $n=N$.
 ```rust
 pub type Dim = usize;
 pub fn dim_intrinsic(&self) -> Dim { self.nvertices() - 1 }
@@ -90,88 +86,83 @@ pub fn is_same_dim(&self) -> bool { self.dim_intrinsic() == self.dim_embedded() 
 === Barycentric Coordinates
 
 The coefficients $avec(lambda) = [lambda^i]_(i=0)^n$ in @def-simplex are called
-*barycentric coordinates* @frankel:diffgeo @hiptmair:numpde.
-They appear inside the convex combination / weighted average $sum_(i=0)^n lambda^i avec(v)_i$
-as weights $lambda^i in [0,1]$ with condition $sum_(i=0)^n lambda^i = 1$ in front of
-each Cartesian vertex coordinate $avec(v)_i in RR^N$.
-They constitute an intrinsic local coordinate representation with respect to the simplex $sigma in RR^N$,
-which is independent from the embedding in $RR^N$ and only relies on the convex combination
-of vertices. \
+*barycentric coordinates* @frankel:diffgeo, @hiptmair:numpde. They appear in the
+convex combination $sum_(i=0)^n lambda^i avec(v)_i$ as weights
+$lambda^i in [0,1]$ (for points within the simplex) that sum to one
+$sum_(i=0)^n lambda^i = 1$, in front of the Cartesian vertex coordinates
+$avec(v)_i in RR^N$. They constitute an intrinsic local coordinate representation with
+respect to the simplex $sigma$, independent of the embedding in $RR^N$, relying
+only on the convex combination of vertices.
+
 The coordinate transformation $psi: avec(lambda) |-> avec(x)$ from intrinsic
-barycentric $avec(lambda) in RR^n$ to ambient Cartesian $avec(x) in RR^N$ coordinate is
-given by
+barycentric coordinates $avec(lambda)$ to ambient Cartesian coordinates $avec(x)$
+is given by:
 $
-  avec(x) = psi (avec(lambda))
-  = sum_(i=0)^n lambda^i avec(v)_i
+  avec(x) = psi (avec(lambda)) = sum_(i=0)^n lambda^i avec(v)_i
 $
 
-We can easily implement this as
+This transformation can be implemented as:
 ```rust
 pub fn bary2global<'a>(&self, bary: impl Into<BaryCoordRef<'a>>) -> EmbeddingCoord {
   let bary = bary.into();
   self
     .vertices
-    .coord_iter()
+    .column_iter()
     .zip(bary.iter())
     .map(|(vi, &baryi)| baryi * vi)
     .sum()
 }
 ```
-The barycentric coordinate representation can be extended beyond the bounds of the simplex to
-the whole affine subspace.
-The condition $sum_(i=0)^n lambda^i = 1$ must still hold but only points
-$avec(x) in sigma$ inside the simplex have $lambda^i in [0,1]$.
+
+The barycentric coordinate representation extends beyond the simplex boundaries
+to the entire affine subspace spanned by the vertices. The condition $sum_(i=0)^n
+lambda^i = 1$ must still hold, but only points $avec(x) in sigma$ strictly
+inside the simplex have all $lambda^i in [0,1]$.
 ```rust
-pub fn is_coord_inside(&self, global: CoordRef) -> bool {
-  let bary = self.global2bary(global);
-  is_bary_inside(&bary)
-}
 pub fn is_bary_inside<'a>(bary: impl Into<CoordRef<'a>>) -> bool {
-  bary.into().iter().all(|&b| (0.0..=1.0).contains(&b))
+  let bary = bary.into();
+  assert_relative_eq!(bary.sum(), 1.0);
+  bary.iter().all(|&b| (0.0..=1.0).contains(&b))
 }
 ```
-Outside the simplex $avec(x) in.not sigma$, $lambda^i$ will be greater than one
-or negative. \
-The barycenter $avec(m) = 1/(n+1) sum_(i=0)^n avec(v)_i$ always has the special
-barycentric coordinates $psi(avec(m)) = [1/n]^(n+1)$.
+
+Outside the simplex $avec(x) in.not sigma$, some $lambda^i$ will be greater
+than one or negative. The barycenter $avec(m) = 1/(n+1) sum_(i=0)^n avec(v)_i$
+always has the special barycentric coordinate
+$psi(avec(m)) = avec(lambda) = [1/n]^(n+1)$.
 ```rust
 pub fn barycenter(&self) -> Coord {
   let mut barycenter = na::DVector::zeros(self.dim_embedded());
-  self.vertices.coord_iter().for_each(|v| barycenter += v);
+  self.vertices.column_iter().for_each(|v| barycenter += v);
   barycenter /= self.nvertices() as f64;
   barycenter
 }
 ```
 
-This coordinate system treats all vertices on equal footing and therefore
-there is a weight for each vertex.
-But as a consequence of this, there is some redundancy in this coordinate representation,
-making it not a proper coordinate system,
-since we have $n+1$ vertices for an only $n$-dimensional affine subspace.
+This coordinate system treats all vertices symmetrically, assigning a weight to
+each. Consequently, with $n+1$ coordinates ($lambda^0, ..., lambda^n$) for an
+$n$-dimensional affine subspace subject to the constraint $sum lambda^i = 1$,
+there is redundancy. This representation is not a minimal coordinate system.
 
-We can instead single out a special vertex to remove this redundancy. We choose
-for this vertex $avec(v)_0$ and call it the *base vertex*.
+To obtain a proper coordinate system, we can single out one vertex, say
+$avec(v)_0$, as the *base vertex*.
 ```rust
 pub fn base_vertex(&self) -> CoordRef { self.coord(0) }
 ```
-
-We can then leave off the redundant $lambda^0 = 1 - sum_(i=1)^n lambda^i$
-corresponding to $avec(v)_0$.
-Then the reduced barycentric coordinates $avec(lambda)^- = [lambda^i]_(i=1)^n$
-constitutes a proper coordinate system without any redundant information.
-We also call this the *local coordinate system*.
-This coordinate system also works for the whole affine subspace, but now
-the coordinates are completely free and there is a bijection between
-the affine subspace and the whole of $RR^n$. There is a unique representation
-for both ways.
+We can then omit the redundant coordinate $lambda^0 = 1 - sum_(i=1)^n lambda^i$
+associated with $avec(v)_0$. The remaining *reduced barycentric coordinates*
+$avec(lambda)^- = [lambda^i]_(i=1)^n$ form a proper coordinate system for the
+$n$-dimensional affine subspace. This is also referred to as the *local
+coordinate system*. In this system, the coordinates $lambda^1, ..., lambda^n$
+are unconstrained, providing a unique representation for every point in the
+affine subspace via a bijection with $RR^n$.
 
 #v(0.5cm)
 === Spanning Vectors
 
-If we consider the edges emanating from the base vertex, we get the
-*spanning vectors* $[avec(e)_i]_(i=1)^n$ with $avec(e)_i = avec(v)_i - avec(v)_0 in RR^N$.
-We can define a matrix $amat(E) in RR^(N times n)$ that has these
-spanning vectors as columns.
+Consider the edge vectors emanating from the base vertex: $avec(e)_i = avec(v)_i
+- avec(v)_0 in RR^N$ for $i=1, ..., n$. These are the *spanning vectors*. We can
+collect them as columns into a matrix $amat(E) in RR^(N times n)$:
 $
   amat(E) = 
   mat(
@@ -181,11 +172,12 @@ $
     )
 $
 
-We implement a function to compute this matrix.
+This matrix can be computed as follows:
 ```rust
 pub fn spanning_vectors(&self) -> na::DMatrix<f64> {
   let mut mat = na::DMatrix::zeros(self.dim_embedded(), self.dim_intrinsic());
   let v0 = self.base_vertex();
+  // Skip base vertex (index 0)
   for (i, vi) in self.vertices.coord_iter().skip(1).enumerate() {
     let v0i = vi - v0;
     mat.set_column(i, &v0i);
@@ -194,21 +186,23 @@ pub fn spanning_vectors(&self) -> na::DMatrix<f64> {
 }
 ```
 
-These spanning vectors are very natural to the reduced barycentric coordinate system,
-since we can rewrite the coordinate transformation $psi$ as
+These spanning vectors naturally relate to the reduced barycentric coordinate
+system. We can rewrite the coordinate transformation $psi$ using $lambda^0 = 1 -
+sum_(i=1)^n lambda^i$:
 $
   avec(x)
-  = sum_(i=0)^n lambda^i avec(v)_i
+  = sum_(i=0)^n lambda^i avec(v)_i 
+  = (1 - sum_(i=1)^n lambda^i) avec(v)_0 + sum_(i=1)^n lambda^i avec(v)_i
   = avec(v)_0 + sum_(i=1)^n lambda^i (avec(v)_i - avec(v)_0)
   = avec(v)_0 + amat(E) avec(lambda)^-
 $
-This makes it very apparent that this transformation is an affine map, with
-translation by $avec(v)_0$ and linear map $avec(lambda)^- |-> amat(E) vvec(lambda)^-$, between
-the local coordinates $avec(lambda)^-$ and the Cartesian coordinates $avec(x)$ of the
-affine subspace spanned up by the spanning vectors positioned at the base
-vertex.
+This clearly shows the transformation is an affine map: a translation by
+$avec(v)_0$ followed by the linear map represented by $amat(E)$ acting on the
+local coordinates $avec(lambda)^-$. It maps the local coordinates to the
+Cartesian coordinates $avec(x)$ within the affine subspace spanned by the
+vectors $avec(e)_i$ originating at $avec(v)_0$.
 
-We can implement some transformation functions.
+We implement functions for this affine transformation:
 ```rust
 pub fn linear_transform(&self) -> na::DMatrix<f64> { self.spanning_vectors() }
 pub fn affine_transform(&self) -> AffineTransform {
@@ -222,124 +216,145 @@ pub fn local2global<'a>(&self, local: impl Into<LocalCoordRef<'a>>) -> Embedding
 }
 ```
 
-Where we represent an affine transform as
+This makes use of the `AffineTransform` struct and its forward application:
 ```rust
 pub struct AffineTransform {
   pub translation: na::DVector<f64>,
   pub linear: na::DMatrix<f64>,
 }
-pub fn apply_forward(&self, coord: na::DVectorView<f64>) -> na::DVector<f64> {
-  &self.linear * coord + &self.translation
+impl AffineTransform {
+  pub fn new(translation: Vector, linear: Matrix) -> Self { Self { translation, linear } }
+  pub fn dim_domain(&self) -> usize { self.linear.ncols() }
+  pub fn dim_image(&self) -> usize { self.linear.nrows() }
+  pub fn apply_forward(&self, coord: na::DVectorView<f64>) -> na::DVector<f64> {
+    &self.linear * coord + &self.translation
+  }
 }
 ```
 
-Reversing the transformation, is more subtle, as due to floating point inaccuracies,
-we almost never exactly lie in the affine subspace.
-Furthermore, when the ambient dimension $N$ is greater than the intrinsic dimension $n < N$,
-then we have a underdetermined linear system.
-Therefore we rely on the Moore-Penrose pseudo-inverse @hiptmair:numcse, computed via SVD, to get
-a least-square solution.
+
+// TODO: introduce chart map, reverse of parametrization
+Reversing the transformation (finding local coordinates from global ones) is
+more complex due to the potentially higher-dimensional ($N >= n$) ambient space.
+The global coordinate point might not lie in the affine subspace.
+And due to floating-point inaccuries it almost never exactly will.
+This makes the linear system of the reverse transformation $avec(x) -
+avec(v)_0 = amat(E) avec(lambda)^-$ underdetermined.
+We use the Moore-Penrose pseudo-inverse $amat(E)^dagger$ @hiptmair:numcse,
+typically computed via Singular Value Decomposition (SVD), to find the
+least-squares solution of smallest norm:
 $
   avec(lambda)^- = phi(avec(x))
   = amat(E)^dagger (avec(x) - avec(v)_0)
 $
 
 ```rust
-pub fn global2local<'a>(&self, global: impl Into<EmbeddingCoordRef<'a>>) -> LocalCoord {
-  let global = global.into();
-  self.affine_transform().apply_backward(global)
+impl CoordSimplex {
+  pub fn global2local<'a>(&self, global: impl Into<EmbeddingCoordRef<'a>>) -> LocalCoord {
+    let global = global.into();
+    self.affine_transform().apply_backward(global)
+  }
 }
 
-pub fn apply_backward(&self, coord: na::DVectorView<f64>) -> na::DVector<f64> {
-  if self.linear.is_empty() { return na::DVector::default(); }
-  self
-    .linear
-    .clone()
-    .svd(true, true)
-    .solve(&(coord - &self.translation), 1e-12)
-    .unwrap()
+impl AffineTransform {
+  pub fn apply_backward(&self, coord: VectorView) -> Vector {
+    if self.dim_domain() == 0 { return Vector::zeros(0); }
+    self
+      .linear
+      .clone()
+      .svd(true, true)
+      .solve(&(coord - &self.translation), 1e-12)
+      .unwrap()
+  }
+  pub fn pseudo_inverse(&self) -> Self {
+    if self.dim_domain() == 0 {
+      return Self::new(Vector::zeros(0), Matrix::zeros(0, self.dim_image()));
+    }
+    let linear = self.linear.clone().pseudo_inverse(1e-12).unwrap();
+    let translation = &linear * &self.translation;
+    Self { translation, linear, }
+  }
 }
-
-pub fn pseudo_inverse(&self) -> Self {
-  let linear = self.linear.clone().pseudo_inverse(1e-12).unwrap();
-  let translation = &linear * &self.translation;
-  Self { translation, linear, }
-}
-
 ```
 
-By computing derivatives of the affine parametrization of the simplex, we
-find that the spanning vectors are a very natural frame/basis for the tangent space
-$T_p sigma$ of the simplex $sigma$ at each point $p in sigma$ @frankel:diffgeo.
-The Jacobian of the affine map is exactly the linear map represented by $amat(E)$.
+The derivatives of the affine parametrization $avec(x)(avec(lambda)^-)$ reveal
+that the spanning vectors $avec(e)_i$ form a natural basis for the tangent space
+$T_p sigma$ at any point $p$ within the simplex $sigma$ @frankel:diffgeo. The
+Jacobian of the affine map is precisely $amat(E)$:
 $
-  (diff avec(x))/(diff lambda^i)
-  = avec(e)_i
+  (diff avec(x))/(diff lambda^i) = avec(e)_i
   quad quad
-  (diff avec(x))/(diff avec(lambda))
-  = amat(E)
+  (diff avec(x))/(diff avec(lambda)^-) = amat(E)
 $
 
-Furthermore we can also compute the total differential of the barycentric coordinate
-functions based on the pseudo-inverse.
-This constitutes a natural basis for cotangent space $T^*_p sigma$ of the simplex $sigma$
-at each point $p in sigma$. It is in fact the dual basis @frankel:diffgeo.
+Conversely, the total differentials of all the barycentric coordinate functions
+$lambda^i$ can be computed using the pseudo-inverse. The rows of
+$amat(E)^dagger$ correspond to the differentials $dif lambda^1, ..., dif lambda^n$.
+These form a basis for the cotangent space $T^*_p sigma$, dual to the tangent
+basis $avec(e)_1, ..., avec(e)_n$ @frankel:diffgeo. The differential $dif lambda^0$
+is determined by the constraint $sum_i dif lambda^i = 0$.
 $
-  (diff avec(lambda))/(diff avec(x))
-  = amat(E)^dagger
+  (diff avec(lambda)^-)/(diff avec(x)) = amat(E)^dagger
   quad quad
-  avec(epsilon)^i = dif lambda^i = (diff lambda^i)/(diff avec(x))
-  = (amat(E)^dagger)_(i,:)
+  dif lambda^i = (diff lambda^i)/(diff avec(x)) = (amat(E)^dagger)_(i,:) quad (i=1...n)
   quad quad
   dif lambda^0 = -sum_(i=1)^n dif lambda^i
   quad quad
-  dif lambda^i (diff/(diff lambda^j)) = delta^i_j
+  dif lambda^i (diff/(diff lambda^j)) = delta^i_j quad (i,j=1...n)
 $
 ```rust
-pub fn difbarys(&self) -> na::DMatrix<f64> {
-  let difs = self.linear_transform().pseudo_inverse(1e-12).unwrap();
-  let mut grads = difs.insert_row(0, 0.0);
-  grads.set_row(0, &-grads.row_sum());
-  grads
+/// Total differential of barycentric coordinate functions in the rows(!) of
+/// a matrix.
+pub fn difbarys(&self) -> Matrix {
+  let difs = self.inv_linear_transform();
+  let mut difs = difs.insert_row(0, 0.0);
+  difs.set_row(0, &-difs.row_sum());
+  difs
 }
 ```
 
-Furthermore these spanning vectors define a parallelepiped.
-This parallelepiped can be used to compute the volume of the simplex, as a
-fraction $(n!)^(-1)$ of the volume of the parallelepiped, which is computed as
-the determinant of the spanning vectors in the case $n=N$ and otherwise using
-the square root of the Gramian determinant
+The spanning vectors also define a parallelepiped. The volume of the $n$-simplex
+is $1/n!$ times the $n$-dimensional volume of this parallelepiped. The signed volume
+is computed using the determinant of the spanning vectors if $n=N$, or more
+generally using the square root of the Gram determinant
 $sqrt(det(amat(E)^transp amat(E)))$ @frankel:diffgeo.
 ```rust
-pub fn det(&self) -> f64 {
-  let det = if self.is_same_dim() {
-    self.spanning_vectors().determinant()
-  } else {
-    self.spanning_vectors().gram_det_sqrt()
-  };
-  ref_vol(self.dim_intrinsic()) * det
+impl SimplexCoords {
+  pub fn det(&self) -> f64 {
+    let det = if self.is_same_dim() {
+      self.spanning_vectors().determinant()
+    } else {
+      Gramian::from_euclidean_vectors(self.spanning_vectors()).det_sqrt()
+    };
+    refsimp_vol(self.dim_intrinsic()) * det
+  }
+  pub fn vol(&self) -> f64 { self.det().abs() }
+  pub fn is_degenerate(&self) -> bool { self.vol() <= 1e-12 }
 }
-pub fn vol(&self) -> f64 { self.det().abs() }
 pub fn ref_vol(dim: Dim) -> f64 { (factorial(dim) as f64).recip() }
-
 ```
-Based on this we can also get the global orientation of the simplex via
-the sign of the determinant.
+
+The sign of the signed volume gives the global orientation of the coordinate
+simplex relative to the ambient space $RR^N$.
 ```rust
 pub fn orientation(&self) -> Sign {
   Sign::from_f64(self.det()).unwrap()
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
 pub enum Sign {
-  Pos = +1,
+  #[default]
+  Pos = 1,
   Neg = -1,
 }
 ```
+
 As a consequence swapping to vertices in the simplex, will swap the orientation of the simplex,
 by the properties of the determinant.
 
-Every simplex has two orientations positive and negative, just like the determinant
-always has only two signs @hatcher:algtop.
+Swapping two vertices in the definition of the simplex negates the determinant
+and thus flips the orientation. Every non-degenerate simplex has exactly two
+orientations, positive and negative @hatcher:algtop.
 #table(
   columns: 4,
   stroke: fgcolor,
@@ -353,35 +368,32 @@ always has only two signs @hatcher:algtop.
 #v(0.5cm)
 === Reference Simplex
 
-There is a special simplex, called the *reference simplex* @hiptmair:numpde, which has exactly the
-local coordinates (reduced barycentric coordinates) also as global coordinates.
+A particularly important simplex is the *reference simplex* @hiptmair:numpde,
+which serves as a canonical domain for defining basis functions in FEM. For a
+given dimension $n$, the $n$-dimensional reference simplex $sigma_"ref"^n$ is
+defined in $RR^n$ (so $N=n$) using its local
+coordinates as its global Cartesian coordinates:
 $
   sigma_"ref"^n = {(lambda_1,dots,lambda_n) in RR^n mid(|) lambda_i >= 0, quad sum_(i=1)^n lambda_i <= 1 }
 $
-For each dimension $n in NN$ there is exactly one reference simplex $sigma_"ref"^n$,
-which has coinciding intrinsic and ambient dimension $N=n$.
-For this simplex the edge vectors are exactly the euclidean standard basis vectors
-$avec(e)_i = nvec(e)_i$ with $(nvec(e)_i)_j = delta_i^j$.
-Is has volume $det(sigma) = (n!)^(-1)$.
+Its vertices are the origin $avec(v)_0 = avec(0)$ and the standard basis vectors
+$avec(v)_i = nvec(e)_i$ for $i=1...n$. The spanning vectors are simply the
+standard basis vectors $avec(e)_i = nvec(e)_i$, so $amat(E) = amat(I)_n$. The
+metric tensor is the identity matrix $amat(G) = amat(I)_n$, representing the
+standard Euclidean inner product. Its volume is $(n!)^(-1)$.
 
-They give rise to an euclidean orthonormal tangent space basis. $amat(E) = amat(I)_n$
-Which manifests as a metric tensor that is equal to the identity matrix
-$amat(G) = amat(I)_n^transp amat(I)_n = amat(I)_n$.
-
-The base vertex is the origin $v_0 = avec(0) in RR^n$ and the other vertices
-are $avec(v)_i = avec(0) + nvec(e)_i = nvec(e)_i$.
-The parametrization of the reference simplex is the identity map.
-$phi: avec(lambda)^- |-> avec(0) + amat(I) avec(lambda)^-$
-
-Every (real) simplex is the image of the reference simplex under the affine parametrization
-map.
+The affine map $phi$ from the reference simplex's local coordinates to its global
+coordinates is the identity map. Any real, non-degenerate $n$-simplex $sigma$
+can be viewed as the image of the reference $n$-simplex under the affine map
+defined by $sigma$'s spanning vectors and base vertex:
 $
   sigma = phi(sigma_"ref"^n)
 $
-The reference simplex acts as a chart of each real simplex $sigma$. While $psi:
-sigma -> sigma_"ref"^n subset.eq RR^n$ is the chart map.
-
-The barycentric coordinate functions are since they are intrinsic affine-invariant.
+The reference simplex acts as the parameter domain or chart for any real
+simplex $sigma$. The map $phi$ is the parametrization, while its inverse $psi:
+sigma -> sigma_"ref"^n$ (mapping global points on $sigma$ to local coordinates)
+is the chart map. Barycentric coordinates, being intrinsic, remain invariant
+under this affine transformation.
 
 
 == Abstract Simplicies
