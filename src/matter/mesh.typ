@@ -45,7 +45,7 @@ $n$-simplex $sigma$ is defined by $n+1$ vertices $avec(v)_0, dots, avec(v)_n in
 RR^N$ in a possibly higher-dimensional space $RR^N$ (where $N >= n$). The
 simplex itself is the region bounded by the convex hull of these vertices:
 $
-  Delta(RR^n) in.rev sigma =
+  sigma =
   "convex" {avec(v)_0,dots,avec(v)_n} =
   {
     sum_(i=0)^n lambda^i avec(v)_i
@@ -78,8 +78,8 @@ intrinsic and ambient dimensions coincide, $n=N$.
 ```rust
 pub type Dim = usize;
 pub fn dim_intrinsic(&self) -> Dim { self.nvertices() - 1 }
-pub fn dim_embedded(&self) -> Dim { self.vertices.nrows() }
-pub fn is_same_dim(&self) -> bool { self.dim_intrinsic() == self.dim_embedded() }
+pub fn dim_ambient(&self) -> Dim { self.vertices.nrows() }
+pub fn is_same_dim(&self) -> bool { self.dim_intrinsic() == self.dim_ambient() }
 ```
 
 #v(0.5cm)
@@ -98,26 +98,26 @@ The coordinate transformation $psi: avec(lambda) |-> avec(x)$ from intrinsic
 barycentric coordinates $avec(lambda)$ to ambient Cartesian coordinates $avec(x)$
 is given by:
 $
-  avec(x) = psi (avec(lambda)) = sum_(i=0)^n lambda^i avec(v)_i
+  psi: avec(lambda) |-> avec(x) = sum_(i=0)^n lambda^i avec(v)_i
 $
 
 This transformation can be implemented as:
 ```rust
-pub fn bary2global<'a>(&self, bary: impl Into<BaryCoordRef<'a>>) -> EmbeddingCoord {
-  let bary = bary.into();
+pub fn bary2global<'a>(&self, bary: impl Into<CoordRef<'a>>) -> Coord {
   self
     .vertices
-    .column_iter()
-    .zip(bary.iter())
+    .coord_iter()
+    .zip(bary.into().iter())
     .map(|(vi, &baryi)| baryi * vi)
     .sum()
 }
 ```
 
-The barycentric coordinate representation extends beyond the simplex boundaries
-to the entire affine subspace spanned by the vertices. The condition $sum_(i=0)^n
-lambda^i = 1$ must still hold, but only points $avec(x) in sigma$ strictly
-inside the simplex have all $lambda^i in [0,1]$.
+The barycentric coordinate representation extends beyond the simplex
+boundaries to the entire affine subspace spanned by the vertices. The condition
+$sum_(i=0)^n lambda^i = 1$ must still hold, but only points $avec(x) in sigma$
+strictly inside the simplex have all $lambda^i in [0,1]$. Outside the simplex,
+some $lambda^i$ will be greater than one or negative.
 ```rust
 pub fn is_bary_inside<'a>(bary: impl Into<CoordRef<'a>>) -> bool {
   let bary = bary.into();
@@ -126,13 +126,12 @@ pub fn is_bary_inside<'a>(bary: impl Into<CoordRef<'a>>) -> bool {
 }
 ```
 
-Outside the simplex $avec(x) in.not sigma$, some $lambda^i$ will be greater
-than one or negative. The barycenter $avec(m) = 1/(n+1) sum_(i=0)^n avec(v)_i$
-always has the special barycentric coordinate
-$psi(avec(m)) = avec(lambda) = [1/(n+1)]^(n+1)$.
+The barycenter $avec(m) = 1/(n+1) sum_(i=0)^n avec(v)_i$ always has the special
+barycentric coordinate $psi(avec(m)) = avec(lambda) = [1/(n+1)]^(n+1)$ and
+is name-giving for the barycentric coordinates.
 ```rust
 pub fn barycenter(&self) -> Coord {
-  let mut barycenter = na::DVector::zeros(self.dim_embedded());
+  let mut barycenter = na::DVector::zeros(self.dim_ambient());
   self.vertices.column_iter().for_each(|v| barycenter += v);
   barycenter /= self.nvertices() as f64;
   barycenter
@@ -153,9 +152,23 @@ We can then omit the redundant coordinate $lambda^0 = 1 - sum_(i=1)^n lambda^i$
 associated with $avec(v)_0$. The remaining *reduced barycentric coordinates*
 $avec(lambda)^- = [lambda^i]_(i=1)^n$ form a proper coordinate system for the
 $n$-dimensional affine subspace. This is also referred to as the *local
-coordinate system*. In this system, the coordinates $lambda^1, ..., lambda^n$
+coordinate system*. In this system, the local coordinates $lambda^1, ..., lambda^n$
 are unconstrained, providing a unique representation for every point in the
 affine subspace via a bijection with $RR^n$.
+
+
+```rust
+pub fn bary2local<'a>(bary: impl Into<CoordRef<'a>>) -> Coord {
+  let bary = bary.into();
+  bary.view_range(1.., ..).into()
+}
+pub fn local2bary<'a>(local: impl Into<CoordRef<'a>>) -> Coord {
+  let local = local.into();
+  let bary0 = 1.0 - local.sum();
+  local.insert_row(0, bary0)
+}
+```
+
 
 #v(0.5cm)
 === Spanning Vectors
@@ -166,16 +179,16 @@ collect them as columns into a matrix $amat(E) in RR^(N times n)$:
 $
   amat(E) = 
   mat(
-      |,  , |;
-      avec(e)_1,dots.c,avec(e)_n;
-      |,  , |;
-    )
+    |,  , |;
+    avec(e)_1,dots.c,avec(e)_n;
+    |,  , |;
+  )
 $
 
 This matrix can be computed as follows:
 ```rust
 pub fn spanning_vectors(&self) -> na::DMatrix<f64> {
-  let mut mat = na::DMatrix::zeros(self.dim_embedded(), self.dim_intrinsic());
+  let mut mat = na::DMatrix::zeros(self.dim_ambient(), self.dim_intrinsic());
   let v0 = self.base_vertex();
   // Skip base vertex (index 0)
   for (i, vi) in self.vertices.column_iter().skip(1).enumerate() { 
@@ -186,9 +199,12 @@ pub fn spanning_vectors(&self) -> na::DMatrix<f64> {
 }
 ```
 
-These spanning vectors naturally relate to the reduced barycentric coordinate
-system. We can rewrite the coordinate transformation $psi$ using $lambda^0 = 1 -
-sum_(i=1)^n lambda^i$:
+This gives us an explicit basis of the affine space located at $avec(v)_0$ and
+spanned by $avec(e)_1,dots,avec(e)_n$.
+
+We can also rewrite the coordinate transformation $psi: avec(lambda) |->
+avec(x)$ using $lambda^0 = 1 - sum_(i=1)^n lambda^i$ in terms of
+the spanning vectors instead of the vertices:
 $
   avec(x)
   = sum_(i=0)^n lambda^i avec(v)_i 
@@ -196,11 +212,13 @@ $
   = avec(v)_0 + sum_(i=1)^n lambda^i (avec(v)_i - avec(v)_0)
   = avec(v)_0 + amat(E) avec(lambda)^-
 $
-This clearly shows the transformation is an affine map: a translation by
-$avec(v)_0$ followed by the linear map represented by $amat(E)$ acting on the
-local coordinates $avec(lambda)^-$. It maps the local coordinates to the
-Cartesian coordinates $avec(x)$ within the affine subspace spanned by the
-vectors $avec(e)_i$ originating at $avec(v)_0$.
+
+This shows that the transformation $psi$ is actually an affine map $psi:
+avec(lambda)^- |-> avec(x)$ consisting of the linear map represented by $amat(E)$
+followed by a translation by $avec(v)_0$.
+$
+  psi: avec(lambda)^- |-> avec(x) = avec(v)_0 + amat(E) avec(lambda)^-
+$
 
 We implement functions for this affine transformation:
 ```rust
@@ -210,7 +228,7 @@ pub fn affine_transform(&self) -> AffineTransform {
   let linear = self.linear_transform();
   AffineTransform::new(translation, linear)
 }
-pub fn local2global<'a>(&self, local: impl Into<LocalCoordRef<'a>>) -> EmbeddingCoord {
+pub fn local2global<'a>(&self, local: impl Into<CoordRef<'a>>) -> Coord {
   let local = local.into();
   self.affine_transform().apply_forward(local)
 }
@@ -241,13 +259,12 @@ underdetermined. We use the Moore-Penrose pseudo-inverse $amat(E)^dagger$
 @hiptmair:numcse, typically computed via Singular Value Decomposition (SVD), to
 find the unique least-squares solution of smallest norm:
 $
-  avec(lambda)^- = phi(avec(x))
-  = amat(E)^dagger (avec(x) - avec(v)_0)
+  phi: avec(x) |-> avec(lambda)^- = amat(E)^dagger (avec(x) - avec(v)_0)
 $
 
 ```rust
 impl SimplexCoords {
-  pub fn global2local<'a>(&self, global: impl Into<EmbeddingCoordRef<'a>>) -> LocalCoord {
+  pub fn global2local<'a>(&self, global: impl Into<CoordRef<'a>>) -> Coord {
     let global = global.into();
     self.affine_transform().apply_backward(global)
   }
@@ -274,26 +291,49 @@ impl AffineTransform {
 }
 ```
 
-The derivatives of the affine parametrization $phi: avec(lambda)^- |->
+The derivatives of the affine transformation $phi: avec(lambda)^- |->
 avec(x)$ reveal that the spanning vectors $avec(e)_i$ form a natural basis
 for the tangent space $T_p sigma$ at any point $p$ within the simplex $sigma$
-@frankel:diffgeo. The Jacobian of the affine map is precisely $amat(E)$. In
-differential geometry terms, the linear map $amat(E)$ acts as the *pushforward*
-$phi_*: avec(u) |-> avec(w) = amat(E) avec(u)$, transforming intrinsic tangent vectors
-(basis $diff/(diff lambda^i)$) to the ambient tangent vectors (basis vectors $avec(e)_i$).
+@frankel:diffgeo. The Jacobian of the affine map is precisely $amat(E)$.
 $
-  (diff avec(x))/(diff lambda^i) = avec(e)_i
+  diff/(diff lambda^i) = (diff avec(x))/(diff lambda^i) = avec(e)_i
   quad quad
   (diff avec(x))/(diff avec(lambda)^-) = amat(E)
 $
 
-// TODO: should be keep this?
-Conversely, the *pullback* $phi^*$ operation takes covectors (1-forms) defined
-in the ambient space coordinates and expresses them in the local coordinate
-system. If $omega$ is a covector in the ambient space, its pullback $eta = phi^* omega$
-acts on local tangent vectors $u$ such that $eta(u) = omega(phi_* u) = omega(amat(E) u)$.
-This transformation rule for covector components involves the matrix $amat(E)$
-(specifically, right-multiplication if covectors are row vectors: $avec(eta) = avec(omega) amat(E)$).
+In differential geometry terms, the linear map $amat(E)$ acts as the
+*pushforward*.
+$
+  phi_*: avec(u) |-> avec(w) = amat(E) avec(u)
+$
+It transforms intrinsic tangent vectors (basis $diff/(diff lambda^i)$) to the
+ambient tangent vectors (basis vectors $avec(e)_i$).
+```rust
+/// Local2Global Tangentvector
+pub fn pushforward_vector<'a>(&self, local: impl Into<TangentVectorRef<'a>>) -> TangentVector {
+  self.linear_transform() * local.into()
+}
+```
+
+Conversely, the *pullback* $phi^*$ operation takes covectors defined in the
+ambient space coordinates and expresses them in the local coordinate system.
+If $avec(omega) in RR^(1 times N)$ is a covector in the ambient space, its
+pullback $avec(eta) = phi^* avec(omega)$ acts on local tangent vectors $avec(u)$ such
+that $avec(eta)(avec(u)) = avec(omega)(phi_* avec(u)) = avec(omega)(amat(E) avec(u))$.
+The transformation rule is right-multiplication if covectors are row vectors.
+$
+  phi^*: avec(omega) |-> avec(eta) = avec(omega) amat(E)
+$
+```rust
+
+/// Global2Local Cotangentvector
+pub fn pullback_covector<'a>(
+  &self,
+  global: impl Into<CoTangentVectorRef<'a>>,
+) -> CoTangentVector {
+  global.into() * self.linear_transform()
+}
+```
 
 Separately, we can consider the differentials of the barycentric coordinate
 functions $lambda^i$ as functions of the global coordinates $avec(x)$. These
@@ -301,18 +341,25 @@ differentials, $dif lambda^i$, form a basis for the cotangent space $T^*_p sigma
 Their components relative to the ambient basis $dif x^i$ are found using the
 differential of the *inverse* map $psi: sigma -> sigma_"ref"^n$, which involves the
 pseudo-inverse $amat(E)^dagger$. Specifically, the rows of $amat(E)^dagger$ give
-the components of $dif lambda^1, ..., dif lambda^n$. These $dif lambda^i$ form the
-basis dual to the tangent basis $avec(e)_1, ..., avec(e)_n$ @frankel:diffgeo. The
+the components of $dif lambda^1, ..., dif lambda^n$.
+The
 differential $dif lambda^0$ is determined by the constraint $sum_i dif lambda^i = 0$.
 $
-  (diff lambda^-)/(diff x) = amat(E)^dagger
+
+
+  (diff avec(lambda)^-)/(diff avec(x)) = amat(E)^dagger
   quad quad
-  dif lambda^i quad (i=1...n)
+  dif lambda^i = (diff lambda^i)/(diff avec(x)) = epsilon^i = (amat(E)^dagger)_(i,:)
   quad quad
-  dif lambda^0 = -sum_(i=1)^n d lambda^i
-  quad quad
-  dif lambda^i (diff/(diff lambda^j)) = delta^i_j quad (i,j=1...n)
+  dif lambda^0 = -sum_(i=1)^n dif lambda^i
 $
+
+These $epsilon^i = dif lambda^i$ form the basis dual to the tangent basis $avec(e)_1, ...,
+avec(e)_n$ @frankel:diffgeo.
+$
+  dif lambda^i (diff/(diff lambda^j)) = delta^i_j
+$
+
 
 ```rust
 /// Total differential of barycentric coordinate functions in the rows(!) of
@@ -326,11 +373,14 @@ pub fn difbarys(&self) -> Matrix {
 ```
 
 The spanning vectors as a basis of the tangent space, can be used to derive
-the *Riemannian metric tensor*. This metric on the simplex is induced by the amient
+the *Riemannian metric tensor*. This metric on the simplex is induced by the ambient
 Euclidean metric via the affine embedding.
 $
   amat(G) = amat(E)^transp amat(E)
 $
+
+Our implementation has a struct for working with Gramians, which will discuss
+in more detail later on.
 ```rust
 pub fn metric_tensor(&self) -> Gramian {
   Gramian::from_euclidean_vectors(self.spanning_vectors())
@@ -346,12 +396,12 @@ The spanning vectors also define a parallelepiped. The volume of the $n$-simplex
 is $1/n!$ times the $n$-dimensional volume of this parallelepiped. The signed volume
 is computed using the determinant of the spanning vectors if $n=N$.
 $
-  vol(sigma) = det(amat(E))
+  vol(sigma) = 1/n! det(amat(E))
 $
 For higher-dimensional ambient spaces we can use the Gram determinant of the metric tensor.
 @frankel:diffgeo.
 $
-  vol(sigma) = sqrt(amat(G)) = sqrt(det(amat(E)^transp amat(E)))
+  vol(sigma) = 1/n! sqrt(amat(G)) = 1/n! sqrt(det(amat(E)^transp amat(E)))
 $
 
 ```rust
@@ -426,18 +476,19 @@ standard basis vectors $avec(e)_i = nvec(e)_i$, so $amat(E) = amat(I)_n$. The
 metric tensor is the identity matrix $amat(G) = amat(I)_n$, representing the
 standard Euclidean inner product. Its volume is $(n!)^(-1)$.
 
-The affine map $phi$ from the reference simplex's local coordinates to its global
-coordinates is the identity map. Any real, non-degenerate $n$-simplex $sigma$
-can be viewed as the image of the reference $n$-simplex under the affine map
-$phi_sigma$ defined by $sigma$'s spanning vectors and base vertex:
+When looking at an arbitrary "real" $n$-simplex $tau$,
+the local to global map $phi_tau: avec(lambda)^- |-> avec(x)$ can be seen as a
+parametrization $phi_tau: sigma_"ref"^n -> tau subset.eq RR^N$, where the parametrization domain
+is the reference $n$-simplex. The real simplex is then the image of the reference simplex
 $
   sigma = phi_sigma (sigma_"ref"^n)
 $
-The reference simplex acts as the parameter domain or chart for any real
-simplex $sigma$. The map $phi_sigma$ is the parametrization, while its inverse $psi_sigma:
-sigma -> sigma_"ref"^n$ (mapping global points on $sigma$ to local coordinates)
-is the chart map. Barycentric coordinates, being intrinsic, remain invariant
-under this affine transformation.
+Conversely the global to local map $psi_tau: avec(x) |-> avec(lambda)^-$ can
+be seen as a chart map $psi_tau: tau -> sigma_"ref"^n$ where the chart itself
+is the reference $n$-simplex.
+
+When taking the "real" simplex to be the reference simplex, then
+the parametrization and chart maps are both identity maps.
 
 
 == Abstract Simplicies
@@ -1204,7 +1255,7 @@ $
   amat(G) = [g_(i j)]_(i,j=1)^(n times n)
 $
 
-This is called a Gram matrix or Gramian @hiptmair:numcse and is the discretization of a
+This is called a Gram matrix or Gramian and is the discretization of a
 inner product of a linear space, given a basis.
 This matrix doesn't represent a linear map, which would be a $(1,1)$-tensor, but
 instead a bilinear form, which is a $(0,2)$-tensor.
