@@ -779,7 +779,8 @@ pub fn boundary(&self) -> impl Iterator<Item = SignedSimplex> {
 }
 ```
 
-To represent the terms in the formal sum, we introduce a struct that pairs a simplex with an explicit sign:
+To represent the terms in the formal sum, we introduce a struct that pairs a
+simplex with an explicit sign:
 ```rust
 #[derive(Debug, Default, Clone, PartialEq, Eq, Hash)]
 pub struct SignedSimplex {
@@ -788,32 +789,32 @@ pub struct SignedSimplex {
 }
 ```
 
+
 == Simplicial Skeleton
 
-Simplicies are the building blocks of our mesh.
-If we build our mesh from coordinate simplicies, then we have the typical euclidean
-extrinsic description of an embedded mesh, that contains all geometric information. 
-As an embedding the union of these coordinate simplicies really is a
-$n$-dimensional region of $N$-dimensional of euclidean space.
+Simplices are the building blocks of our mesh. If we construct our mesh from
+coordinate simplices, we obtain the typical Euclidean extrinsic description
+of an embedded mesh, which inherently contains all geometric information. As
+an embedding, the union of these coordinate simplices forms an $n$-dimensional
+region within an $N$-dimensional Euclidean space.
 
-If we, in contrast, build our mesh only from abstract simplicies, then
-we are missing this full geometric information.
-since, abstract simplicies only specify the vertices (as indices) that they are made of.
-This information however fully defines the topology of our discrete
-$n$-manifold @hatcher:algtop.
-If two simplicies share the same vertices, then these are connected, by either
-being adjacent or by being incident.
-This makes the topology purely combinatorial.
+If we, in contrast, build our mesh using only abstract simplices, we lack
+this explicit geometric information, since abstract simplices only specify the
+vertices (via indices) they comprise. This information, however, fully defines
+the *topology* of our discrete $n$-manifold @hatcher:algtop. The connectivity
+between simplices—whether they are adjacent or incident—is determined entirely
+by shared vertices. This makes the topology purely combinatorial.
 
-In the following sections we study this simplicial topology and implement data
-structures and algorithms related to it.
+In the following sections, we will study this simplicial topology and implement
+the necessary data structures and algorithms.
 
 #v(1cm)
 
-To define the topology of our simplicial $n$-manifold, we just need
-to store the $n$-simplicies that make it up.
-This defines the topology of the mesh at the top-level.
-We call such a collection of $n$-simplicies that share the same vertices a $n$-skeleton @hatcher:algtop.
+To define the topology of a simplicial $n$-manifold at its highest dimension, we
+only need to store the set of $n$-simplices that constitute it. This collection
+defines the top-level structure of the mesh. Such a collection of $n$-simplices,
+typically sharing vertices from a common pool, is called an $n$-skeleton
+@hatcher:algtop.
 
 ```rust
 /// A container for sorted simplicies of the same dimension.
@@ -825,9 +826,9 @@ pub struct Skeleton {
 }
 ```
 
-A skeleton takes care of various responsibilities of a mesh data structure.
-It is a container for all $n$-simplicies.
-It allows for the iteration of all these mesh entities.
+A `Skeleton` fulfills several responsibilities of a mesh data structure.
+Primarily, it serves as a container for all $n$-simplices of a specific
+dimension $n$. It allows for iteration over all these mesh entities:
 ```rust
 impl Skeleton {
   pub fn iter(&self) -> indexmap::set::Iter<'_, Simplex> {
@@ -842,13 +843,14 @@ impl IntoIterator for Skeleton {
   }
 }
 ```
-In provides unique identification of the simplicies
-through a global numbering.
-This is a bijective mapping between the simplex index
-and the abstract simplex itself. This represented through this `IndexSet` data structure
-from the `index-map` crate. It has the typical `Vec` functionality for retrieving
-a `Simplex` from it's `SimplexIdx`, but it also supports the reverse direction (through hashing)
-of retrieving the index from the `Simplex` itself.
+Crucially, it provides unique identification for each simplex through a
+global numbering scheme within that dimension. This establishes a bijective
+mapping between an integer index (`KSimplexIdx`) and the abstract simplex
+itself. This functionality is achieved using the `IndexSet` data structure
+from the `indexmap` crate. `IndexSet` maintains insertion order, allowing
+efficient retrieval of a `Simplex` given its index (similar to `Vec`), while
+also using hashing internally to support the reverse lookup: retrieving the
+index corresponding to a given `Simplex` instance.
 ```rust
 pub fn simplex_by_kidx(&self, idx: KSimplexIdx) -> &Simplex {
   self.simplicies.get_index(idx).unwrap()
@@ -858,9 +860,8 @@ pub fn kidx_by_simplex(&self, simp: &Simplex) -> KSimplexIdx {
 }
 ```
 
-
-The skeleton constructor upholds various guarantees about the simplicies
-that are contained in it.
+The `Skeleton` constructor enforces several guarantees about the simplices it
+contains:
 ```rust
 pub fn new(simplicies: Vec<Simplex>) -> Self {
   assert!(!simplicies.is_empty(), "Skeleton must not be empty");
@@ -892,15 +893,16 @@ pub fn new(simplicies: Vec<Simplex>) -> Self {
   }
 }
 ```
-First of all, the skeleton cannot be empty and all simplicies must be of the
-same dimension.
-Furthermore we want to only store canonical representation of simplicies, since
-only then the reverse mapping from simplex to index is useful, because independent
-of the current vertex ordering we can always convert to the canonical representation
-to get the index.
-Lastly we have a special requirement on a 0-skeleton, because there the
-simplicies are exactly just the vertices and we want them sorted.
-
+First, a skeleton cannot be empty, and all contained simplices must have the
+same dimension. Furthermore, we enforce that only the canonical representation
+(sorted vertex indices) of simplices is stored. This is essential for the
+reverse mapping (simplex-to-index lookup) to be consistently useful; regardless
+of the initial ordering of a simplex's vertices, converting it to the canonical
+sorted form allows retrieval of its unique index within the skeleton. Lastly,
+a special requirement applies to 0-skeletons: the simplices must represent the
+vertices indexed sequentially as $[0], [1], dots, [N-1]$. The constructor also
+determines and stores the total number of vertices (`nvertices`) involved in
+the skeleton.
 
 == Simplicial Complex
 
