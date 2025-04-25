@@ -129,7 +129,7 @@ pub fn is_bary_inside<'a>(bary: impl Into<CoordRef<'a>>) -> bool {
 Outside the simplex $avec(x) in.not sigma$, some $lambda^i$ will be greater
 than one or negative. The barycenter $avec(m) = 1/(n+1) sum_(i=0)^n avec(v)_i$
 always has the special barycentric coordinate
-$psi(avec(m)) = avec(lambda) = [1/n]^(n+1)$.
+$psi(avec(m)) = avec(lambda) = [1/(n+1)]^(n+1)$.
 ```rust
 pub fn barycenter(&self) -> Coord {
   let mut barycenter = na::DVector::zeros(self.dim_embedded());
@@ -178,7 +178,7 @@ pub fn spanning_vectors(&self) -> na::DMatrix<f64> {
   let mut mat = na::DMatrix::zeros(self.dim_embedded(), self.dim_intrinsic());
   let v0 = self.base_vertex();
   // Skip base vertex (index 0)
-  for (i, vi) in self.vertices.coord_iter().skip(1).enumerate() {
+  for (i, vi) in self.vertices.column_iter().skip(1).enumerate() { 
     let v0i = vi - v0;
     mat.set_column(i, &v0i);
   }
@@ -232,24 +232,21 @@ impl AffineTransform {
 }
 ```
 
-
-// TODO: introduce chart map, reverse of parametrization
 Reversing the transformation (finding local coordinates from global ones) is
 more complex due to the potentially higher-dimensional ($N >= n$) ambient space.
-The global coordinate point might not lie in the affine subspace.
-And due to floating-point inaccuries it almost never exactly will.
-This makes the linear system of the reverse transformation $avec(x) -
-avec(v)_0 = amat(E) avec(lambda)^-$ underdetermined.
-We use the Moore-Penrose pseudo-inverse $amat(E)^dagger$ @hiptmair:numcse,
-typically computed via Singular Value Decomposition (SVD), to find the
-least-squares solution of smallest norm:
+The global coordinate point might not lie exactly in the affine subspace due
+to floating-point inaccuracies. This makes the linear system for the reverse
+transformation $avec(x) - avec(v)_0 = amat(E) avec(lambda)^-$ potentially
+underdetermined. We use the Moore-Penrose pseudo-inverse $amat(E)^dagger$
+@hiptmair:numcse, typically computed via Singular Value Decomposition (SVD), to
+find the unique least-squares solution of smallest norm:
 $
   avec(lambda)^- = phi(avec(x))
   = amat(E)^dagger (avec(x) - avec(v)_0)
 $
 
 ```rust
-impl CoordSimplex {
+impl SimplexCoords {
   pub fn global2local<'a>(&self, global: impl Into<EmbeddingCoordRef<'a>>) -> LocalCoord {
     let global = global.into();
     self.affine_transform().apply_backward(global)
@@ -264,7 +261,7 @@ impl AffineTransform {
       .clone()
       .svd(true, true)
       .solve(&(coord - &self.translation), 1e-12)
-      .unwrap()
+      .expect("SVD solve failed")
   }
   pub fn pseudo_inverse(&self) -> Self {
     if self.dim_domain() == 0 {
@@ -272,7 +269,7 @@ impl AffineTransform {
     }
     let linear = self.linear.clone().pseudo_inverse(1e-12).unwrap();
     let translation = &linear * &self.translation;
-    Self { translation, linear, }
+    Self { translation, linear }
   }
 }
 ```
@@ -280,7 +277,10 @@ impl AffineTransform {
 The derivatives of the affine parametrization $avec(x)(avec(lambda)^-)$ reveal
 that the spanning vectors $avec(e)_i$ form a natural basis for the tangent space
 $T_p sigma$ at any point $p$ within the simplex $sigma$ @frankel:diffgeo. The
-Jacobian of the affine map is precisely $amat(E)$:
+Jacobian of the affine map is precisely $amat(E)$. In differential geometry
+terms, the linear map $avec(lambda)^- |-> amat(E) avec(lambda)^-$ acts as the *pushforward*, transforming tangent
+vectors from the local coordinate space (where the basis is $diff/(diff lambda^i)$)
+to the ambient space (where the basis vectors are $avec(e)_i$).
 $
   (diff avec(x))/(diff lambda^i) = avec(e)_i
   quad quad
@@ -291,12 +291,13 @@ Conversely, the total differentials of all the barycentric coordinate functions
 $lambda^i$ can be computed using the pseudo-inverse. The rows of
 $amat(E)^dagger$ correspond to the differentials $dif lambda^1, ..., dif lambda^n$.
 These form a basis for the cotangent space $T^*_p sigma$, dual to the tangent
-basis $avec(e)_1, ..., avec(e)_n$ @frankel:diffgeo. The differential $dif lambda^0$
-is determined by the constraint $sum_i dif lambda^i = 0$.
+basis $avec(e)_1, ..., avec(e)_n$ @frankel:diffgeo.
+
+The differential $dif lambda^0$ is determined by the constraint $sum_i dif lambda^i = 0$.
 $
   (diff avec(lambda)^-)/(diff avec(x)) = amat(E)^dagger
   quad quad
-  dif lambda^i = (diff lambda^i)/(diff avec(x)) = (amat(E)^dagger)_(i,:) quad (i=1...n)
+  dif lambda^i = (diff lambda^i)/(diff avec(x)) = (amat(E)^dagger)_(i, :) quad (i=1...n)
   quad quad
   dif lambda^0 = -sum_(i=1)^n dif lambda^i
   quad quad
@@ -306,32 +307,54 @@ $
 /// Total differential of barycentric coordinate functions in the rows(!) of
 /// a matrix.
 pub fn difbarys(&self) -> Matrix {
-  let difs = self.inv_linear_transform();
-  let mut difs = difs.insert_row(0, 0.0);
-  difs.set_row(0, &-difs.row_sum());
+  // COMMENT: Ensure inv_linear_transform computes pseudo_inverse if N > n
+  let difs = self.affine_transform().pseudo_inverse().linear; // Get linear part of pseudo-inverse transform
+  let mut difs = difs.insert_row(0, 0.0); // Add row for lambda^0
+  difs.set_row(0, &-difs.row_sum()); // Compute grad(lambda^0) = -sum(grad(lambda^i))
   difs
 }
 ```
 
+The spanning vectors as a basis of the tangent space, can be used to derive
+the *Riemannian metric tensor*. This metric on the simplex is induced by the amient
+Euclidean metric via the affine embedding.
+$
+  amat(G) = amat(E)^transp amat(E)
+$
+```rust
+pub fn metric_tensor(&self) -> Gramian {
+  Gramian::from_euclidean_vectors(self.spanning_vectors())
+}
+```
+Since $amat(E)$ is constant across the simplex, this induced metric $amat(G)$
+is also *constant* everywhere within the simplex. This constancy implies that
+the simplex is *intrinsically flat* (zero Riemannian curvature). Consequently,
+geodesics (shortest paths between points) within the simplex are simply straight
+line segments in the embedding.
+
 The spanning vectors also define a parallelepiped. The volume of the $n$-simplex
 is $1/n!$ times the $n$-dimensional volume of this parallelepiped. The signed volume
-is computed using the determinant of the spanning vectors if $n=N$, or more
-generally using the square root of the Gram determinant
-$sqrt(det(amat(E)^transp amat(E)))$ @frankel:diffgeo.
+is computed using the determinant of the spanning vectors if $n=N$. Otherwise
+we can use the Gram determinant of the metric tensor.
+$sqrt(G) = sqrt(det(amat(E)^transp amat(E)))$ @frankel:diffgeo.
+
 ```rust
 impl SimplexCoords {
   pub fn det(&self) -> f64 {
     let det = if self.is_same_dim() {
       self.spanning_vectors().determinant()
     } else {
-      Gramian::from_euclidean_vectors(self.spanning_vectors()).det_sqrt()
+      self.metric_tensor().det_sqrt()
     };
     refsimp_vol(self.dim_intrinsic()) * det
   }
+
   pub fn vol(&self) -> f64 { self.det().abs() }
   pub fn is_degenerate(&self) -> bool { self.vol() <= 1e-12 }
 }
-pub fn ref_vol(dim: Dim) -> f64 { (factorial(dim) as f64).recip() }
+pub fn refsimp_vol(dim: Dim) -> f64 {
+  factorialf(dim).recip()
+}
 ```
 
 The sign of the signed volume gives the global orientation of the coordinate
@@ -347,10 +370,15 @@ pub enum Sign {
   Pos = 1,
   Neg = -1,
 }
+impl Sign {
+  pub fn from_f64(f: f64) -> Option<Self> {
+    if f == 0.0 {
+      return None;
+    }
+    Some(Self::from_bool(f > 0.0))
+  }
+}
 ```
-
-As a consequence swapping to vertices in the simplex, will swap the orientation of the simplex,
-by the properties of the determinant.
 
 Swapping two vertices in the definition of the simplex negates the determinant
 and thus flips the orientation. Every non-degenerate simplex has exactly two
@@ -385,16 +413,15 @@ standard Euclidean inner product. Its volume is $(n!)^(-1)$.
 The affine map $phi$ from the reference simplex's local coordinates to its global
 coordinates is the identity map. Any real, non-degenerate $n$-simplex $sigma$
 can be viewed as the image of the reference $n$-simplex under the affine map
-defined by $sigma$'s spanning vectors and base vertex:
+$phi_sigma$ defined by $sigma$'s spanning vectors and base vertex:
 $
-  sigma = phi(sigma_"ref"^n)
+  sigma = phi_sigma(sigma_"ref"^n)
 $
 The reference simplex acts as the parameter domain or chart for any real
-simplex $sigma$. The map $phi$ is the parametrization, while its inverse $psi:
+simplex $sigma$. The map $phi_sigma$ is the parametrization, while its inverse $psi_sigma:
 sigma -> sigma_"ref"^n$ (mapping global points on $sigma$ to local coordinates)
 is the chart map. Barycentric coordinates, being intrinsic, remain invariant
 under this affine transformation.
-
 
 == Abstract Simplicies
 
