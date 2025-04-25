@@ -491,21 +491,25 @@ When taking the "real" simplex to be the reference simplex, then
 the parametrization and chart maps are both identity maps.
 
 
+Okay, here is a revised version of the "Abstract Simplicies" section, incorporating improvements while adhering to your constraints. I have focused on clarity, flow, and correcting minor grammatical issues, ensuring the text accurately describes the provided code's behavior, including the specific interpretation of `subsets`.
+
+---
+
 == Abstract Simplicies
 
-After studying coordinate simplicies, the reader has hopefully developed
-some intuitive understanding of simplicies. We will now shed the coordinates
-and represent simplicies in a more abstract way, by just considering
-them as a list of vertex indices, without any vertex coordinates.
-A $n$-simplex $sigma$ is a $(n+1)$-tuple of natural numbers, which represent vertex
-indices @hatcher:algtop.
+After studying coordinate simplices, the reader has hopefully developed some
+intuitive understanding of simplices. We will now shed the coordinates and
+represent simplices in a more abstract way, by considering them merely as a list
+of vertex indices, without any associated vertex coordinates. An $n$-simplex
+$sigma$ is thus represented as an $(n+1)$-tuple of natural numbers, which
+correspond to vertex indices @hatcher:algtop.
 $
   sigma = [v_0,dots,v_n] in NN^(n+1)
   quad quad
   v_i in NN
 $
 
-In Rust we can simply represent this as the following struct.
+In Rust, we can simply represent this using the following struct:
 ```rust
 pub type VertexIdx = usize;
 pub struct Simplex {
@@ -521,63 +525,59 @@ impl Simplex {
 }
 ```
 
-The ordering of the vertices _does_ matter, therefore we really have ordered tuples
-and not just unordered sets. This makes our simplicies combinatorial objects and
-these combinatorics will be heart of our mesh data structure.
+The ordering of the vertices _does_ matter; therefore, we are dealing with
+ordered tuples, not just unordered sets. This makes our simplices combinatorial
+objects, and these combinatorics will be the heart of our mesh data structure.
 
 === Sorted Simplicies
 
-Even though order does matter, simplicies that share the same vertices,
-are still pretty much the same. For this reason it is helpful,
-to introduce a convention for the canonical representation of a
-simplex given a set of vertices.
+Even though the order matters for defining a specific simplex instance,
+simplices that share the same set of vertices are closely related. For this
+reason, it is helpful to introduce a convention for the canonical representation
+of a simplex given a particular set of vertices.
 
-Our canonical representative will be the tuple, which as it's vertex indices
-sorted increasingly. We can take any simplex in arbitrary order and
-convert it to it's canonical representation.
+Our canonical representative will be the tuple whose vertex indices are sorted
+in increasing order. We can take any simplex with arbitrarily ordered vertices
+and convert it to its canonical representation.
 ```rust
 pub fn is_sorted(&self) -> bool { self.vertices.is_sorted() }
 pub fn sort(&mut self) { self.vertices.sort_unstable() }
 pub fn sorted(mut self) -> Self { self.sort(); self }
 ```
 
-Using this canonical representation, we can easily check
-whether we two simplicies have the same vertex set, meaning
-they are permutations of each other.
+Using this canonical representation, we can easily check whether two simplices
+have the same vertex set, meaning they are permutations of each other.
 ```rust
 pub fn set_eq(&self, other: &Self) -> bool {
   self.clone().sorted() == other.clone().sorted()
 }
-pub fn is_permutation_of(&self, other: &Self) -> bool {
-  self.set_eq(other)
-}
+pub fn is_permutation_of(&self, other: &Self) -> bool { self.set_eq(other) }
 ```
-
 
 === Orientation
 
-For our coordinate simplicies, we have seen that there are always
-two orientations that a simplex can have.
-We computed the orientation based on the determinant of the spanning vectors,
-but without any coordinates this is no longer possible.
+For coordinate simplices, we observed that a simplex always has two possible
+orientations. We computed this orientation based on the determinant of the
+spanning vectors, but without coordinates, this is no longer possible.
 
-However we can still have a notion of relative orientation.
-We have seen that with coordinate simplicies that swapping of two vertices
-flips the orientation, due to the properties of the determinant.
-The same behavior is present in abstract simplicies, based on the
-ordering of the vertices.
-All permutations can be divided into two equivalence classes.
-Given a reference ordering of the vertices of a simplex,
-we can call these even and odd permutations @hatcher:algtop.
-We call simplicies with even permutations, positively oriented and
-simplicies with odd permutations negatively oriented.
-Therefore every abstract simplex has exactly two orientations, positive
-and negative depending on the ordering of vertices.
+However, we can still define a notion of relative orientation. Recall that
+swapping two vertices in a coordinate simplex flips its orientation due to
+the properties of the determinant. The same behavior is present in abstract
+simplices, based purely on the ordering of the vertices. All permutations of a
+given set of vertices can be divided into two equivalence classes relative to
+a reference ordering: even and odd permutations @hatcher:algtop. We associate
+simplices with even permutations with positive orientation and those with
+odd permutations with negative orientation. Therefore, every abstract simplex
+has exactly two orientations, positive and negative, depending on its vertex
+ordering relative to a reference.
 
-We use as reference ordering our canonical sorted representation.
-We can determine the orientation relative to this sorted permutation,
-by counting the number of swaps necessary to sort the simplex.
-For this we implement a basic bubble sort, that keeps track of the number of swaps.
+We use our canonical sorted representation as the reference ordering. We can
+determine the orientation of any simplex relative to this sorted permutation by
+counting the number of swaps necessary to sort its vertex list. An even number
+of swaps corresponds to a positive orientation, and an odd number corresponds
+to a negative orientation. For this, we implement a basic bubble sort that keeps
+track of the number of swaps. The computational complex $cal(O) (n^2)$
+is not optimal but sufficent for the typically small number of vertices per simplex.
 ```rust
 pub fn orientation_rel_sorted(&self) -> Sign { self.clone().sort_signed() }
 pub fn sort_signed(&mut self) -> Sign { sort_signed(&mut self.vertices) }
@@ -609,11 +609,11 @@ pub fn sort_count_swaps<T: Ord>(a: &mut [T]) -> usize {
 }
 ```
 
-
-Two simplicies that are made up of the same vertices, have equal orientation iff
-their two permutations fall into the same (even or odd) permutation equivalence
-class. Using the transitivity of this equivalence relation, we can do the check
-relative to the sorted permutation.
+Two simplices composed of the same vertex set have equal orientation if and
+only if their respective permutations fall into the same equivalence class (both
+even or both odd). Using the transitivity of this equivalence relation, we can
+check this by comparing their orientations relative to the canonical sorted
+permutation.
 ```rust
 pub fn orientation_eq(&self, other: &Self) -> bool {
   self.orientation_rel_sorted() == other.orientation_rel_sorted()
@@ -622,13 +622,13 @@ pub fn orientation_eq(&self, other: &Self) -> bool {
 
 === Subsets
 
-Another important notion is the idea of a subsimplex or a face of a simplex @hatcher:algtop.
+Another important notion is that of a subsimplex or a face of a simplex
+@hatcher:algtop. In this context, we first consider the concept of vertex
+subsets.
 
-A subsimplex is just a subset of a simplex.
-
-We can easily check if a simplex is a subset of another simplex,
-by using the subset relation definition.
-$A subset.eq B <=> (forall a in A => a in B)$
+A simplex $sigma$ can be considered a subset of another simplex $tau$ if all vertices
+of $sigma$ are also vertices of $tau$. We can check this condition directly: $sigma
+subset.eq tau <=> (forall a in sigma => a in tau)$
 ```rust
 pub fn is_subset_of(&self, other: &Self) -> bool {
   self.iter().all(|v| other.vertices.contains(v))
@@ -638,22 +638,26 @@ pub fn is_superset_of(&self, other: &Self) -> bool {
 }
 ```
 
-We can generate all subsets, for which we rely on a
-Itertools implementation.
+We can also generate all $k$-simplices whose vertex sets of size $k+1$
+form subsets of the original $n$-simplex's $n+1$ vertices. The following
+function generates all ordered $(k+1)$-tuples by taking *permutations* of
+the $n+1$-tuple from the original simplex.
 ```rust
 pub fn subsets(&self, sub_dim: Dim) -> impl Iterator<Item = Self> {
   itertools::Itertools::permutations(self.clone().into_iter(), sub_dim + 1).map(Self::from)
 }
 ```
 
-The number of subsimplicies is given by the binomial coefficient.
+The number of distinct vertex subsets of size $k+1$ within a set of $n+1$
+vertices is given by the binomial coefficient $binom(n+1, k+1)$.
 ```rust
 pub fn nsubsimplicies(dim_cell: Dim, dim_sub: Dim) -> usize {
   binomial(dim_cell + 1, dim_sub + 1)
 }
 ```
 
-
+Given a simplex that is a subset of a larger simplex, we can compute its vertex
+indices relative to:
 ```rust
 /// Computes local vertex numbers relative to sup.
 pub fn relative_to(&self, sup: &Self) -> Simplex {
@@ -670,17 +674,17 @@ pub fn relative_to(&self, sup: &Self) -> Simplex {
 }
 ```
 
-
 === Subsequences
 
-When considering the facets of an $n$-simplex, there are multiple
-permutations with the same set of vertices. It would be nice
-to instead have only one permutation per subset of vertices.
-For this we can instead consider the subsequences of the original simplex.
-This then also preservers the vertex order.
+When considering the faces (like facets) of an $n$-simplex, it is often
+desirable to have a unique representative simplex for each subset of vertices,
+rather than all possible permutations. Furthermore, preserving the relative
+order of vertices from the original simplex is often important, particularly for
+defining orientations via the boundary operator.
 
-We have some methods to check whether a simplex is a subsequence of another,
-based on a naive subsequence check algorithm.
+For this, we consider *subsequences* of the original simplex's vertex list. A
+subsequence maintains the relative order of the vertices it contains. We can
+check if one simplex is a subsequence of another using a naive algorithm:
 ```rust
 pub fn is_subsequence_of(&self, sup: &Self) -> bool {
   let mut sup_iter = sup.iter();
@@ -691,39 +695,39 @@ pub fn is_supersequence_of(&self, other: &Self) -> bool {
 }
 ```
 
-We also have a method for generating all $k$-subsimplicies that
-are subsequencess of a $n$-simplex. For this we generate all $k+1$-subsequences
-of the original $n+1$ vertices.
-We use here the implementation of provided by the itertools crate.
+We provide a method for generating all $k$-dimensional subsimplices that
+are *subsequences* of an $n$-simplex. This is achieved by generating all
+$(k+1)$-length combinations (which preserve order) of the original $(n+1)$
+vertices, using an implementation provided by the `itertools` crate @crate:itertools.
 ```rust
 pub fn subsequences(&self, sub_dim: Dim) -> impl Iterator<Item = Self> {
   itertools::Itertools::combinations(self.clone().into_iter(), sub_dim + 1).map(Self::from)
 }
 ```
-This implementation is nice, since it provides the subsequences in a lexicographical
-order w.r.t. the local indices.
-If the original simplex was sorted, then the subsequences are truly lexicographically ordered even
-w.r.t. the global indices.
+This implementation conveniently provides the subsequences in lexicographical
+order with respect to the vertex indices of the original simplex. If the
+original simplex was sorted, then the generated subsequences are also
+lexicographically ordered.
 
-A very standard operation is to generate all subsequences simplicies of the standard simplex.
-We call these the standard subsimplicies.
+A standard operation is to generate all subsequence simplices of the standard
+simplex $[0, 1, ..., n]$. We call these the standard subsimplices.
 ```rust
 pub fn standard_subsimps(dim_cell: Dim, dim_sub: Dim) -> impl Iterator<Item = Simplex> {
   Simplex::standard(dim_cell).subsequences(dim_sub)
 }
 ```
-
-We can also generate all the various standard subsimplicies for each standard simplex
-dimension in a graded fashion. Something we will be using for generating the standard
-simplicial complex.
+We can also generate all standard subsimplices for each dimension up to $n$ in a
+graded fashion, which is useful for generating a standard simplicial complex.
 ```rust
 pub fn graded_subsimps(dim_cell: Dim) -> impl Iterator<Item = impl Iterator<Item = Simplex>> {
   (0..=dim_cell).map(move |d| standard_subsimps(dim_cell, d))
 }
 ```
 
-We can also go the other directions and generate the supersequences of a given simplex,
-if we are given a root simplex that has both the original simplex and it's subsequences as subsequences.
+Conversely, we can generate supersequences. Given a simplex and a "root" simplex
+(which contains both the original simplex and its potential supersequences as
+subsequences), we can find all subsequences of the root that have a specific
+`super_dim` and contain the original simplex as a subsequence.
 ```rust
 pub fn supersequences(
   &self,
@@ -738,31 +742,32 @@ pub fn supersequences(
 
 === Boundary
 
-There is a special operation related to subsequence simplicies, called the
-boundary operator @hatcher:algtop.
-The boundary operator can be applied to any $n$-simplex $sigma in NN^(n+1)$ and
-is the defined as.
+A special operation related to subsequence simplices is the *boundary operator*
+$diff$ @hatcher:algtop. Applied to an $n$-simplex $sigma = [v_0, dots, v_n]$,
+the boundary operator is defined as the formal sum:
 $
-  diff sigma = sum_i (-1)^i [v_0,dots,hat(v)_i,dots,v_n]
+  diff sigma = sum_(i=0)^n (-1)^i [v_0,dots,hat(v)_i,dots,v_n]
 $
-On the left we have a formal sum of simplicies.
-This formal sum consists of all the $(n-1)$-subsequences of a $n$-simplex,
-together with a sign, giving the boundary simplicies a meaningful orientation.
-
-When understanding this formal linear combinations as an element of the
-free Abelian group generated by the basis of all simplicies,
-then this operator is linear.
+Here, $hat(v)_i$ indicates that vertex $v_i$ is omitted. The result is a formal
+sum of all $(n-1)$-dimensional subsequence simplices (facets) of $sigma$. Each
+facet is assigned a sign $(-1)^i$, giving the boundary an orientation consistent
+with the orientation of $sigma$. When viewed as elements of the free Abelian
+group generated by all oriented simplices, this operator is linear.
 
 For instance, the boundary of the triangle $sigma = [0,1,2]$ is
 $
-  diff sigma = [1,2] - [0,2] + [0,1] = [0,1] + [1,2] + [2,0]
+  diff sigma = (-1)^0 [1,2] + (-1)^1 [0,2] + (-1)^2 [0,1] = [1,2] - [0,2] + [0,1]
 $
-which is exactly what you get if you walk along the edges of the triangle.
+Rearranging terms to follow a path gives $[0,1] + [1,2] + [2,0]$, which
+corresponds to traversing the edges of the triangle.
 
-We introduce an additional convention here regarding the ordering of the boundary simplicies.
-We rely on the `subsimps` implementation that gives us a lexicographically ordered
-subsimplicies. This is exactly the opposite of the ordered suggested of the sum sign.
-We need to make sure the sign is still the same for all boundary simplicies.
+Our implementation generates the boundary facets using the `subsequences`
+method, which yields them in an order based on the index of the *retained*
+vertices (lexicographical combinations). This order differs from the summation
+index $i$ (based on the *omitted* vertex) in the standard definition $sum_i
+(-1)^i [...]$. The code calculates the appropriate sign for each generated
+subsequence to ensure consistency with the standard alternating sign convention
+of the boundary operator.
 ```rust
 pub fn boundary(&self) -> impl Iterator<Item = SignedSimplex> {
   let mut sign = Sign::from_parity(self.nvertices() - 1);
@@ -774,9 +779,7 @@ pub fn boundary(&self) -> impl Iterator<Item = SignedSimplex> {
 }
 ```
 
-
-We can add an extra formal sign symbol to the simplex to obtain
-a signed simplex.
+To represent the terms in the formal sum, we introduce a struct that pairs a simplex with an explicit sign:
 ```rust
 #[derive(Debug, Default, Clone, PartialEq, Eq, Hash)]
 pub struct SignedSimplex {
