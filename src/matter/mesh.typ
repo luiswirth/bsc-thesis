@@ -140,7 +140,7 @@ pub fn barycenter(&self) -> Coord {
 ```
 
 This coordinate system treats all vertices symmetrically, assigning a weight to
-each. Consequently, with $n+1$ coordinates ($lambda^0, ..., lambda^n$) for an
+each. Consequently, with $n+1$ coordinates $lambda^0, ..., lambda^n$ for an
 $n$-dimensional affine subspace subject to the constraint $sum lambda^i = 1$,
 there is redundancy. This representation is not a minimal coordinate system.
 
@@ -274,43 +274,53 @@ impl AffineTransform {
 }
 ```
 
-The derivatives of the affine parametrization $avec(x)(avec(lambda)^-)$ reveal
-that the spanning vectors $avec(e)_i$ form a natural basis for the tangent space
-$T_p sigma$ at any point $p$ within the simplex $sigma$ @frankel:diffgeo. The
-Jacobian of the affine map is precisely $amat(E)$. In differential geometry
-terms, the linear map $avec(lambda)^- |-> amat(E) avec(lambda)^-$ acts as the *pushforward*, transforming tangent
-vectors from the local coordinate space (where the basis is $diff/(diff lambda^i)$)
-to the ambient space (where the basis vectors are $avec(e)_i$).
+The derivatives of the affine parametrization $phi: avec(lambda)^- |->
+avec(x)$ reveal that the spanning vectors $avec(e)_i$ form a natural basis
+for the tangent space $T_p sigma$ at any point $p$ within the simplex $sigma$
+@frankel:diffgeo. The Jacobian of the affine map is precisely $amat(E)$. In
+differential geometry terms, the linear map $amat(E)$ acts as the *pushforward*
+$phi_*: avec(u) |-> avec(w) = amat(E) avec(u)$, transforming intrinsic tangent vectors
+(basis $diff/(diff lambda^i)$) to the ambient tangent vectors (basis vectors $avec(e)_i$).
 $
   (diff avec(x))/(diff lambda^i) = avec(e)_i
   quad quad
   (diff avec(x))/(diff avec(lambda)^-) = amat(E)
 $
 
-Conversely, the total differentials of all the barycentric coordinate functions
-$lambda^i$ can be computed using the pseudo-inverse. The rows of
-$amat(E)^dagger$ correspond to the differentials $dif lambda^1, ..., dif lambda^n$.
-These form a basis for the cotangent space $T^*_p sigma$, dual to the tangent
-basis $avec(e)_1, ..., avec(e)_n$ @frankel:diffgeo.
+// TODO: should be keep this?
+Conversely, the *pullback* $phi^*$ operation takes covectors (1-forms) defined
+in the ambient space coordinates and expresses them in the local coordinate
+system. If $omega$ is a covector in the ambient space, its pullback $eta = phi^* omega$
+acts on local tangent vectors $u$ such that $eta(u) = omega(phi_* u) = omega(amat(E) u)$.
+This transformation rule for covector components involves the matrix $amat(E)$
+(specifically, right-multiplication if covectors are row vectors: $avec(eta) = avec(omega) amat(E)$).
 
-The differential $dif lambda^0$ is determined by the constraint $sum_i dif lambda^i = 0$.
+Separately, we can consider the differentials of the barycentric coordinate
+functions $lambda^i$ as functions of the global coordinates $avec(x)$. These
+differentials, $dif lambda^i$, form a basis for the cotangent space $T^*_p sigma$.
+Their components relative to the ambient basis $dif x^i$ are found using the
+differential of the *inverse* map $psi: sigma -> sigma_"ref"^n$, which involves the
+pseudo-inverse $amat(E)^dagger$. Specifically, the rows of $amat(E)^dagger$ give
+the components of $dif lambda^1, ..., dif lambda^n$. These $dif lambda^i$ form the
+basis dual to the tangent basis $avec(e)_1, ..., avec(e)_n$ @frankel:diffgeo. The
+differential $dif lambda^0$ is determined by the constraint $sum_i dif lambda^i = 0$.
 $
-  (diff avec(lambda)^-)/(diff avec(x)) = amat(E)^dagger
+  (diff lambda^-)/(diff x) = amat(E)^dagger
   quad quad
-  dif lambda^i = (diff lambda^i)/(diff avec(x)) = (amat(E)^dagger)_(i, :) quad (i=1...n)
+  dif lambda^i quad (i=1...n)
   quad quad
-  dif lambda^0 = -sum_(i=1)^n dif lambda^i
+  dif lambda^0 = -sum_(i=1)^n d lambda^i
   quad quad
   dif lambda^i (diff/(diff lambda^j)) = delta^i_j quad (i,j=1...n)
 $
+
 ```rust
 /// Total differential of barycentric coordinate functions in the rows(!) of
 /// a matrix.
 pub fn difbarys(&self) -> Matrix {
-  // COMMENT: Ensure inv_linear_transform computes pseudo_inverse if N > n
-  let difs = self.affine_transform().pseudo_inverse().linear; // Get linear part of pseudo-inverse transform
+  let difs = self.inv_linear_transform();
   let mut difs = difs.insert_row(0, 0.0); // Add row for lambda^0
-  difs.set_row(0, &-difs.row_sum()); // Compute grad(lambda^0) = -sum(grad(lambda^i))
+  difs.set_row(0, &-difs.row_sum()); // lambda^0 = -sum(dif lambda^i)
   difs
 }
 ```
@@ -332,11 +342,17 @@ the simplex is *intrinsically flat* (zero Riemannian curvature). Consequently,
 geodesics (shortest paths between points) within the simplex are simply straight
 line segments in the embedding.
 
-The spanning vectors also define a parallelepiped. The volume of the $n$-simplex
+The spanning vectors also define a parallelepiped. The volume of the $n$-simplex $sigma$
 is $1/n!$ times the $n$-dimensional volume of this parallelepiped. The signed volume
-is computed using the determinant of the spanning vectors if $n=N$. Otherwise
-we can use the Gram determinant of the metric tensor.
-$sqrt(G) = sqrt(det(amat(E)^transp amat(E)))$ @frankel:diffgeo.
+is computed using the determinant of the spanning vectors if $n=N$.
+$
+  vol(sigma) = det(amat(E))
+$
+For higher-dimensional ambient spaces we can use the Gram determinant of the metric tensor.
+@frankel:diffgeo.
+$
+  vol(sigma) = sqrt(amat(G)) = sqrt(det(amat(E)^transp amat(E)))
+$
 
 ```rust
 impl SimplexCoords {
@@ -415,13 +431,14 @@ coordinates is the identity map. Any real, non-degenerate $n$-simplex $sigma$
 can be viewed as the image of the reference $n$-simplex under the affine map
 $phi_sigma$ defined by $sigma$'s spanning vectors and base vertex:
 $
-  sigma = phi_sigma(sigma_"ref"^n)
+  sigma = phi_sigma (sigma_"ref"^n)
 $
 The reference simplex acts as the parameter domain or chart for any real
 simplex $sigma$. The map $phi_sigma$ is the parametrization, while its inverse $psi_sigma:
 sigma -> sigma_"ref"^n$ (mapping global points on $sigma$ to local coordinates)
 is the chart map. Barycentric coordinates, being intrinsic, remain invariant
 under this affine transformation.
+
 
 == Abstract Simplicies
 
