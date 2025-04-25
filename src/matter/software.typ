@@ -179,6 +179,16 @@ with additional adaptors and methods. We use it primarily for combinatoric
 algorithms (permutations, combinations) essential for mesh topology and exterior
 algebra operations.
 
+=== IndexMap (ordered HashSet)
+
+For our skeleton data structure that contains simplicies, we need a
+bidirectional map, between simplicies and indicies. For this we use a
+`indexmap::IndexSet`, which is like a `HashSet` but also with an index. This
+is provided by the `indexmap` crate @crate:indexmap. This crate provides map
+and set data structures that maintain insertion order, which is crucial for
+ensuring consistent global numbering and reproducible results in our mesh data
+structures.
+
 === Rayon (parallelism)
 
 To leverage multi-core processors and accelerate computationally intensive
