@@ -50,7 +50,7 @@ in FEEC.
 A $k$-cochain $omega$ is a real-valued function $omega: Delta_k (mesh) -> RR$
 on the $k$-skeleton $Delta_k (mesh)$ of the mesh $mesh$ @hatcher:algtop, @douglas:feec-article.
 
-A rank $k$ differential $k$-form, becomes a $k$-cochain, defined on the simplicies
+A rank $k$ differential $k$-form, becomes a $k$-cochain, defined on the simplices
 of dimension $k$ of the mesh.
 
 Simplicial cochains arise naturally from the combinatorial structure of a
@@ -62,8 +62,8 @@ Simplicial cochains are also the fundamental combinatorial object
 in *discrete exterior calculus* (DEC) @crane:ddg.
 
 
-One can represent this function on the simplicies, using a list of real values
-that are ordered according to the global numbering of the simplicies.
+One can represent this function on the simplices, using a list of real values
+that are ordered according to the global numbering of the simplices.
 ```rust
 pub struct Cochain {
   pub coeffs: na::DVector<f64>,
@@ -194,7 +194,7 @@ operator preserves the structure of Stokes' Theorem at the discrete level
 
 From a computational perspective, the boundary operator $diff^k$ mapping
 $k$-chains to $(k-1)$-chains can be represented as a signed incidence matrix
-between the simplicies in the $k$-skeleton and $(k-1)$-skeleton @hatcher:algtop.
+between the simplices in the $k$-skeleton and $(k-1)$-skeleton @hatcher:algtop.
 The adjoint property then translates directly to the discrete exterior
 derivative $dif^k$ (mapping $k$-cochains to $(k+1)$-cochains) being the
 transpose of the boundary operator $diff_(k+1)$:
@@ -359,7 +359,7 @@ and purely rotational vector fields.
 
 We now implement some functionality to work with Whitney forms.
 The most important of which is the point evaluation of Whitney basis forms
-on a cell associated with one of it's subsimplicies. Which means
+on a cell associated with one of it's subsimplices. Which means
 implementing @def:whitney.
 
 We do this implementation based on a coordinate simplex. But this doesn't
@@ -485,7 +485,7 @@ This is the corresponding implementation.
 
 The defining property of the Whitney basis is a from pointwise to integral
 generalized Lagrange basis property @douglas:feec-article:\
-For any two $k$-simplicies $sigma, tau in Delta_k (mesh)$, we have
+For any two $k$-simplices $sigma, tau in Delta_k (mesh)$, we have
 $
   integral_sigma lambda_tau = cases(
     +&1 quad &"if" sigma = +tau,

@@ -23,7 +23,7 @@ The Rust ownership model, borrow checker, and type system act as a proof system 
 ## Approach
 
 + _Coordinate-Free Simplicial Complex Data Structure_:
-  Develop a mesh data structure that represents the computational domain as a simplicial complex without explicit coordinates for vertices. Instead, the mesh will store topological information (incidence and adjacency) and associate a metric tensor (geometry) on individual simplicies.
+  Develop a mesh data structure that represents the computational domain as a simplicial complex without explicit coordinates for vertices. Instead, the mesh will store topological information (incidence and adjacency) and associate a metric tensor (geometry) on individual simplices.
 + _Finite Element Spaces and Basis Functions_:
   Utilize Whitney forms as basis functions for discretizing differential forms on the simplicial complex. These forms are naturally defined on all simplices.
 + _Weak Formulation of the Hodge-Laplace Operator_:

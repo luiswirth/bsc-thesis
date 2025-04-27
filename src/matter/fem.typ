@@ -196,9 +196,9 @@ impl ElMatProvider for HodgeMassElmat {
     let grade = self.0;
 
     let nvertices = grade + 1;
-    let simplicies: Vec<_> = subsimplicies(dim, grade).collect();
+    let simplices: Vec<_> = subsimplices(dim, grade).collect();
 
-    let wedge_terms: Vec<_> = simplicies
+    let wedge_terms: Vec<_> = simplices
       .iter()
       .cloned()
       .map(|simp| WhitneyForm::new(SimplexCoords::standard(dim), simp).wedge_terms())
@@ -206,9 +206,9 @@ impl ElMatProvider for HodgeMassElmat {
 
     let scalar_mass = ScalarMassElmat.eval(geometry);
 
-    let mut elmat = na::DMatrix::zeros(simplicies.len(), simplicies.len());
-    for (i, asimp) in simplicies.iter().enumerate() {
-      for (j, bsimp) in simplicies.iter().enumerate() {
+    let mut elmat = na::DMatrix::zeros(simplices.len(), simplices.len());
+    for (i, asimp) in simplices.iter().enumerate() {
+      for (j, bsimp) in simplices.iter().enumerate() {
         let wedge_terms_a = &wedge_terms[i];
         let wedge_terms_b = &wedge_terms[j];
         let wedge_inners = geometry
@@ -273,7 +273,7 @@ impl ElMatProvider for ScalarMassElmat {
 
 The element matrix provider tells the assembly routine,
 what the exterior grade is of the arguments into the bilinear forms,
-based on this the right dimension of simplicies are used to assemble.
+based on this the right dimension of simplices are used to assemble.
 The assembly process itself is a standard FEM technique @hiptmair:numpde.
 
 ```rust

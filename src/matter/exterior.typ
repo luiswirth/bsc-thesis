@@ -316,7 +316,7 @@ In general given an inner product on the vector space $V$, we can
 derive an inner product on the exterior power $wedgespace^k (V)$ @frankel:diffgeo, @douglas:feec-book.
 The rule is the following:
 $
-  inner(e_I, e_J) = det [inner(dif x_I_i, dif x_I_j)]_(i,j)^k
+  inner(e_I, e_J) = det [inner(dif x_I_i, dif x_J_j)]_(i,j)^k
 $
 
 Computationally we represent inner products as Gramian matrices on some basis.
@@ -356,6 +356,9 @@ impl RiemannianMetricExt for RiemannianMetric {
 
 We are already at the end of the implementation of the exterior algebra.
 There exist many operations that could be implemented as well, such as the
-Hodge star operator @frankel:diffgeo, @douglas:feec-book, based on an inner product, but it's just not necessary
-for the rest of the library to have such functionality, therefore we omit it
-here.
+Hodge star operator $hodge$ @frankel:diffgeo, @douglas:feec-book, based on an inner
+product.
+While the Hodge star is theoretically central, the chosen mixed finite element
+formulation allows us to construct the discrete system using only the exterior
+derivative and the inner product, bypassing the need to explicitly assemble the
+Hodge star operator itself.

@@ -143,7 +143,7 @@ The core crates are:
 
 All of these have been published to `crates.io` @RustLang.
 
-The chapters of the thesis parallel the structure and outline of these libaries.
+The chapters of the thesis parallel the structure and outline of these libraries.
 
 
 == External libraries
@@ -166,9 +166,9 @@ library suite, for solving large sparse linear systems (specifically using its
 direct solvers). For the associated eigenvalue problems, we use SLEPc
 @SLEPcPaper2005, which builds upon PETSc.
 
-To avoid having PETSc and SLEPc as depedencies, since they are very big, we
+To avoid having PETSc and SLEPc as dependencies, since they are very big, we
 decoupled them by not using them through Rust bindings or FFI.
-Instead we have a seperate very small PETSc/SLEPc solver program
+Instead we have a separate very small PETSc/SLEPc solver program
 that interfaces with our Rust program through file IO.
 This keeps the build step of formoniq simple and nice.
 
@@ -181,13 +181,13 @@ algebra operations.
 
 === IndexMap (ordered HashSet)
 
-For our skeleton data structure that contains simplicies, we need a
-bidirectional map, between simplicies and indicies. For this we use a
-`indexmap::IndexSet`, which is like a `HashSet` but also with an index. This
-is provided by the `indexmap` crate @crate:indexmap. This crate provides map
-and set data structures that maintain insertion order, which is crucial for
-ensuring consistent global numbering and reproducible results in our mesh data
-structures.
+For our skeleton data structure that contains simplices, we need a bidirectional
+map, between simplices and indices. For this we use `indexmap::IndexSet`, which
+provides set semantics while maintaining insertion order and allowing efficient
+lookup by index. This is provided by the `indexmap` crate @crate:indexmap. This
+crate provides map and set data structures that maintain insertion order, which
+is crucial for ensuring consistent global numbering and reproducible results in
+our mesh data structures.
 
 === Rayon (parallelism)
 

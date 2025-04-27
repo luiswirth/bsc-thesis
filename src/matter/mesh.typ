@@ -14,7 +14,7 @@ compute the piecewise-flat (over the cells) Riemannian metric @frankel:diffgeo,
 using methods from Regge Calculus @regge. We also support the optional storage of global
 vertex coordinates if an embedding is known.
 
-== Coordinate Simplicies
+== Coordinate Simplices
 
 Finite Element Methods benefit from their ability to work on unstructured meshes
 @hiptmair:numpde. Instead of subdividing a domain into a regular grid, FEM
@@ -41,12 +41,12 @@ the first four kinds are:
 
 The underlying idea is that an $n$-simplex is the convex hull of $n+1$ affinely
 independent points, forming the simplest possible $n$-dimensional polytope. An
-$n$-simplex $sigma$ is defined by $n+1$ vertices $avec(v)_0, dots, avec(v)_n in
+$n$-simplex $sigma$ is defined by $n+1$ vertices $avec(v)_0, ..., avec(v)_n in
 RR^N$ in a possibly higher-dimensional space $RR^N$ (where $N >= n$). The
 simplex itself is the region bounded by the convex hull of these vertices:
 $
   sigma =
-  "convex" {avec(v)_0,dots,avec(v)_n} =
+  "convex" {avec(v)_0,...,avec(v)_n} =
   {
     sum_(i=0)^n lambda^i avec(v)_i
     mid(|)
@@ -128,7 +128,7 @@ pub fn is_bary_inside<'a>(bary: impl Into<CoordRef<'a>>) -> bool {
 
 The barycenter $avec(m) = 1/(n+1) sum_(i=0)^n avec(v)_i$ always has the special
 barycentric coordinate $avec(lambda) = [1/(n+1)]^(n+1)$ and
-is name-giving for the barycentric coordinates.
+is namesake for the barycentric coordinates.
 ```rust
 pub fn barycenter(&self) -> Coord {
   let mut barycenter = na::DVector::zeros(self.dim_ambient());
@@ -200,7 +200,7 @@ pub fn spanning_vectors(&self) -> na::DMatrix<f64> {
 ```
 
 This gives us an explicit basis of the affine space located at $avec(v)_0$ and
-spanned by $avec(e)_1,dots,avec(e)_n$.
+spanned by $avec(e)_1,...,avec(e)_n$.
 
 We can also rewrite the coordinate transformation $phi: avec(lambda) |->
 avec(x)$ using $lambda^0 = 1 - sum_(i=1)^n lambda^i$ in terms of
@@ -469,7 +469,7 @@ given dimension $n$, the $n$-dimensional reference simplex $hat(sigma)^n$ is
 defined in $RR^n$ (so $N=n$) using its local
 coordinates as its global Cartesian coordinates:
 $
-  hat(sigma)^n = {(lambda_1,dots,lambda_n) in RR^n mid(|) lambda_i >= 0, quad sum_(i=1)^n lambda_i <= 1 }
+  hat(sigma)^n = {(lambda_1,...,lambda_n) in RR^n mid(|) lambda_i >= 0, quad sum_(i=1)^n lambda_i <= 1 }
 $
 Its vertices are the origin $avec(v)_0 = avec(0)$ and the standard basis vectors
 $avec(v)_i = nvec(e)_i$ for $i=1...n$. The spanning vectors are simply the
@@ -492,11 +492,11 @@ When taking the "real" simplex to be the reference simplex, then
 the parametrization and chart maps are both identity maps.
 
 
-Okay, here is a revised version of the "Abstract Simplicies" section, incorporating improvements while adhering to your constraints. I have focused on clarity, flow, and correcting minor grammatical issues, ensuring the text accurately describes the provided code's behavior, including the specific interpretation of `subsets`.
+Okay, here is a revised version of the "Abstract Simplices" section, incorporating improvements while adhering to your constraints. I have focused on clarity, flow, and correcting minor grammatical issues, ensuring the text accurately describes the provided code's behavior, including the specific interpretation of `subsets`.
 
 ---
 
-== Abstract Simplicies
+== Abstract Simplices
 
 After studying coordinate simplices, the reader has hopefully developed some
 intuitive understanding of simplices. We will now shed the coordinates and
@@ -505,7 +505,7 @@ of vertex indices, without any associated vertex coordinates. An $n$-simplex
 $sigma$ is thus represented as an $(n+1)$-tuple of natural numbers, which
 correspond to vertex indices @hatcher:algtop.
 $
-  sigma = [v_0,dots,v_n] in NN^(n+1)
+  sigma = [v_0,...,v_n] in NN^(n+1)
   quad quad
   v_i in NN
 $
@@ -530,7 +530,7 @@ The ordering of the vertices _does_ matter; therefore, we are dealing with
 ordered tuples, not just unordered sets. This makes our simplices combinatorial
 objects, and these combinatorics will be the heart of our mesh data structure.
 
-=== Sorted Simplicies
+=== Sorted Simplices
 
 Even though the order matters for defining a specific simplex instance,
 simplices that share the same set of vertices are closely related. For this
@@ -577,8 +577,8 @@ determine the orientation of any simplex relative to this sorted permutation by
 counting the number of swaps necessary to sort its vertex list. An even number
 of swaps corresponds to a positive orientation, and an odd number corresponds
 to a negative orientation. For this, we implement a basic bubble sort that keeps
-track of the number of swaps. The computational complex $cal(O) (n^2)$
-is not optimal but sufficent for the typically small number of vertices per simplex.
+track of the number of swaps. The computational complexity $cal(O) (n^2)$
+is not optimal but sufficient for the typically small number of vertices per simplex.
 ```rust
 pub fn orientation_rel_sorted(&self) -> Sign { self.clone().sort_signed() }
 pub fn sort_signed(&mut self) -> Sign { sort_signed(&mut self.vertices) }
@@ -623,6 +623,10 @@ pub fn orientation_eq(&self, other: &Self) -> bool {
 
 === Subsets
 
+// TODO: There is some concern that the naming here is confusing.
+// Subsets or sets in general are unordered, so producing multiple
+// objects that are permutations of each other, might confuse...
+
 Another important notion is that of a subsimplex or a face of a simplex
 @hatcher:algtop. In this context, we first consider the concept of vertex
 subsets.
@@ -652,7 +656,7 @@ pub fn subsets(&self, sub_dim: Dim) -> impl Iterator<Item = Self> {
 The number of distinct vertex subsets of size $k+1$ within a set of $n+1$
 vertices is given by the binomial coefficient $binom(n+1, k+1)$.
 ```rust
-pub fn nsubsimplicies(dim_cell: Dim, dim_sub: Dim) -> usize {
+pub fn nsubsimplices(dim_cell: Dim, dim_sub: Dim) -> usize {
   binomial(dim_cell + 1, dim_sub + 1)
 }
 ```
@@ -744,10 +748,10 @@ pub fn supersequences(
 === Boundary
 
 A special operation related to subsequence simplices is the *boundary operator*
-$diff$ @hatcher:algtop. Applied to an $n$-simplex $sigma = [v_0, dots, v_n]$,
+$diff$ @hatcher:algtop. Applied to an $n$-simplex $sigma = [v_0, ..., v_n]$,
 the boundary operator is defined as the formal sum:
 $
-  diff sigma = sum_(i=0)^n (-1)^i [v_0,dots,hat(v)_i,dots,v_n]
+  diff sigma = sum_(i=0)^n (-1)^i [v_0,...,hat(v)_i,...,v_n]
 $
 Here, $hat(v)_i$ indicates that vertex $v_i$ is omitted. The result is a formal
 sum of all $(n-1)$-dimensional subsequence simplices (facets) of $sigma$. Each
@@ -818,11 +822,11 @@ typically sharing vertices from a common pool, is called an $n$-skeleton
 @hatcher:algtop.
 
 ```rust
-/// A container for sorted simplicies of the same dimension.
+/// A container for sorted simplices of the same dimension.
 #[derive(Default, Debug, Clone)]
 pub struct Skeleton {
   /// Every simplex is sorted.
-  simplicies: IndexSet<Simplex>,
+  simplices: IndexSet<Simplex>,
   nvertices: usize,
 }
 ```
@@ -833,14 +837,14 @@ dimension $n$. It allows for iteration over all these mesh entities:
 ```rust
 impl Skeleton {
   pub fn iter(&self) -> indexmap::set::Iter<'_, Simplex> {
-    self.simplicies.iter()
+    self.simplices.iter()
   }
 }
 impl IntoIterator for Skeleton {
   type Item = Simplex;
   type IntoIter = indexmap::set::IntoIter<Self::Item>;
   fn into_iter(self) -> Self::IntoIter {
-    self.simplicies.into_iter()
+    self.simplices.into_iter()
   }
 }
 ```
@@ -854,42 +858,42 @@ also using hashing internally to support the reverse lookup: retrieving the
 index corresponding to a given `Simplex` instance.
 ```rust
 pub fn simplex_by_kidx(&self, idx: KSimplexIdx) -> &Simplex {
-  self.simplicies.get_index(idx).unwrap()
+  self.simplices.get_index(idx).unwrap()
 }
 pub fn kidx_by_simplex(&self, simp: &Simplex) -> KSimplexIdx {
-  self.simplicies.get_index_of(simp).unwrap()
+  self.simplices.get_index_of(simp).unwrap()
 }
 ```
 
 The `Skeleton` constructor enforces several guarantees about the simplices it
 contains:
 ```rust
-pub fn new(simplicies: Vec<Simplex>) -> Self {
-  assert!(!simplicies.is_empty(), "Skeleton must not be empty");
-  let dim = simplicies[0].dim();
+pub fn new(simplices: Vec<Simplex>) -> Self {
+  assert!(!simplices.is_empty(), "Skeleton must not be empty");
+  let dim = simplices[0].dim();
   assert!(
-    simplicies.iter().map(|simp| simp.dim()).all(|d| d == dim),
-    "Skeleton simplicies must have same dimension."
+    simplices.iter().map(|simp| simp.dim()).all(|d| d == dim),
+    "Skeleton simplices must have same dimension."
   );
   assert!(
-    simplicies.iter().all(|simp| simp.is_sorted()),
-    "Skeleton simplicies must be sorted."
+    simplices.iter().all(|simp| simp.is_sorted()),
+    "Skeleton simplices must be sorted."
   );
   let nvertices = if dim == 0 {
-    assert!(simplicies.iter().enumerate().all(|(i, simp)| simp[0] == i));
-    simplicies.len()
+    assert!(simplices.iter().enumerate().all(|(i, simp)| simp[0] == i));
+    simplices.len()
   } else {
-    simplicies
+    simplices
       .iter()
       .map(|simp| simp.iter().max().expect("Simplex is not empty."))
       .max()
-      .expect("Simplicies is not empty.")
+      .expect("Simplices is not empty.")
       + 1
   };
 
-  let simplicies = IndexSet::from_iter(simplicies);
+  let simplices = IndexSet::from_iter(simplices);
   Self {
-    simplicies,
+    simplices,
     nvertices,
   }
 }
@@ -901,7 +905,7 @@ reverse mapping (simplex-to-index lookup) to be consistently useful; regardless
 of the initial ordering of a simplex's vertices, converting it to the canonical
 sorted form allows retrieval of its unique index within the skeleton. Lastly,
 a special requirement applies to 0-skeletons: the simplices must represent the
-vertices indexed sequentially as $[0], [1], dots, [N-1]$. The constructor also
+vertices indexed sequentially as $[0], [1], ..., [N-1]$. The constructor also
 determines and stores the total number of vertices (`nvertices`) involved in
 the skeleton.
 
@@ -913,7 +917,7 @@ defining its $n$-dimensional cells. However, this structure alone is often
 insufficient for applications like Finite Element Exterior Calculus (FEEC)
 @douglas:feec-book. Many FE methods associate degrees of freedom (DOFs) or
 basis functions not only with cells but also with the lower-dimensional entities, in our
-case subsimplicies.
+case subsimplices.
 Therefore, we need a data structure that explicitly represents the topology of
 _all_ relevant simplices within the mesh.
 
@@ -1002,7 +1006,7 @@ impl ComplexSkeleton {
   }
 }
 
-/// Complex-specific data for all simplicies in a single skeleton.
+/// Complex-specific data for all simplices in a single skeleton.
 pub type SkeletonComplexData = Vec<SimplexComplexData>;
 
 /// Complex-specific data associated with a single simplex within the complex.
@@ -1016,7 +1020,7 @@ pub struct SimplexComplexData {
 
 The primary method for creating a `Complex` is by providing the skeleton of
 its highest-dimensional cells ($n$-simplices). The `from_cells` constructor
-then systematically builds the skeletons for all lower dimensions ($k=0, dots,
+then systematically builds the skeletons for all lower dimensions ($k=0, ...,
 n-1$) by generating all subsequence simplices of the input cells. During this
 process, it also computes crucial topological incidence information: for each
 simplex, it records the list of top-level cells that contain it (its `cocells`).
@@ -1080,11 +1084,11 @@ impl Complex {
 }
 ```
 
-=== Simplicies in the Mesh: Simplex Indices and Handles
+=== Simplices in the Mesh: Simplex Indices and Handles
 
 To identify a simplex inside the mesh, we use an indexing system.
 If the context of a concrete dimension is given,
-than we only need to know the index inside the skeleton, which
+then we only need to know the index inside the skeleton, which
 is just an integer
 ```rust
 pub type KSimplexIdx = usize;
@@ -1099,17 +1103,17 @@ pub struct SimplexIdx {
 }
 ```
 Using this we reference any simplex in the mesh. Since we are using a `indexmap::IndexSet`
-data structure for storing our simplicies inside a skeleton,
+data structure for storing our simplices inside a skeleton,
 we are able to go both ways. We can not only retrieve the simplex, given the index,
 but we can also get the index corresponding to a given simplex.
 
 The `Simplex` struct doesn't reference the mesh and therefore doesn't have access
-to any other simplicies. But for doing any kind of topological computations,
-it is helpful to be able to reference other simplicies in the mesh.
+to any other simplices. But for doing any kind of topological computations,
+it is helpful to be able to reference other simplices in the mesh.
 For this reason we introduce a new concept, that represents a simplex
 inside of a mesh. We create a simplex handle, that is like a more sophisticated
 pointer to a simplex, that has a reference to the mesh.
-This allows us to interact with these simplicies inside the mesh very naturally.
+This allows us to interact with these simplices inside the mesh very naturally.
 
 ```rust
 #[derive(Copy, Clone)]
@@ -1122,8 +1126,8 @@ Pretty much all functionality that was available on the raw `Simplex` struct,
 is also available on the handle, but here we directly provide any relevant
 mesh information.
 
-For instance the `SimplexHandle::supersimps` gives us all supersimplicies that
-are also contained in the mesh, which are exactly all the supersequence simplicies.
+For instance the `SimplexHandle::supersimps` gives us all supersimplices that
+are also contained in the mesh, which are exactly all the supersequence simplices.
 The `Simplex::supersequence` method however expects a `root: &Simplex`, which
 gives the context in which we are searching for supersequences. This context
 is directly provided to the method on the handle, since the mesh knows
@@ -1194,12 +1198,12 @@ impl Complex {
 == Simplicial Geometry
 
 We have now successfully developed the topological structure of our mesh,
-by combining many abstract simplicies into skeletons and collecting
+by combining many abstract simplices into skeletons and collecting
 all of these skeletons together.
 
 What we are still missing in our mesh data structure now, is any geometry.
-The geometry is missing, since we only store abstract simplicies and not
-something like coordinate simplicies.
+The geometry is missing, since we only store abstract simplices and not
+something like coordinate simplices.
 
 This was purposefully done, because we want to separate the topology from the geometry.
 This allows us to switch between a coordinate-based embedded geometry and a coordinate-free
@@ -1232,9 +1236,9 @@ is different from the topology dimension in general.
 Here we witness another benefit of separating topology and geometry, which should be done
 even when there are not multiple geometry representations supported:
 We avoid any redundancy in storing the vertex coordinates. For every vertex we
-store it's coordinate exactly once. This is contrast to use a list of `SimplexCoords`, for
+store its coordinate exactly once. This is contrast to using a list of `SimplexCoords`, for
 which there would have been many duplicate coordinates, since the vertices are
-shared by many simplicies. So separating topology and geometry is always very natural
+shared by many simplices. So separating topology and geometry is always very natural
 even in the case of the typical coordinate-based geometry.
 
 === Coordinate Function Functors & Barycentric Quadrature
@@ -1255,14 +1259,14 @@ On manifolds the story is a little different. They admit no global coordinates
 in general @frankel:diffgeo. But instead we can rely on ambient coordinates $x in RR^N$, if an
 embedding is available, and work with functions defined on them.
 
-One common use-case that is also relevant to us for a such a point-evaluable
+One common use-case that is also relevant to us for such a point-evaluable
 functor is numerical integration of a real valued function via numerical
 quadrature @hiptmair:numpde.
 Since we are doing only 1st order FEEC, we restrict ourselves to
 quadrature rules of order 1, that integrate affine-linear functions exactly.
-The simplest of these that work on arbitrary-dimensional simplicies is
+The simplest of these that work on arbitrary-dimensional simplices is
 the barycentric quadrature rule, that just does a single evaluation
-of the function at the barycenter of the simplex and multiples this
+of the function at the barycenter of the simplex and multiplies this
 value by the volume of the simplex, giving us a approximation of the
 integral.
 $
@@ -1288,7 +1292,7 @@ coordinate differential form closures, since after evaluating
 the differential form on the tangent vectors, we obtain a simple
 scalar function.
 $
-  avec(x) in RR^N |-> omega_avec(x) (diff/(diff x^1),dots,diff/(diff x^n)) in RR
+  avec(x) in RR^N |-> omega_avec(x) (diff/(diff x^1),...,diff/(diff x^n)) in RR
 $
 
 
@@ -1324,9 +1328,9 @@ manifold is curved in general and therefore the inner product changes from point
 to point, reflecting the changing geometry.
 
 
-Given a basis $diff/(diff x^1),dots,diff/(diff x^n)$ of the tangent space
+Given a basis $diff/(diff x^1),...,diff/(diff x^n)$ of the tangent space
 $T_p M$ at a point $p$, induced by a chart map
-$phi: p in U subset.eq M |-> (x_1,dots,x_n)$, the inner product $g_p$ can be
+$phi: p in U subset.eq M |-> (x_1,...,x_n)$, the inner product $g_p$ can be
 represented in this basis using components $(g_p)_(i j) in RR$.
 This is done by plugging in all combinations of basis vectors into the two
 arguments of the bilinear form.
@@ -1358,15 +1362,15 @@ covariant tensors, therefore they are measured by the inverse metric tensor @fra
 
 Computing the inverse is numerically unstable and instead it would
 be better to rely on matrix factorization to do computation
-invovling the inverse metric @hiptmair:numcse. However this quickly becomes
+involving the inverse metric @hiptmair:numcse. However this quickly becomes
 intractable. For this reason we chose here to rely on the directly
-computed inverse matrix nontheless.
+computed inverse matrix nonetheless.
 
 We introduce a struct to represent the Riemannian metric at a particular point
 as the Gramian matrix.
 
 ```rust
-/// A Gram Matrix represent an inner product expressed in a basis.
+/// A Gram Matrix represents an inner product expressed in a basis.
 #[derive(Debug, Clone)]
 pub struct Gramian {
   /// S.P.D. matrix
@@ -1518,7 +1522,7 @@ We have now discussed the of Riemannian geometry in general.
 Now we want to focus on the special case of simplicial geometry,
 where the Riemannian metric is defined on our mesh.
 
-We have seen with our coordinate simplicies that our geometry is piecewise-flat
+We have seen with our coordinate simplices that our geometry is piecewise-flat
 over the cells. This means that our metric is constant over each cell
 and changes only from one cell to another.
 
@@ -1528,9 +1532,9 @@ that is about producing simplicial approximations of spacetimes that are
 solutions to the Einstein field equation.
 
 
-=== Deriving the Metric from Coordinate Simplicies
+=== Deriving the Metric from Coordinate Simplices
 
-Our coordinate simplicies are an immersion of an abstract simplex
+Our coordinate simplices are an immersion of an abstract simplex
 and as such, we can compute the corresponding constant metric tensor on it.
 We've seen that the local metric tensor is exactly the Gramian of the Jacobian of the immersion.
 The Jacobian of our affine-linear transformation, is the matrix $amat(E)$,
@@ -1587,7 +1591,7 @@ pub fn new(lengths: na::DVector<f64>, dim: Dim) -> Self {
   let this = Self { lengths, dim };
   assert!(
     this.is_coordinate_realizable(),
-    "Simplex must be coordiante realizable."
+    "Simplex must be coordinate realizable."
   );
   this
 }
@@ -1617,7 +1621,7 @@ pub fn from_coords(coords: &SimplexCoords) -> Self {
 
 The edge lengths of a simplex and the metric tensor on it
 both fully define the geometry uniquely @regge.
-These two geometry representations are completly equivalent.
+These two geometry representations are completely equivalent.
 This means one can be derived from the other.
 
 
@@ -1874,22 +1878,22 @@ tensor-product domains. These domains are $n$-dimensional Cartesian products $[0
 of the unit interval $[0,1]$. The simplicial skeleton will be computed based on
 a Cartesian grid that subdivides the domain into $l^n$ many $n$-cubes, which are
 generalizations of squares and cubes. Here $l$ is the number of subdivisions per axis.
-To obtain a simplicial skeleton, we need to split each $n$-cube into non-overlapping $n$-simplicies
-that make up it's volume. In 2D it's very natural to split a square into two triangles
+To obtain a simplicial skeleton, we need to split each $n$-cube into non-overlapping $n$-simplices
+that make up its volume. In 2D it's very natural to split a square into two triangles
 of equal volume. This can be generalized to higher dimensions. The trivial
-triangulation of a $n$-cube into $n!$ simplicies is based on the $n!$ many permutations
+triangulation of a $n$-cube into $n!$ simplices is based on the $n!$ many permutations
 of the $n$ coordinate axes @hiptmair:numpde.
 
 The $n$-cube has $2^n$ vertices, which can all be identified using multiindices
 $
-  V = {0,1}^n = {(i_1,dots,i_n) mid(|) i_j in {0,1}}
+  V = {0,1}^n = {(i_1,...,i_n) mid(|) i_j in {0,1}}
 $
-All $n!$ simplicies will be based on this vertex base set. To generate the list
+All $n!$ simplices will be based on this vertex base set. To generate the list
 of vertices of the simplex, we start at the origin vertex $v_0 = 0 = (0)^n$.
-From there we walk along on axis directions from vertex to vertex.
-For this we consider all $n!$ permutations of the basis directions $avec(e)_1,dots,avec(e)_n$.
+From there we walk along axis directions from vertex to vertex.
+For this we consider all $n!$ permutations of the basis directions $avec(e)_1,...,avec(e)_n$.
 A permutation $sigma$ tells in which axis direction we need to walk next.
-This gives us the vertices $v_0,dots,v_n$ that forms a simplex.
+This gives us the vertices $v_0,...,v_n$ that forms a simplex.
 $
   v_k = v_0 + sum_(i=1)^k avec(e)_sigma(i)
 $
@@ -1901,8 +1905,8 @@ pub fn compute_cell_skeleton(&self) -> Skeleton {
   let nboxes_axis = self.ncells_axis();
 
   let dim = self.dim();
-  let nsimplicies = factorial(dim) * nboxes;
-  let mut simplicies: Vec<SortedSimplex> = Vec::with_capacity(nsimplicies);
+  let nsimplices = factorial(dim) * nboxes;
+  let mut simplices: Vec<SortedSimplex> = Vec::with_capacity(nsimplices);
 
   // iterate through all boxes that make up the mesh
   for ibox in 0..nboxes {
@@ -1916,7 +1920,7 @@ pub fn compute_cell_skeleton(&self) -> Skeleton {
 
     // Construct all $d!$ simplexes that make up the current box.
     // Each permutation of the basis directions (dimensions) gives rise to one simplex.
-    let cube_simplicies = basisdirs.permutations().map(|basisdirs| {
+    let cube_simplices = basisdirs.permutations().map(|basisdirs| {
       // Construct simplex by adding all shifted vertices.
       let mut simplex = vec![ivertex_origin];
 
@@ -1933,17 +1937,17 @@ pub fn compute_cell_skeleton(&self) -> Skeleton {
       Simplex::from(simplex).assume_sorted()
     });
 
-    simplicies.extend(cube_simplicies);
+    simplices.extend(cube_simplices);
   }
 
-  Skeleton::new(simplicies)
+  Skeleton::new(simplices)
 }
 ```
 
 We can note here, that the computational complexity of this algorithm, grows extremely fast
 in the dimension $n$.
 We have a factorial scaling $cal(O)(n!)$ (worse than exponential scaling $cal(O)(e^n)$)
-for splitting the cube into simplicies. Given $l$ subdivisions per dimensions, we have
+for splitting the cube into simplices. Given $l$ subdivisions per dimensions, we have
 $l^n$ cubes. So the overall computational complexity is dominated by $cal(O)(l^n n!)$,
 a terrible result, due to the curse of dimensionality.
 The memory usage is dictated by the same scaling law.
