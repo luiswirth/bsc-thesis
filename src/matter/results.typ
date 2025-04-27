@@ -37,21 +37,28 @@ $
 $
 
 $
+  u = sum_(i=1)^n u_i dif x^i
+  quad "with" quad
   u_i = sin^2 (x^i) product_(j != i) cos(x^j)
 $
 
 $
-  n=2 ==> u = vec(
+  n=2 ==> u^sharp = vec(
     sin^2(x) cos(y),
     cos(x) sin^2(y),
   )
   quad quad
-  n=3 ==> u = vec(
+  n=3 ==> u^sharp = vec(
     sin^2(x) cos(y) cos(z),
     cos(x) sin^2(y) cos(z),
     cos(x) cos(y) sin^2(z),
   )
 $
+
+$
+  dif u = sum_(k<i) [(product_(j !=i,k) cos(x^j)) sin(x^i) sin(x^k) (sin(x^k) - sin(x^i))] dif x^k wedge dif x^i
+$
+
 
 The corresponding source term $f = Delta^1 u$ is computed analytically:
 $

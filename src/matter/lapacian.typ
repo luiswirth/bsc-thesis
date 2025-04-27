@@ -277,11 +277,8 @@ pub fn solve_hodge_laplace_harmonics(
   topology: &Complex,
   geometry: &MeshEdgeLengths,
   grade: ExteriorGrade,
+  homology_dim: usize,
 ) -> na::DMatrix<f64> {
-  // TODO!!!
-  //let homology_dim = topology.homology_dim(grade);
-  let homology_dim = 0;
-
   if homology_dim == 0 {
     let nwhitneys = topology.nsimplicies(grade);
     return na::DMatrix::zeros(nwhitneys, 0);
@@ -299,8 +296,9 @@ pub fn solve_hodge_laplace_source(
   geometry: &MeshEdgeLengths,
   grade: ExteriorGrade,
   source_data: Cochain,
+  homology_dim: usize,
 ) -> (Cochain, Cochain, Cochain) {
-  let harmonics = solve_hodge_laplace_harmonics(topology, geometry, grade);
+  let harmonics = solve_hodge_laplace_harmonics(topology, geometry, grade, homology_dim);
 
   let galmats = MixedGalmats::compute(topology, geometry, grade);
 

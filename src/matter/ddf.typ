@@ -43,7 +43,6 @@ structure-preserving discrete operators used throughout FEEC @douglas:feec-book.
 
 This chapter lays the foundation for the discrete variational formulations used
 in FEEC.
-Compute Basis Functions on any Coordinate Simplex, including Reference Simplex.
 
 
 == Cochains
@@ -72,12 +71,13 @@ pub struct Cochain {
 }
 ```
 
-Simplicial cochains are a structure preserving discretization
-and therefore retain the key topological and geometrical properties
-from differential topology/geometry @douglas:feec-article.
-
+Simplicial cochains preserve the structure of the de Rham complex at a discrete
+level and therefore retain the key topological and geometrical properties from
+differential topology/geometry @douglas:feec-article.
 
 Cochains can be seen as the coefficents or DOFs of our FE spaces @douglas:feec-book.
+
+
 
 === Discretization: Cochain-Projection via Integration
 
@@ -92,30 +92,29 @@ of the mesh @douglas:feec-article, @frankel:diffgeo. This gives a real number fo
 the cochain values.
 This projection is called the *integration map* @douglas:feec-book.
 $
-  c_sigma = integral_sigma omega
-  quad forall sigma in Delta_k (mesh)
-$
-
-$
   I: Lambda^k (Omega) -> C^k (mesh; RR)
 $
 
 $
-  I(omega) = (sigma |-> integral_sigma omega)
+  I(omega) = (sigma |-> c_sigma) quad "where" quad c_sigma = integral_sigma omega quad forall sigma in Delta_k (mesh)
 $
 
-TODO: EXPLAIN INTEGRAL DEFINITION 
+The integral of a differential $k$-form over a $k$-simplex is defined using the pullback
+to the reference $k$-simplex.
+$
+  integral_sigma omega
+  &= integral_hat(sigma) phi^* omega \
+  &= integral_hat(sigma) omega_(phi(lambda^1,dots,lambda^k)) (phi_* nvec(e)_1, dots, phi_* nvec(e)_k) dif lambda^1 dots dif lambda^k \
+  &= integral_hat(sigma) omega_(phi(lambda^1,dots,lambda^k)) ((diff avec(x))/(diff lambda_1), dots, (diff avec(x))/(diff lambda_k)) dif lambda^1 dots dif lambda^k
+$
 
-The integral of a differential $k$-form over a
-$k$-simplex is defined as:
-$
-  integral_sigma omega = integral_(sigma^"ref")(lambda^1,dots,lambda^k) ...
-$
+The last expression is a traditional pre-differential geometry integral over a
+subset $hat(sigma) in RR^k$. No exterior calculus required.
 
-We approximate the integral of a coordinate differential form
-over a coordinate simplex by barycentric quadrature @hiptmair:numpde, @hiptmair:numcse.
+We approximate this integral using barycentric quadrature. @hiptmair:numpde,
+@hiptmair:numcse.
 $
-  integral_sigma omega approx |sigma| omega_(avec(m)_sigma) (avec(e)_1,dots,avec(e)_n)
+  integral_sigma omega approx |hat(sigma)| omega_(phi(avec(m)_hat(sigma))) (avec(e)_1,dots,avec(e)_n)
 $
 
 And the implementation just looks like this:
@@ -154,47 +153,64 @@ pub fn cochain_projection(
 
 === Discrete Exterior Derivative via Stokes' Theorem
 
-The exterior derivative is the unified derivative in exterior calculus @frankel:diffgeo.
-We want to find a discrete counterpart that works on our discrete cochains.
-For this we look at some really simple cochain calculus.
+In exterior calculus, the exterior derivative is a fundamental operator
+that generalizes the standard derivatives (gradient, curl, divergence) to
+differential forms @frankel:diffgeo. For our discrete setting, we require a
+discrete counterpart that acts on cochains. This can be derived through the lens
+of cochain calculus.
 
-A very important property of the exterior derivative is captured in *Stokes'
-Theorem* for chains, that relates the exterior derivative to the boundary of
-a chain @frankel:diffgeo, @hatcher:algtop.
+A crucial property of the continuous exterior derivative is captured by *Stokes'
+Theorem*. For a differential form $omega$ and a chain $c$, this theorem relates
+the integral of the exterior derivative over the chain to the integral of the
+form over the chain's boundary @frankel:diffgeo, @hatcher:algtop:
 $
   integral_c dif omega = integral_(diff c) omega
 $
 
-We can introduce the dual pairing $inner(dot, dot)$ defined as
+This relationship is particularly insightful when viewed through the framework
+of dual pairings. If we define a natural pairing $inner(dot, dot)$ between
+differential forms and chains as integration over the chain:
 $
-  inner(omega, sigma) := integral_sigma omega
+  inner(omega, c) := integral_c omega
 $
 
-and then Stokes' Theorem becomes
+Now Stokes' Theorem can be expressed in a more abstract form:
 $
   inner(dif omega, c) = inner(omega, diff c)
 $
+This equation reveals that, with respect to this dual pairing, the exterior
+derivative operator $dif$ is the adjoint of the boundary operator $diff$
+@douglas:feec-article.
 
-Written in this way, we can see that the exterior derivative
-is the adjoint of the boundary operator, w.r.t. this dual pairing @douglas:feec-article.
+This adjoint relationship provides the direct motivation for defining the
+discrete exterior derivative.
+On a simplicial complex, we use cochains as discrete differential forms
+and the boundary operator
+is a fundamental combinatorial operator acting on chains. The discrete
+exterior derivative, often called the *coboundary operator*, is thus defined
+as the adjoint of the boundary operator. By definition, this discrete
+operator preserves the structure of Stokes' Theorem at the discrete level
+@douglas:feec-article, @crane:ddg.
 
-This inspires a definition of the discrete exterior derivative as
-the adjoint of the boundary operator, the *coboundary* operator,
-which fulfills Stokes' Theorem by definition @douglas:feec-article, @crane:ddg.
-
-TODO: EXPLAIN!
-
-From a computational standpoint, the boundary operator is a signed incidence matrix @hatcher:algtop.
-This makes the coboundary operator be the transpose of the signed incidence matrix @douglas:feec-article.
+From a computational perspective, the boundary operator $diff^k$ mapping
+$k$-chains to $(k-1)$-chains can be represented as a signed incidence matrix
+between the simplicies in the $k$-skeleton and $(k-1)$-skeleton @hatcher:algtop.
+The adjoint property then translates directly to the discrete exterior
+derivative $dif^k$ (mapping $k$-cochains to $(k+1)$-cochains) being the
+transpose of the boundary operator $diff_(k+1)$:
 $
   dif^k = diff_(k+1)^transp
 $
 
-This also perfectly demonstrates how the exterior derivative is a purely
-topological operator that doesn't depend on the geometry / metric of the manifold @douglas:feec-book.
+This definition highlights a key feature of the discrete exterior derivative: it
+is a purely topological operator. Its definition and computation depend only on
+the combinatorial structure of the simplicial complex (captured by the incidence
+relationships in the boundary operator), and not on the geometry or metric of
+the underlying manifold @douglas:feec-book.
 
-Using an extension trait, we introduce a basic function that returns
-the matrix corresponding to the discrete exterior derivative.
+In our implementation, we represent the discrete exterior derivative as a sparse
+matrix. Using an extension trait, we provide a method to compute this matrix for
+a given grade, leveraging the already implemented boundary operator:
 ```rust
 pub trait ManifoldComplexExt { ... }
 impl ManifoldComplexExt for Complex {
@@ -205,39 +221,55 @@ impl ManifoldComplexExt for Complex {
 }
 ```
 
+
 == Whitney Forms
 
-Now let's take a look at Whitney forms, which are the finite element
-differential forms that correspond to cochains @douglas:feec-article.
+*Whitney forms* are the *finite element differential forms* that correspond to
+cochains. They are the piecewise-linear (over the cells) differential
+forms defined over the simplicial manifold @whitney:geointegration,
+@douglas:feec-article.
 
-Whitney forms are the piecewise-linear (over the cells) differential forms
-defined over the simplicial manifold @whitney:geointegration, @douglas:feec-article.
+The Whitney space $cal(W) Lambda^k (mesh)$ is the space of all Whitney forms
+over our mesh $mesh$ @douglas:feec-book.
 
-They are our finite element differential forms. Our finite element function space
-is the space $cal(W) Lambda^k (mesh)$ of Whitney forms over our mesh $mesh$ @douglas:feec-book.
+For a $mesh$ with topological dimension $n$, the Whitney $0$-form space coincides with
+the Lagrangian space and the $n$-forms coincides with piecewise-constant discontinuous elements.
+$
+  cal(W) Lambda^0 (mesh) &=^~ cal(S)^0_1 (mesh) \
+  cal(W) Lambda^n (mesh) &=^~ cal(S)^(-1)_0 (mesh) \
+$
 
-The Whitney $k$-form basis function live on all $k$-simplicies of the mesh $mesh$.
+For a 3D mesh, we additionaly have a correspondance with Raviart-Thomas
+$bold(cal(R T))(mesh)$ and Nédélec $bold(cal(N))(mesh)$ Finite Element spaces.
+$
+  cal(W) Lambda^0 (mesh) &=^~ cal(S)^0_1 (mesh) \
+  cal(W) Lambda^1 (mesh) &=^~ bold(cal(N)) (mesh) \
+  cal(W) Lambda^2 (mesh) &=^~ bold(cal(R T)) (mesh) \
+  cal(W) Lambda^3 (mesh) &=^~ cal(S)^(-1)_0 (mesh) \
+$
+
+THis is the famous discrete subcomplex of the de Rham complex.
+$
+  0 -> cal(S)^0_1 (mesh) limits(->)^grad bold(cal(N)) (mesh) limits(->)^curl bold(cal(R T)) (mesh) limits(->)^div cal(S)^(-1)_0 (mesh) -> 0
+$
+
+The *Whitney subcomplex* generalize it to arbitrary dimensions.
+$
+  0 -> cal(W) Lambda^0 (mesh) limits(->)^dif dots.c limits(->)^dif cal(W) Lambda^n (mesh) -> 0
+$
+
+
+=== Whitney Basis
+
+There is a special basis for the space of Whitney forms, called the *Whitney
+basis* @whitney:geointegration, @douglas:feec-article. Just like there is a
+cochain value for each $k$-simplex, there is a Whitney basis function for each
+$k$-simplex. They have their DOF on this $K$-simplex.
 $
   cal(W) Lambda^k (mesh) = "span" {lambda_sigma : sigma in Delta_k (mesh)}
 $
 
-Each Whitney $k$-form is associated with a particular $k$-simplex.
-This simplex is the DOF and it's coefficient is the cochain value
-on this simplex @douglas:feec-article.
-
-
-They are distinct from the tensor-product space
-$[cal(S)^1 (Omega)]^k$ formed by taking $k$-copies of the Lagrangian FE space @hiptmair:electromagnetism.
-
-=== Whitney Basis
-
-There is a special basis for the space of Whitney forms, called the Whitney basis @whitney:geointegration, @douglas:feec-article.
-Just like there is a cochain value for each $k$-simplex, there
-is a Whitney basis function for each $k$-simplex.
-This is a necessary condition for the two spaces to be isomorphic.
-
-The basis functions are discontinuous from cell to cell, for this
-reason we will look at the local shape functions.
+Let's take a look at the local shape functions (LSF).
 
 The local Whitney form $lambda_(i_0 dots i_k)$ associated with the DOF simplex
 $sigma = [i_0 dots i_k] subset.eq tau$ on the cell $tau = [j_0 dots j_n]$ is
@@ -248,10 +280,8 @@ $
   (dif lambda_i_0 wedge dots.c wedge hat(dif lambda)_i_l wedge dots.c wedge dif lambda_i_k)
 $ <def:whitney>
 
-To get some intuition for the kind of fields this produces,
-let's look at some visualizations.
-
-We do this specifically for 1-forms, since we can visualize
+To get some intuition for the kind of fields this produces, let's look at some
+visualizations. We do this specifically for 1-forms, since we can visualize
 these using vector field proxies.
 
 We have the following formula for Whitney 1-forms.

@@ -35,7 +35,7 @@ approach offers robust discretizations that *preserve key topological and
 geometric structures* inherent in the underlying PDEs, ensuring stability,
 accuracy, and convergence @douglas:feec-article. FEEC is now the standard
 framework for analyzing and constructing conforming finite element spaces for
-differential forms in *arbitrary dimensions* and on *domains with complex topology*
+differential forms in *arbitrary dimensions* and on *domains with non-trivial topology*
 @douglas:feec-book.
 
 A key strength of FEEC lies in its ability to naturally handle arbitrary domain
@@ -60,7 +60,7 @@ as *abstract Riemannian manifolds* @frankel:diffgeo. We develop a novel finite
 element library in the Rust programming language @RustLang that operates on
 such abstract *simplicial complexes* @hatcher:algtop in arbitrary dimensions,
 avoiding any reliance on coordinate embeddings. The geometry is defined purely
-intrinsically via a *Riemannian metric* @frankel:diffgeo derived from edge lengths
+intrinsically via a *Riemannian metric* @frankel:diffgeo derived from *edge lengths*
 using *Regge Calculus* @regge.
 
 We restrict this work to first-order methods, employing the piecewise linear

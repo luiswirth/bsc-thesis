@@ -11,7 +11,7 @@ adjacency) of the mesh and serve as the container for all mesh entities, which
 are simplices. It also provides unique identification through global numbering
 and iteration over these entities. For the geometry, edge lengths are stored to
 compute the piecewise-flat (over the cells) Riemannian metric @frankel:diffgeo,
-known as the Regge metric @regge. We also support the optional storage of global
+using methods from Regge Calculus @regge. We also support the optional storage of global
 vertex coordinates if an embedding is known.
 
 == Coordinate Simplicies
@@ -94,11 +94,11 @@ $avec(v)_i in RR^N$. They constitute an intrinsic local coordinate representatio
 respect to the simplex $sigma$, independent of the embedding in $RR^N$, relying
 only on the convex combination of vertices.
 
-The coordinate transformation $psi: avec(lambda) |-> avec(x)$ from intrinsic
+The coordinate transformation $phi: avec(lambda) |-> avec(x)$ from intrinsic
 barycentric coordinates $avec(lambda)$ to ambient Cartesian coordinates $avec(x)$
 is given by:
 $
-  psi: avec(lambda) |-> avec(x) = sum_(i=0)^n lambda^i avec(v)_i
+  phi: avec(lambda) |-> avec(x) = sum_(i=0)^n lambda^i avec(v)_i
 $
 
 This transformation can be implemented as:
@@ -127,7 +127,7 @@ pub fn is_bary_inside<'a>(bary: impl Into<CoordRef<'a>>) -> bool {
 ```
 
 The barycenter $avec(m) = 1/(n+1) sum_(i=0)^n avec(v)_i$ always has the special
-barycentric coordinate $psi(avec(m)) = avec(lambda) = [1/(n+1)]^(n+1)$ and
+barycentric coordinate $avec(lambda) = [1/(n+1)]^(n+1)$ and
 is name-giving for the barycentric coordinates.
 ```rust
 pub fn barycenter(&self) -> Coord {
@@ -202,7 +202,7 @@ pub fn spanning_vectors(&self) -> na::DMatrix<f64> {
 This gives us an explicit basis of the affine space located at $avec(v)_0$ and
 spanned by $avec(e)_1,dots,avec(e)_n$.
 
-We can also rewrite the coordinate transformation $psi: avec(lambda) |->
+We can also rewrite the coordinate transformation $phi: avec(lambda) |->
 avec(x)$ using $lambda^0 = 1 - sum_(i=1)^n lambda^i$ in terms of
 the spanning vectors instead of the vertices:
 $
@@ -213,11 +213,11 @@ $
   = avec(v)_0 + amat(E) avec(lambda)^-
 $
 
-This shows that the transformation $psi$ is actually an affine map $psi:
+This shows that the transformation $phi$ is actually an affine map $phi:
 avec(lambda)^- |-> avec(x)$ consisting of the linear map represented by $amat(E)$
 followed by a translation by $avec(v)_0$.
 $
-  psi: avec(lambda)^- |-> avec(x) = avec(v)_0 + amat(E) avec(lambda)^-
+  phi: avec(lambda)^- |-> avec(x) = avec(v)_0 + amat(E) avec(lambda)^-
 $
 
 We implement functions for this affine transformation:
@@ -250,8 +250,9 @@ impl AffineTransform {
 }
 ```
 
-Reversing the transformation (finding local coordinates from global ones) is
-more complex due to the potentially higher-dimensional ($N >= n$) ambient space.
+The reverse transformation $psi: avec(x) |-> avec(lambda)^-$ from local
+$avec(x)$ to global $avec(lambda)^-$ coordinates is
+more complex due to the potentially higher-dimensional ambient space $RR^N$ with $N >= n$.
 The global coordinate point might not lie exactly in the affine subspace due
 to floating-point inaccuracies. This makes the linear system for the reverse
 transformation $avec(x) - avec(v)_0 = amat(E) avec(lambda)^-$ potentially
@@ -259,7 +260,7 @@ underdetermined. We use the Moore-Penrose pseudo-inverse $amat(E)^dagger$
 @hiptmair:numcse, typically computed via Singular Value Decomposition (SVD), to
 find the unique least-squares solution of smallest norm:
 $
-  phi: avec(x) |-> avec(lambda)^- = amat(E)^dagger (avec(x) - avec(v)_0)
+  psi: avec(x) |-> avec(lambda)^- = amat(E)^dagger (avec(x) - avec(v)_0)
 $
 
 ```rust
@@ -301,13 +302,13 @@ $
   (diff avec(x))/(diff avec(lambda)^-) = amat(E)
 $
 
-In differential geometry terms, the linear map $amat(E)$ acts as the
-*pushforward*.
+In differential geometry terms, the linear map represented by $amat(E)$ acts as
+*the pushforward*.
 $
   phi_*: avec(u) |-> avec(w) = amat(E) avec(u)
 $
-It transforms intrinsic tangent vectors (basis $diff/(diff lambda^i)$) to the
-ambient tangent vectors (basis vectors $avec(e)_i$).
+It transforms intrinsic tangent vectors $avec(u) = u^i diff/(diff lambda^i)$ to
+ambient tangent vectors $avec(w) = w^i avec(e)_i$.
 ```rust
 /// Local2Global Tangentvector
 pub fn pushforward_vector<'a>(&self, local: impl Into<TangentVectorRef<'a>>) -> TangentVector {
@@ -339,7 +340,7 @@ Separately, we can consider the differentials of the barycentric coordinate
 functions $lambda^i$ as functions of the global coordinates $avec(x)$. These
 differentials, $dif lambda^i$, form a basis for the cotangent space $T^*_p sigma$.
 Their components relative to the ambient basis $dif x^i$ are found using the
-differential of the *inverse* map $psi: sigma -> sigma_"ref"^n$, which involves the
+differential of the inverse map $psi: avec(x) -> avec(lambda)^-$, which involves the
 pseudo-inverse $amat(E)^dagger$. Specifically, the rows of $amat(E)^dagger$ give
 the components of $dif lambda^1, ..., dif lambda^n$.
 The
@@ -464,11 +465,11 @@ orientations, positive and negative @hatcher:algtop.
 
 A particularly important simplex is the *reference simplex* @hiptmair:numpde,
 which serves as a canonical domain for defining basis functions in FEM. For a
-given dimension $n$, the $n$-dimensional reference simplex $sigma_"ref"^n$ is
+given dimension $n$, the $n$-dimensional reference simplex $hat(sigma)^n$ is
 defined in $RR^n$ (so $N=n$) using its local
 coordinates as its global Cartesian coordinates:
 $
-  sigma_"ref"^n = {(lambda_1,dots,lambda_n) in RR^n mid(|) lambda_i >= 0, quad sum_(i=1)^n lambda_i <= 1 }
+  hat(sigma)^n = {(lambda_1,dots,lambda_n) in RR^n mid(|) lambda_i >= 0, quad sum_(i=1)^n lambda_i <= 1 }
 $
 Its vertices are the origin $avec(v)_0 = avec(0)$ and the standard basis vectors
 $avec(v)_i = nvec(e)_i$ for $i=1...n$. The spanning vectors are simply the
@@ -478,13 +479,13 @@ standard Euclidean inner product. Its volume is $(n!)^(-1)$.
 
 When looking at an arbitrary "real" $n$-simplex $tau$,
 the local to global map $phi_tau: avec(lambda)^- |-> avec(x)$ can be seen as a
-parametrization $phi_tau: sigma_"ref"^n -> tau subset.eq RR^N$, where the parametrization domain
+parametrization $phi_tau: hat(sigma)^n -> tau subset.eq RR^N$, where the parametrization domain
 is the reference $n$-simplex. The real simplex is then the image of the reference simplex
 $
-  sigma = phi_sigma (sigma_"ref"^n)
+  sigma = phi_sigma (hat(sigma)^n)
 $
 Conversely the global to local map $psi_tau: avec(x) |-> avec(lambda)^-$ can
-be seen as a chart map $psi_tau: tau -> sigma_"ref"^n$ where the chart itself
+be seen as a chart map $psi_tau: tau -> hat(sigma)^n$ where the chart itself
 is the reference $n$-simplex.
 
 When taking the "real" simplex to be the reference simplex, then
@@ -904,144 +905,178 @@ vertices indexed sequentially as $[0], [1], dots, [N-1]$. The constructor also
 determines and stores the total number of vertices (`nvertices`) involved in
 the skeleton.
 
+
 == Simplicial Complex
 
-A $n$-skeleton alone doesn't suffice as data structure for our FEEC implementation @douglas:feec-book,
-since it is missing the topology of the lower-dimensional subsimplicies of our cells.
-But our FE basis functions are associated with these subsimplicies, so we need to represent them.
+An $n$-skeleton provides the top-level topological information of a mesh by
+defining its $n$-dimensional cells. However, this structure alone is often
+insufficient for applications like Finite Element Exterior Calculus (FEEC)
+@douglas:feec-book. Many FE methods associate degrees of freedom (DOFs) or
+basis functions not only with cells but also with the lower-dimensional entities, in our
+case subsimplicies.
+Therefore, we need a data structure that explicitly represents the topology of
+_all_ relevant simplices within the mesh.
 
-The skeleton only stores the top-level simplicies $Delta_n (mesh)$, but our FEM library
-also needs to reference the lower-level simplicies $Delta_k (mesh)$, since these are also
-also mesh entities on which the DOFs of our FE space live.
+The skeleton only stores the top-level simplices $Delta_n (mesh)$. Our FEM
+library, however, also needs to reference the lower-level simplices $Delta_k
+(mesh)$ for $k < n$, since these are also mesh entities potentially carrying
+DOFs.
 
+Enter the *simplicial complex* @hatcher:algtop. A simplicial complex $K$ is a
+collection of simplices such that:
++ Every face (subsequence simplex) of a simplex in $K$ is also in $K$.
++ The intersection of any two simplices in $K$ is either empty or a face of both.
 
-Enter the simplicial complex @hatcher:algtop. It stores not only the top-level cells, but also all
-$k$-subsimplicies with $0 <= k <= n$.
-So a simplicial $n$-complex is made up of $n+1$ skeletons of dimensions $0,dots,n$.
+In our implementation, we represent an $n$-dimensional simplicial complex by
+storing the complete set of $k$-simplices for each dimension $k$ from $0$ to
+$n$. Effectively, it comprises $n+1$ distinct skeletons, one for each dimension.
 
-Some useful terminology is
-- The $0$-simplicies are called vertices.
-- The $1$-simplicies are called edges.
-- The $2$-simplicies are called faces.
-- The $3$-simplicies are called tets.
-- The $(n-1)$-simplicies are called facets.
-- The $n$-simplicies are called cells.
+We use standard terminology for low-dimensional simplices within the complex:
+-   The $0$-simplices are called *vertices*.
+-   The $1$-simplices are called *edges*.
+-   The $2$-simplices are called *faces*.
+-   The $3$-simplices are called *tets*.
+-   The $(n-1)$-simplices are called *facets*.
+-   The $n$-simplices are called *cells*.
+The `Complex` will serve as the main *topological data structure* passed as an
+argument into our FEEC algorithm routines, providing access to all mesh entities
+and their relationships.
 
-It will be the main topological data structure that we will, pass as argument
-into all FEEC algorithm routines.
+While general simplicial complexes can represent complex topological spaces,
+potentially including non-manifold features @hatcher:algtop, our target
+applications in PDE modeling typically require computational domains that
+are *manifolds*. A topological $n$-manifold is a space that locally resembles
+Euclidean $n$-space. For a simplicial complex, this means the neighborhood of
+each point (specifically, the link of each vertex) should be homeomorphic to an
+$(n-1)$-sphere or an $(n-1)$-ball (if on the boundary) @hatcher:algtop.
 
-In general a simplicial complex need not have manifold topology, since it can
-represent more general topological spaces beyond manifolds @hatcher:algtop.
-Our PDE framework however needs domains to be manifold.
-For this reason we will restrict our data structure to this. As a consequence
-our simplicial complex will be pure, meaning every $k$-subsimplex is contained in at
-least one cell.
-This will be ensured by the fact, that we will generate our simplicial complex
-from a cell-skeleton and all possible subset simplicies will be present.
+Our `Complex` data structure is designed to represent such manifold domains. We
+ensure two properties through construction:
+1.  *Closure:* The complex contains all faces (subsequences) of its simplices.
+  This is guaranteed by generating the complex from a list of top-level cells and
+  explicitly adding all their subsequences.
+2.  *Purity:* Every simplex of dimension $k < n$ is a face of at least one
+  $n$-simplex (cell). This is also ensured by constructing the complex downwards
+  from the cells.
 
-However the skeleton itself, might not encode a manifold topology. This would be the case
-if in 2D, we would have more than two triangles meeting at a single edge. Then we don't
-have a surface, but some non-manifold topological space.
-In general the rule is that at each facet has at most 2 cocells. A property we
-will be checking when building the complex.
-
-For a simplicial complex to be manifold, the neighborhood of each vertex (i.e. the
-set of simplices that contain that point as a vertex) needs to be homeomorphic
-to a $n$-ball @hatcher:algtop.
-
+However, the input `cells` skeleton itself might implicitly define a
+non-manifold topology. A common example in 2D is when three or more triangles
+meet along a single edge, or in 3D when multiple tetrahedra share a common face
+like pages of a book. To ensure the represented space is a manifold (potentially
+with boundary), we perform a check. A necessary condition for an $n$-dimensional
+simplicial complex to be a manifold (without boundary) is that every facet
+($(n-1)$-simplex) must be shared by exactly two cells ($(n)$-simplices). If
+facets are shared by only one cell, this indicates they lie on the boundary
+of the manifold. Our check verifies that each facet is contained in *at most*
+two cells. This check is performed *after* building the full complex structure
+because the required incidence information (which cells contain each facet) is
+naturally computed during the construction process. It fundamentally serves as a
+validation step for the input cell skeleton.
 
 ```rust
 /// A simplicial manifold complex.
 #[derive(Default, Debug, Clone)]
 pub struct Complex {
-  skeletons: Vec<(Skeleton, SkeletonData)>,
+  // Stores skeletons for dimensions 0 to n.
+  skeletons: Vec<ComplexSkeleton>,
 }
 impl Complex {
   pub fn dim(&self) -> Dim { self.skeletons.len() - 1 }
 }
-```
 
-One of the main algorithms is to construct a simplicial complex from a top-level
-cell-skeleton. For this we generate the subsequences of all lengths of the cells.
-While constructing we also precompute and store certain topological properties,
-such as in which cells the subsimplex is contained.
-Afterwards we do some topology checks, such as verifying that the topology of
-the given skeleton was actually manifold.
-```rust
-pub fn from_cells(cells: Skeleton) -> Self {
-  let dim = cells.dim();
-
-  let mut skeletons = vec![(Skeleton::default(), SkeletonData::default()); dim + 1];
-  skeletons[0].0 = Skeleton::new((0..cells.nvertices()).map(Simplex::single).collect());
-  skeletons[0].1 = SkeletonData(
-    (0..cells.nvertices())
-      .map(|_| SimplexData::default())
-      .collect(),
-  );
-
-  for (icell, cell) in cells.iter().enumerate() {
-    for (dim_sub, (sub_skeleton, sub_skeleton_data)) in skeletons.iter_mut().enumerate() {
-      for sub in cell.subsequences(dim_sub) {
-        let (sub_idx, is_new) = sub_skeleton.insert(sub);
-        let sub_data = if is_new {
-          sub_skeleton_data.0.push(SimplexData::default());
-          sub_skeleton_data.0.last_mut().unwrap()
-        } else {
-          &mut sub_skeleton_data.0[sub_idx]
-        };
-        sub_data.cocells.push(SimplexIdx::new(dim, icell));
-      }
-    }
+/// A skeleton inside of a complex, pairing the raw Skeleton
+/// with additional topological data computed during complex construction.
+#[derive(Default, Debug, Clone)]
+pub struct ComplexSkeleton {
+  skeleton: Skeleton,
+  complex_data: SkeletonComplexData,
+}
+impl ComplexSkeleton {
+  pub fn skeleton(&self) -> &Skeleton {
+    &self.skeleton
   }
-
-  // Topology checks.
-  if dim >= 1 {
-    let facet_data = &skeletons[dim - 1].1;
-    for SimplexData { cocells } in &facet_data.0 {
-      let nparents = cocells.len();
-      let is_manifold = nparents == 2 || nparents == 1;
-      assert!(is_manifold, "Topology must be manifold.");
-    }
+  /// Accessor for the complex-specific data associated with each simplex
+  /// in this skeleton.
+  pub fn complex_data(&self) -> &[SimplexComplexData] {
+    &self.complex_data
   }
+}
 
-  Self { skeletons }
+/// Complex-specific data for all simplicies in a single skeleton.
+pub type SkeletonComplexData = Vec<SimplexComplexData>;
+
+/// Complex-specific data associated with a single simplex within the complex.
+#[derive(Default, Debug, Clone)]
+pub struct SimplexComplexData {
+  /// Stores the indices of the top-level cells (n-simplices)
+  /// that contain this simplex as a face (subsequence).
+  pub cocells: Vec<SimplexIdx>,
 }
 ```
 
-=== Boundary Operator
+The primary method for creating a `Complex` is by providing the skeleton of
+its highest-dimensional cells ($n$-simplices). The `from_cells` constructor
+then systematically builds the skeletons for all lower dimensions ($k=0, dots,
+n-1$) by generating all subsequence simplices of the input cells. During this
+process, it also computes crucial topological incidence information: for each
+simplex, it records the list of top-level cells that contain it (its `cocells`).
+This information is stored alongside the skeletons in the `ComplexSkeleton`
+structure.
 
-We have already seen the boundary operator for single simplicies.
-We can extend this operator to the whole skeleton.
-Here the boundary operator itself is returned as a linear operator
-from the $k$-skeleton to the $(k-1)$-skeleton @hatcher:algtop.
-It is the signed incidence matrix of the simplicies in the upper skeleton
-in the lower skeleton.
-
-$
-  amat(D) in {-1,0,+1}^(N_(k-1) times N_k)
-$
-
-
+After populating all skeletons and computing the incidence data, the
+constructor performs the manifold topology check described earlier. It examines
+the $(n-1)$-skeleton (facets) and verifies that each facet is listed as a
+subsequence of either one cell (indicating a boundary facet) or two cells
+(indicating an interior facet). If any facet belongs to more than two cells,
+the input `cells` skeleton does not represent a manifold, and the constructor
+asserts failure.
 ```rust
-/// $diff^k: Delta_k -> Delta_(k-1)$
-pub fn boundary_operator(&self, dim: Dim) -> SparseMatrix {
-  let sups = &self.skeleton(dim);
+impl Complex {
+  pub fn from_cells(cells: Skeleton) -> Self {
+    let dim = cells.dim();
 
-  if dim == 0 {
-    return SparseMatrix::zeros(0, sups.len());
-  }
+    let mut skeletons = vec![ComplexSkeleton::default(); dim + 1];
+    skeletons[0] = ComplexSkeleton {
+      skeleton: Skeleton::new((0..cells.nvertices()).map(Simplex::single).collect()),
+      complex_data: (0..cells.nvertices())
+        .map(|_| SimplexComplexData::default())
+        .collect(),
+    };
 
-  let subs = &self.skeleton(dim - 1);
-  let mut mat = SparseMatrix::zeros(subs.len(), sups.len());
-  for (isup, sup) in sups.handle_iter().enumerate() {
-    let sup_boundary = sup.simplex_set().boundary();
-    for sub in sup_boundary {
-      let sign = sub.sign.as_f64();
-      let isub = subs.get_by_simplex(&sub.simplex).kidx();
-      mat.push(isub, isup, sign);
+    for (icell, cell) in cells.iter().enumerate() {
+      for (
+        dim_skeleton,
+        ComplexSkeleton {
+          skeleton,
+          complex_data: mesh_data,
+        },
+      ) in skeletons.iter_mut().enumerate()
+      {
+        for sub in cell.subsequences(dim_skeleton) {
+          let (sub_idx, is_new) = skeleton.insert(sub);
+          let sub_data = if is_new {
+            mesh_data.push(SimplexComplexData::default());
+            mesh_data.last_mut().unwrap()
+          } else {
+            &mut mesh_data[sub_idx]
+          };
+          sub_data.cocells.push(SimplexIdx::new(dim, icell));
+        }
+      }
     }
+
+    // Topology checks.
+    if dim >= 1 {
+      let facet_data = skeletons[dim - 1].complex_data();
+      for SimplexComplexData { cocells } in facet_data {
+        let nparents = cocells.len();
+        let is_manifold = nparents == 2 || nparents == 1;
+        assert!(is_manifold, "Topology must be manifold.");
+      }
+    }
+
+    Self { skeletons }
   }
-  mat
 }
 ```
 
@@ -1111,6 +1146,50 @@ Furthermore these functions always directly access the `IndexSet` and retrieve
 the corresponding index of the simplex and construct a new `SimplexHandle` out of
 it, such that we can easily apply subsequent method calls on the returned objects.
 
+
+=== Boundary Operator
+
+We previously defined the boundary operator $diff$ for individual simplices.
+This concept extends naturally to the entire complex. For each dimension $k$,
+the boundary operator $diff_k$ maps the $k$-skeleton to the $(k-1)$-skeleton.
+It can be represented as a linear operator, specifically a matrix $amat(D)_k$,
+often called the *incidence matrix* @hatcher:algtop.
+
+The matrix $amat(D)_k$ has dimensions $N_(k-1) times N_k$, where $N_j$ is the
+number of $j$-simplices in the complex. The entry $(amat(D)_k)_(i j)$ represents
+the signed incidence relation between the $i$-th $(k-1)$-simplex and the $j$-th
+$k$-simplex. It is $+1$ or $-1$ if the $i$-th $(k-1)$-simplex is a facet of the
+$j$-th $k$-simplex (with the sign determined by the relative orientation from
+the boundary definition), and $0$ otherwise.
+$
+  amat(D)_k in {-1,0,+1}^(N_(k-1) times N_k)
+$
+
+The following function computes this sparse incidence matrix for a given
+dimension `dim` ($k$).
+```rust
+impl Complex {
+  pub fn boundary_operator(&self, dim: Dim) -> CooMatrix {
+    let sups = &self.skeleton(dim);
+
+    if dim == 0 {
+      return CooMatrix::zeros(0, sups.len());
+    }
+
+    let subs = &self.skeleton(dim - 1);
+    let mut mat = CooMatrix::zeros(subs.len(), sups.len());
+    for (isup, sup) in sups.handle_iter().enumerate() {
+      let sup_boundary = sup.boundary();
+      for sub in sup_boundary {
+        let sign = sub.sign.as_f64();
+        let isub = subs.handle_by_simplex(&sub.simplex).kidx();
+        mat.push(isub, isup, sign);
+      }
+    }
+    mat
+  }
+}
+```
 
 == Simplicial Geometry
 
@@ -1318,18 +1397,13 @@ impl Gramian {
     Self::new_unchecked(matrix)
   }
 
-  pub fn matrix(&self) -> &na::DMatrix<f64> {
-    &self.matrix
-  }
-  pub fn dim(&self) -> Dim {
-    self.matrix.nrows()
-  }
-  pub fn det(&self) -> f64 {
-    self.matrix.determinant()
-  }
-  pub fn det_sqrt(&self) -> f64 {
-    self.det().sqrt()
-  }
+  pub fn matrix(&self) -> &na::DMatrix<f64> { &self.matrix }
+
+
+  pub fn dim(&self) -> Dim { self.matrix.nrows() }
+  pub fn det(&self) -> f64 { self.matrix.determinant() }
+  pub fn det_sqrt(&self) -> f64 { self.det().sqrt() }
+
   pub fn inverse(self) -> Self {
     let matrix = self
       .matrix
@@ -1341,21 +1415,13 @@ impl Gramian {
 
 /// Inner product functionality directly on the basis.
 impl Gramian {
-  pub fn basis_inner(&self, i: usize, j: usize) -> f64 {
-    self.matrix[(i, j)]
-  }
-  pub fn basis_norm_sq(&self, i: usize) -> f64 {
-    self.basis_inner(i, i)
-  }
-  pub fn basis_norm(&self, i: usize) -> f64 {
-    self.basis_norm_sq(i).sqrt()
-  }
+  pub fn basis_inner(&self, i: usize, j: usize) -> f64 { self.matrix[(i, j)] }
+  pub fn basis_norm_sq(&self, i: usize) -> f64 { self.basis_inner(i, i) }
+  pub fn basis_norm(&self, i: usize) -> f64 { self.basis_norm_sq(i).sqrt() }
   pub fn basis_angle_cos(&self, i: usize, j: usize) -> f64 {
     self.basis_inner(i, j) / self.basis_norm(i) / self.basis_norm(j)
   }
-  pub fn basis_angle(&self, i: usize, j: usize) -> f64 {
-    self.basis_angle_cos(i, j).acos()
-  }
+  pub fn basis_angle(&self, i: usize, j: usize) -> f64 { self.basis_angle_cos(i, j).acos() }
 }
 impl std::ops::Index<(usize, usize)> for Gramian {
   type Output = f64;
@@ -1446,7 +1512,7 @@ impl DMatrixExt for na::DMatrix<f64> {
 }
 ```
 
-== Simplicial Riemannian Geometry & Regge Metric
+== Simplicial Riemannian Geometry & Regge Calculus
 
 We have now discussed the of Riemannian geometry in general.
 Now we want to focus on the special case of simplicial geometry,
@@ -1462,7 +1528,7 @@ that is about producing simplicial approximations of spacetimes that are
 solutions to the Einstein field equation.
 
 
-=== Deriving the Regge Metric from Coordinate Simplicies
+=== Deriving the Metric from Coordinate Simplicies
 
 Our coordinate simplicies are an immersion of an abstract simplex
 and as such, we can compute the corresponding constant metric tensor on it.
@@ -1484,15 +1550,16 @@ impl SimplexCoords {
 
 === Simplex Edge Lengths
 
-We have seen how to derive the Regge metric from coordinates,
+We have seen how to derive the metric tensor from an embedding,
 but of course the metric is independent of the specific coordinates.
 The metric is invariant under isometric transformations, such
 as translations, rotations and reflections @frankel:diffgeo.
 This begs the question, what the minimal geometric information necessary is
 to derive the metric.
 It turns out that, while vertex coordinates are over-specified, edge lengths
-in contrast are exactly the required information @regge.
-Edge lengths are also invariant under isometric transformations.
+in contrast are exactly the required information.
+Edge lengths are invariant under isometric transformations.
+This is known from *Regge Caluclus* @regge.
 
 Instead of giving all vertices a global coordinate, as one would do in extrinsic
 geometry, we just give each edge in the mesh a positive length. Just knowing
@@ -1548,17 +1615,18 @@ pub fn from_coords(coords: &SimplexCoords) -> Self {
 }
 ```
 
-The Regge metric on a single simplex and it's edge lengths
-are exactly equivalent and both define the geometry uniquely @regge.
+The edge lengths of a simplex and the metric tensor on it
+both fully define the geometry uniquely @regge.
+These two geometry representations are completly equivalent.
 This means one can be derived from the other.
 
 
-We can derive the edge lengths, from the Regge metric Gramian.
+We can derive the edge lengths, from the metric tensor Gramian.
 $
   d_(i j) = sqrt(amat(G)_(i i) + amat(G)_(j j) - 2 amat(G)_(i j))
 $
 ```rust
-pub fn from_regge_metric(metric: &Gramian) -> Self {
+pub fn from_metric_tensor(metric: &Gramian) -> Self {
   let dim = metric.dim();
   let length = |i, j| {
     (metric.basis_inner(i, i) + metric.basis_inner(j, j) - 2.0 * metric.basis_inner(i, j)).sqrt()
@@ -1578,16 +1646,16 @@ pub fn from_regge_metric(metric: &Gramian) -> Self {
 ```
 
 
-We can derive the Regge metric Gramian, from the edge lengths by using the law
+We can derive the metric, from the edge lengths by using the law
 of cosines.
 $
   amat(G)_(i j) = 1/2 (d_(0 i)^2 + d_(0 j)^2 - d_(i j)^2)
 $
 ```rust
-pub fn into_regge_metric(&self) -> Gramian {
-  let mut metric_tensor = na::DMatrix::zeros(self.dim(), self.dim());
+pub fn to_metric_tensor(&self) -> Gramian {
+  let mut metric = Matrix::zeros(self.dim(), self.dim());
   for i in 0..self.dim() {
-    metric_tensor[(i, i)] = self[i].powi(2);
+    metric[(i, i)] = self[i].powi(2);
   }
   for i in 0..self.dim() {
     for j in (i + 1)..self.dim() {
@@ -1601,41 +1669,49 @@ pub fn into_regge_metric(&self) -> Gramian {
 
       let val = 0.5 * (l0i.powi(2) + l0j.powi(2) - lij.powi(2));
 
-      metric_tensor[(i, j)] = val;
-      metric_tensor[(j, i)] = val;
+      metric[(i, j)] = val;
+      metric[(j, i)] = val;
     }
   }
-  Gramian::try_new(metric_tensor).expect("Edge Lengths must be coordinate realizable.")
+  Gramian::new(metric)
 }
 ```
 
 
 === Realizability Conditions
 
+While edge lengths provide a coordinate-free description of a simplex's
+intrinsic geometry, not just any assignment of positive numbers to the edges
+of an abstract simplex constitutes a valid Euclidean geometry. The assigned
+lengths must satisfy certain consistency requirements, known collectively
+as *realizability conditions* @distgeo. These conditions ensure that the
+abstract simplex, endowed with these edge lengths, could actually be embedded
+isometrically as a flat simplex in some Euclidean space $RR^N$. In essence, only
+edge lengths for which a corresponding `SimplexCoords` object could exist are
+considered valid for defining a Euclidean simplex geometry.
 
-HIPTMAIR TODO: die Kantenlängen müssen die Dreiecksungleichung erfüllen, damit sie eine lokal-konstante Riemannsche Metrik induzieren. Ansonsten erhält man eine pseudo-Riemannsche Metrik
-
-Of course not all possible length assignment are valid. They need to fulfill certain
-critieria that evolve around the possibility of realizing these edge lengths
-as a real euclidean simplex. These are so called *Realizability Conditions* @distgeo.
-Only edge lengths for which a coordinate simplex exists that actually
-produces these edge lengths are valid.
-
-One important condition on these edge lengths, is that they fulfill the
-triangle inequality: \
-All 2-simplicies (triangles) $sigma = [i, j, k] in Delta_2 (mesh)$ in the mesh $mesh$,
-must fulfill the usual triangle inequality
+A fundamental necessary condition stems from the geometry of triangles. For
+every 2-dimensional face (triangle) $sigma = [i, j, k]$ within the mesh, the
+assigned edge lengths $d_(i j)$, $d_(j k)$, and $d_(i k)$ must satisfy the
+standard *triangle inequalities*:
 $
-  d_(i j) + d_(j k) >= d_(i k) \
-  d_(j k) + d_(i k) >= d_(i j) \
-  d_(i k) + d_(i j) >= d_(j k) \
+  d_(i j) + d_(j k) >= d_(i k) \
+  d_(j k) + d_(i k) >= d_(i j) \
+  d_(i k) + d_(i j) >= d_(j k) \
 $
-Otherwise our metric tensor is not positive-definite and we obtain a
-degenerate pseudo-Riemannian metric instead of a proper Riemannian metric. If we start from
-an immersed mesh, this is always the case.
+If these inequalities (particularly the strict versions) are violated for any
+triangle, the metric tensor $amat(G)$ derived from these lengths via the law
+of cosines will not be positive-definite. This would imply a degenerate or
+pseudo-Riemannian metric rather than the proper Riemannian metric associated
+with Euclidean geometry. If the edge lengths are derived from an actual
+coordinate embedding (`SimplexCoords::from_coords`), the triangle inequalities
+are automatically satisfied.
 
-
-*Euclidean distance matrix* @distgeo
+While necessary, the triangle inequalities alone are not sufficient for
+dimensions $n > 2$. A more comprehensive check involves the squared distances
+between all pairs of vertices. We can assemble these into the *Euclidean
+distance matrix* (EDM) $amat(A)$ @distgeo, a symmetric matrix with zeros on
+the diagonal:
 $
   amat(A) = mat(
     0, d_12^2, d_13^2, dots.c, d_(1 n)^2;
@@ -1645,7 +1721,7 @@ $
     d_(n 1)^2, d_(n 2)^2, d_(n 3)^2, dots.c, 0;
   )
 $
-
+where $d_(i j)$ is the length of the edge between vertex $i$ and vertex $j$.
 ```rust
 pub fn distance_matrix(&self) -> na::DMatrix<f64> {
   let mut mat = na::DMatrix::zeros(self.nvertices(), self.nvertices());
@@ -1663,8 +1739,8 @@ pub fn distance_matrix(&self) -> na::DMatrix<f64> {
 }
 ```
 
-*Cayley-Menger Matrix* @distgeo
-
+Building upon the EDM, the *Cayley-Menger matrix* @distgeo is constructed by
+bordering the EDM with a row and column of ones:
 $
   amat(C M) = mat(
     0, d_12^2, d_13^2, dots.c, d_(1 n)^2, 1;
@@ -1675,7 +1751,6 @@ $
     1, 1, 1, dots.c, 1, 0;
   )
 $
-
 ```rust
 pub fn cayley_menger_matrix(&self) -> na::DMatrix<f64> {
   let mut mat = self.distance_matrix();
@@ -1686,34 +1761,41 @@ pub fn cayley_menger_matrix(&self) -> na::DMatrix<f64> {
 }
 ```
 
-*Cayley-Menger Determinant* @distgeo
+The determinant of this matrix, scaled by a dimension-dependent factor, is the
+*Cayley-Menger determinant* $c m$ @distgeo:
 $
   c m = ((-1)^(n+1))/((n!)^2 2^n) det (amat(C M))
 $
-
 ```rust
 impl SimplexLengths {
-pub fn cayley_menger_det(&self) -> f64 {
-  cayley_menger_factor(self.dim()) * self.cayley_menger_matrix().determinant()
+  pub fn cayley_menger_det(&self) -> f64 {
+    cayley_menger_factor(self.dim()) * self.cayley_menger_matrix().determinant()
+  }
 }
 pub fn cayley_menger_factor(dim: Dim) -> f64 {
   (-1.0f64).powi(dim as i32 + 1) / factorial(dim).pow(2) as f64 / 2f64.powi(dim as i32)
 }
 ```
 
-Realizability is equivalent to $c m >= 0$ @distgeo.
-
+A fundamental result states that a set of edge lengths for an $n$-simplex
+is realizable in Euclidean space $RR^N$ (for $N >= n$) if and only if the
+Cayley-Menger determinant is non-negative: $c m >= 0$ @distgeo. A strictly
+positive determinant indicates realizability in exactly $n$ dimensions
+(non-degenerate), while a zero determinant implies the simplex is degenerate and
+lies within an $(n-1)$-dimensional affine subspace.
 ```rust
 pub fn is_coordinate_realizable(&self) -> bool {
-  self.cayley_menger_det() >= 0.0
+  self.cayley_menger_det() >= 0
 }
 ```
 
-If the simplex is realizable, then the positive volume of it is:
+Furthermore, if the simplex is realizable ($c m >= 0$), its $n$-dimensional
+volume is directly related to the Cayley-Menger determinant:
 $
   vol = sqrt(c m)
 $
-
+This provides a way to compute the volume directly from edge lengths, without
+needing explicit coordinates or the metric tensor.
 ```rust
 pub fn vol(&self) -> f64 {
   self.cayley_menger_det().sqrt()
