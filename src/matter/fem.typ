@@ -4,20 +4,20 @@
 
 = Finite Element Methods for Differential Forms
 
-We have now arrived at the chapter talking about the
-actual finite element library formoniq. \
-Here we will derive and implement the formulas for computing the element matrices
-of the various weak differential operators in Finite Element Exterior Calculus (FEEC) @douglas:feec-article, @douglas:feec-book.
-Furthermore we implement the assembly algorithm that will give us the
-final Galerkin matrices @hiptmair:numpde.
+We have now arrived at the chapter discussing the actual `formoniq` crate. \
+Here we will derive and implement the formulas for computing the element
+matrices of the various weak differential operators in Finite Element Exterior
+Calculus (FEEC) @douglas:feec-article, @douglas:feec-book. Furthermore we
+implement the assembly algorithm that will give us the final Galerkin matrices
+@hiptmair:numpde.
 
 == Variational Formulation & Element Matrix Computation
 
 There are only 4 types of variational operators that
 are relevant to the mixed weak formulation of the Hodge-Laplace operator @douglas:feec-book.
-All of them are based on the inner product on Whitney forms @whitney:geointegration, @douglas:feec-article.
+All of them are based on the $L^2$ inner product on Whitney forms @whitney:geointegration, @douglas:feec-article.
 
-Above all is the mass bilinear form, which really is just
+Above all is the mass bilinear form, which is
 the $L^2$ inner product @frankel:diffgeo.
 $
   m^k (u, v) &= inner(u, v)_(L^2 Lambda^k (Omega))
@@ -32,11 +32,13 @@ $
   u in H Lambda^(k-1), v in L^2 Lambda^k
 $
 
-Also relevant is the bilinear form of the codifferential @frankel:diffgeo
+The bilinear form involving the codifferential is also relevant @frankel:diffgeo
 $
   c(u, v) &= inner(delta u, v)_(L^2 Lambda^k (Omega))
 $
-Using the adjoint property of the codifferential relative to the exterior derivative under the $L^2$ inner product @frankel:diffgeo, @douglas:feec-book, we can rewrite it using the exterior derivative
+Using the adjoint property of the codifferential relative to the exterior
+derivative under the $L^2$ inner product @frankel:diffgeo, @douglas:feec-book,
+it can be rewritten using the exterior derivative
 applied to the test function.
 $
   c^k (u, v) &= inner(u, dif v)_(L^2 Lambda^k (Omega))
@@ -137,8 +139,6 @@ impl ElMatProvider for CodifDifElmat {
   }
 }
 ```
-
-This was really easy.
 
 
 === Mass bilinear form

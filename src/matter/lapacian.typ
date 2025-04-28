@@ -189,6 +189,8 @@ pub fn solve_hodge_laplace_evp(
 
 == Source Problem
 
+// TODO: RHS vector discussion
+
 The Hodge-Laplace Source Problem is the generalization of the Poisson equation
 to arbitrary differential $k$-forms @douglas:feec-book. In strong form it is\
 Find $u in Lambda^k (Omega)$, given $f in Lambda^k (Omega)$, s.t.
@@ -203,7 +205,7 @@ difference is that we require that our solution $u$ is orthogonal to harmonic fo
 
 The harmonic forms give a concrete realizations of the cohomology @hatcher:algtop, @frankel:diffgeo.
 They are a representative of the cohomology quotient group $cal(H)^k = (ker dif)/(im dif)$
-and as such they are isomorphic $frak(H)^k = cal(H)^k$.
+and as such they are isomorphic $frak(H)^k =^~ cal(H)^k$.
 
 We once again tackle a mixed weak formulation based on the auxiliary variable $sigma$
 and this time a second one $p$ that represents $f$ without harmonic component @douglas:feec-article, @douglas:feec-book.\

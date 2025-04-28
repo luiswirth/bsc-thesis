@@ -4,12 +4,15 @@
 
 = Results
 
-To verify the function of the library we solve a EVP and a source problem based on the Hodge-Laplacian operator, using the Finite Element Exterior Calculus framework @douglas:feec-book, @douglas:feec-article.
+To verify the functionality of the library we solve a EVP and a source problem
+based on the Hodge-Laplacian operator, using the Finite Element Exterior
+Calculus framework @douglas:feec-book, @douglas:feec-article.
 
 == 1-Form EVP on Annulus
 
 We meshed a 2D annulus $BB_1 (0) \\ BB_(1\/4) (0)$ using Gmsh @GmshPaper2009.
 
+// TODO: IMPROVE!!!
 The eigenvalues computed on the annulus correspond to the actual eigenvalues.
 
 #figure(
@@ -71,13 +74,6 @@ $
   trace_(diff Omega) u = 0
   quad quad
   trace_(diff Omega) dif u = 0
-$
-
-The manufactured solution is chosen such that it is non-trivial, meaning it is neither curl-free nor divergence-free in general.
-$
-  curl avec(u) != 0
-  quad quad
-  div avec(u) != 0
 $
 
 ```rust
@@ -221,12 +217,12 @@ implementation.
 
 However we also get order $alpha_(L 2) = 1$, which is surprising, since
 theory predicts order 2.
-This is most likely due to a non-admissable variational crime, incurred
+This is most likely due to a non-admissible variational crime, incurred
 by the way we approximate the RHS source term. We first do a cochain-projection
 before we multiply by the mass matrix to obtain the RHS.
 This error dominates the finite element error, giving us a worse order than predicted.
 This is not optimal, but because of time constraints, we weren't able to fix this.
-The order 1 $H^1$ convergence is sufficent for proving a valid implementation.
+The order 1 $H^1$ convergence is sufficient for proving a valid implementation.
 
 
 #figure(
