@@ -155,9 +155,17 @@ pub fn cochain_projection(
 
 In exterior calculus, the exterior derivative is a fundamental operator
 that generalizes the standard derivatives (gradient, curl, divergence) to
-differential forms @frankel:diffgeo. For our discrete setting, we require a
+differential forms @frankel:diffgeo.
+$
+  dif: Lambda^k (Omega) -> Lambda^(k+1) (Omega)
+$
+
+For our discrete setting, we require a
 discrete counterpart that acts on cochains. This can be derived through the lens
 of cochain calculus.
+$
+  dif_h: C^k (mesh) -> C^(k+1) (mesh)
+$
 
 A crucial property of the continuous exterior derivative is captured by *Stokes'
 Theorem*. For a differential form $omega$ and a chain $c$, this theorem relates
@@ -181,6 +189,9 @@ $
 This equation reveals that, with respect to this dual pairing, the exterior
 derivative operator $dif$ is the adjoint of the boundary operator $diff$
 @douglas:feec-article.
+$
+  dif = diff^*
+$
 
 This adjoint relationship provides the direct motivation for defining the
 discrete exterior derivative.
@@ -198,8 +209,9 @@ between the simplices in the $k$-skeleton and $(k-1)$-skeleton @hatcher:algtop.
 The adjoint property then translates directly to the discrete exterior
 derivative $dif^k$ (mapping $k$-cochains to $(k+1)$-cochains) being the
 transpose of the boundary operator $diff_(k+1)$:
+// TODO: notation??
 $
-  dif^k = diff_(k+1)^transp
+  amat(dif)^k = amat(D)_(k+1)^transp
 $
 
 This definition highlights a key feature of the discrete exterior derivative: it

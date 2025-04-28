@@ -8,6 +8,26 @@ To verify the functionality of the library we solve a EVP and a source problem
 based on the Hodge-Laplacian operator, using the Finite Element Exterior
 Calculus framework @douglas:feec-book, @douglas:feec-article.
 
+== 1-Form EVP on Torus
+
+We solved a Hodge-Laplace eigenvalue problem on the torus $TT^2$.
+In @img:evp_torus the two harmonic forms on this torus are visualized
+as vector proxies. They are the representatives of the 1-cohomology group.
+The vector field show the two 1-holes on the torus in an intuitive way.
+
+#figure(
+  grid(
+    columns: (1fr, 1fr),
+    rows: 1,
+    gutter: 3pt,
+    image("../../res/torus_eigen0_full.png", width: 100%),
+    image("../../res/torus_eigen1_full.png", width: 100%),
+  ),
+  caption: [
+    The two harmonic forms on the torus, representing the 1-cohomology groups.
+  ],
+) <img:evp_torus>
+
 == 1-Form EVP on Annulus
 
 We meshed a 2D annulus $BB_1 (0) \\ BB_(1\/4) (0)$ using Gmsh @GmshPaper2009.
@@ -27,7 +47,7 @@ The eigenvalues computed on the annulus correspond to the actual eigenvalues.
   caption: [
     Three interesting computed eigenfunctions for the Hodge-Laplacian eigenvalue problem on an annulus.
   ],
-) <img:evp>
+) <img:evp_annulus>
 
 == 1-Form Source Problem on $RR^n, n >= 1$
 

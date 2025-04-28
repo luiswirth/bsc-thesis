@@ -303,7 +303,7 @@ $
 $
 
 In differential geometry terms, the linear map represented by $amat(E)$ acts as
-*the pushforward*.
+the *pushforward*.
 $
   phi_*: avec(u) |-> avec(w) = amat(E) avec(u)
 $
