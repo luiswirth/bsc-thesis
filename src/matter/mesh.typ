@@ -492,10 +492,6 @@ When taking the "real" simplex to be the reference simplex, then
 the parametrization and chart maps are both identity maps.
 
 
-Okay, here is a revised version of the "Abstract Simplices" section, incorporating improvements while adhering to your constraints. I have focused on clarity, flow, and correcting minor grammatical issues, ensuring the text accurately describes the provided code's behavior, including the specific interpretation of `subsets`.
-
----
-
 == Abstract Simplices
 
 After studying coordinate simplices, the reader has hopefully developed some

@@ -1,5 +1,3 @@
-Okay, here is the "Conclusion and Outlook" section with citations added based on your provided BibTeX entries.
-
 #import "../setup.typ": *
 #import "../setup-math.typ": *
 #import "../layout.typ": *
