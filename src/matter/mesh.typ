@@ -1243,57 +1243,152 @@ even in the case of the typical coordinate-based geometry.
 
 === Coordinate Function Functors & Barycentric Quadrature
 
-Before differential geometry, calculus was done on euclidean space $RR^n$
-instead of on abstract manifolds @frankel:diffgeo. Euclidean space always has global coordinates.
-A point $avec(p) in RR^n$ is exactly it's own global coordinate $avec(x) = avec(p)$.
-This means that functions $f: p in Omega |-> f(p) in RR$ that take a point $avec(p)$
-of the space $Omega$ to a real number $f(avec(p))$, are usually specified by an evaluation rule
-$f: avec(x) in Omega |-> f(avec(x)) in RR$ based on coordinates, such as for example
-$f(avec(x)) = sin(x_1)$.
-This is a very useful and general representation of a function that
-relies solely on point evaluation and is very common in numerical codes.
-In programming languages this type of object is referred to as a functor.
-Functors are types that provide an evaluation operator.
+Before differential geometry, calculus was typically performed on Euclidean
+space $RR^n$ using global coordinates, rather than on abstract manifolds
+@frankel:diffgeo. A point $avec(p) in RR^n$ is identified with its coordinate
+vector $avec(x) = avec(p)$. Functions $f: Omega -> RR$ are often
+defined via evaluation rules based on these coordinates, like $f(avec(x))
+= sin(x^1)$. This representation, relying on point evaluation, is common
+in numerical methods. In programming, objects providing such an evaluation
+capability are often called *functors*.
 
-On manifolds the story is a little different. They admit no global coordinates
-in general @frankel:diffgeo. But instead we can rely on ambient coordinates $x in RR^N$, if an
-embedding is available, and work with functions defined on them.
+On general manifolds, global coordinates are usually unavailable
+@frankel:diffgeo. However, if an embedding into an ambient space \(RR^N\)
+exists, we can work with functions defined using these ambient coordinates.
 
-One common use-case that is also relevant to us for such a point-evaluable
-functor is numerical integration of a real valued function via numerical
-quadrature @hiptmair:numpde.
-Since we are doing only 1st order FEEC, we restrict ourselves to
-quadrature rules of order 1, that integrate affine-linear functions exactly.
-The simplest of these that work on arbitrary-dimensional simplices is
-the barycentric quadrature rule, that just does a single evaluation
-of the function at the barycenter of the simplex and multiplies this
-value by the volume of the simplex, giving us a approximation of the
-integral.
-$
-  integral_sigma f vol approx |sigma| f(avec(m)_sigma)
-$
+A primary application for point-evaluable functions in FEM is numerical
+integration using *quadrature rules* @hiptmair:numpde. Since analytic
+integration over complex domains or of complicated functions is often
+infeasible, we approximate integrals numerically.
 
-We implement a simple routine in Rust that does exactly.
+
+Quadrature rules for simplices are typically defined on the reference
+simplex $hat(sigma)^n$. A rule consists of a set of quadrature points
+$q_i$, which are given in local coordinates) and corresponding normalized weights $w_i$, that sum to one.
+Our implementation uses a `SimplexQuadRule` struct which stores these values.
 ```rust
-pub fn barycentric_quadrature<F>(f: &F, simplex: &SimplexCoords) -> f64
-where
-  F: Fn(CoordRef) -> f64,
-{
-  simplex.vol() * f(simplex.barycenter().as_view())
+/// A quadrature rule defined on the reference simplex.
+pub struct SimplexQuadRule {
+  /// Points in local coordinates (reduced barycentric).
+  points: na::DMatrix<f64>,
+  /// Normalized weights that sum to 1.
+  weights: na::DVector<f64>,
 }
 ```
 
-Here `F` is a generic type, that implements the `Fn` trait, that
-supplies an evaluation operator, turning `F` into a functor.
-This trait is most prominently implemented by closures (analogs of lambdas in `C++`).
+The integral of a function $f$ defined in local coordinates over
+any simplex $sigma$ is approximated as:
+$
+  integral_(hat(sigma)^n) f vol approx abs(sigma^n) sum_i w_i f(q_i)
+$
+Note that here we have factored the volume of the simplex out of the weights,
+which allows us to store normalized weights that sum to one.
+Then we can integrate over any simplex, by providing it's volume.
 
-This scalar quadrature can then be used for integrating
-coordinate differential form closures, since after evaluating
-the differential form on the tangent vectors, we obtain a simple
-scalar function.
-$
-  avec(x) in RR^N |-> omega_avec(x) (diff/(diff x^1),...,diff/(diff x^n)) in RR
-$
+
+This volume factor $abs(sigma)$ accounts for the volume change via the
+determinant of the Jacobian of the affine map $phi_sigma: sigma^n -> sigma$, since
+$abs(sigma) = abs(det (Dif phi_sigma)) abs(hat(sigma)^n)$
+```rust
+impl SimplexQuadRule {
+  /// Uses a local coordinate function `f`.
+  pub fn integrate_local<F>(&self, f: &F, vol: f64) -> f64
+  where
+    F: Fn(CoordRef) -> f64,
+  {
+    let mut integral = 0.0;
+    for i in 0..self.npoints() {
+      integral += self.weights[i] * f(self.points.column(i));
+    }
+    vol * integral
+  }
+}
+```
+
+To integrate a function defined in ambient coordinates over the simplex,
+we need to pullback the function.
+```rust
+/// Uses a global coordinate function `f`.
+pub fn integrate_coord<F>(&self, f: &F, coords: &SimplexCoords) -> f64
+where
+  F: Fn(CoordRef) -> f64,
+{
+  self.integrate_local(
+    &|local_coord| f(coords.local2global(local_coord).as_view()),
+    coords.vol(),
+  )
+}
+```
+
+To integrate a global function $f$ defined in ambient coordinates over the
+entire mesh $mesh = union sigma_j$, we sum the integrals over all cells:
+
+```rust
+/// Uses a global coordinate function `f`.
+pub fn integrate_mesh<F>(&self, f: &F, complex: &Complex, coords: &MeshCoords) -> f64
+where
+  F: Fn(CoordRef) -> f64,
+{
+  let mut integral = 0.0;
+  for cell in complex.cells().iter() {
+    let cell_coords = SimplexCoords::from_simplex_and_coords(cell, coords);
+    integral += self.integrate_coord(f, &cell_coords);
+  }
+  integral
+}
+```
+
+The library provides several standard quadrature rules.
+
+The most important of which is the barycentric quadrature rule.
+It generalizes trivially to arbitrary dimensional $n$-simplicies.
+This rule has polynomial exactness degree 1, meaning it integrates
+affine linear functions exactly. This is sufficient for most applications
+in 1st order FEEC, since it constitutes an admissible variational crime. @holst:gvc
+```rust
+/// Integrates 1st order affine linear functions exactly.
+pub fn barycentric(dim: Dim) -> Self {
+  let barycenter = barycenter_local(dim);
+  let points = Matrix::from_columns(&[barycenter]);
+  let weight = 1.0;
+  let weights = Vector::from_element(1, weight);
+  Self { points, weights }
+}
+```
+
+We also have hard-coded order 3 rules for 1D, 2D and 3D. They are accurate
+for polynomials of degree 2. This will be crucial for measuring the convergence
+of our FE solutions to the exact solution, for which we need to use a quadrature rule,
+where the quadrature error doesn't dominate.
+```rust
+pub fn order3(dim: Dim) -> Self {
+  match dim {
+    0 => Self::dim0(),
+    1 => Self::dim1_order3(),
+    2 => Self::dim2_order3(),
+    3 => Self::dim3_order3(),
+    _ => unimplemented!("No order 3 Quadrature available for dim {dim}."),
+  }
+}
+
+/// Simpsons Rule
+pub fn dim1_order3() -> Self {
+  let points = na::dmatrix![0.0, 0.5, 1.0];
+  let weights = na::dvector![1.0 / 6.0, 4.0 / 6.0, 1.0 / 6.0];
+  Self { points, weights }
+}
+pub fn dim2_order3() -> Self {
+  let points = na::dmatrix![
+    1.0/3.0, 1.0/5.0, 3.0/5.0, 1.0/5.0;
+    1.0/3.0, 1.0/5.0, 1.0/5.0, 3.0/5.0;
+  ];
+  let weights = na::dvector![-27.0 / 48.0, 25.0 / 48.0, 25.0 / 48.0, 25.0 / 48.0];
+  Self { points, weights }
+}
+pub fn dim3_order3() -> Self {
+  // omitted...
+}
+```
 
 
 == Metric-Based Riemannian Geometry
