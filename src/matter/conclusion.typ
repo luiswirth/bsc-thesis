@@ -66,63 +66,61 @@ similar challenges.
 - *Focus:* FEEC
 - *Dimension:* Arbitrary
 - *Mesh:* Simplicial Complexes
-- *Geometry:* Intrinsic Regge calculus metric
+- *Geometry:* Intrinsic Regge metric
 - *Discretization:* 1st order Whitney forms
 - *Language:* Rust
-- *Key Features:* Emphasis on coordinate-free intrinsic geometry in arbitrary dimensions.
-- *Availability:* #weblink("https://github.com/luiswirth/formoniq", [github:luiswirth/formoniq])
+- *Key Features:* Emphasis on FEEC on coordinate-free intrinsic geometry in arbitrary dimensions.
+- *Repository:* #weblink("https://github.com/luiswirth/formoniq", [github:luiswirth/formoniq])
 
 === PyDEC
 
 - *Focus:* Primarily DEC, some FEEC elements
 - *Dimension:* Arbitrary
 - *Mesh:* Simplicial and Cubical Complexes
-- *Geometry:* Supports Intrinsic and Extrinsic (embedded)
-- *Discretization:* 1st order Whitney forms (for FEEC aspects)
+- *Geometry:* Embedded
+- *Discretization:* Cochains
 - *Language:* Python
 - *Key Features:* Mature library for DEC., includes tools for cohomology and
   Hodge decomposition. @pydec
-- *Availability:* #weblink("https://github.com/hirani/pydec", [github:hirani/pydec])
+- *Repository:* #weblink("https://github.com/hirani/pydec", [github:hirani/pydec])
 
 === FEEC++ / simplefem
 
 - *Focus:* FEEC
-- *Dimension:* Hardcoded 2D and 3D
+- *Dimension:* Hardcoded 1D, 2D and 3D
 - *Mesh:* Simplicial Complexes
-- *Geometry:* Intrinsic
+- *Geometry:* Embedded
 - *Discretization:* Arbitrary order polynomial differential forms
 - *Language:* C++
-- *Key Features:* Focus on arbitrary polynomial order FEEC spaces in 2D/3D.
-  Developed by Martin Licht. @feecpp
-- *Availability:* #weblink("https://github.com/martinlicht/simplefem", [github:martinlicht/simplefem])
+- *Key Features:* Focus on arbitrary polynomial order differential forms,
+  including Whitney and Sullivan forms. Comes with all necessary linear algebra
+  subroutines. @feecpp
+- *Repository:* #weblink("https://github.com/martinlicht/simplefem", [github:martinlicht/simplefem])
 
 === DDF.jl
 
 - *Focus:* Foundational tools for DEC and FEEC
 - *Dimension:* Arbitrary
 - *Mesh:* Simplicial Complexes
-- *Geometry:* Intrinsic
-- *Discretization:* Explores higher-order discretizations (work in progress)
+- *Geometry:* Embedded
+- *Discretization:* Higher-order discretizations
 - *Language:* Julia
-- *Key Features:* Part of the Julia differential geometry ecosystem, builds on
-  `DifferentialForms.jl`. @ddfjl
-- *Availability:* #weblink("https://github.com/eschnett/DDF.jl", [github:eschnett/DDF.jl])
+- *Key Features:* Arbitrary dimensions and higher-order methods. Unfinished. @ddfjl
+- *Repository:* #weblink("https://github.com/eschnett/DDF.jl", [github:eschnett/DDF.jl])
 
 === dexterior
 
 - *Focus:* DEC
 - *Dimension:* Arbitrary
 - *Mesh:* Simplicial Complexes
-- *Geometry:* Extrinsic (Embedding-based)
-- *Discretization:* DEC operators (discrete \(d\), \(\star\)) on cochains
+- *Geometry:* Embedded
+- *Discretization:* Cochain
 - *Language:* Rust
-- *Key Features:* Provides core DEC operators in Rust, inspired by PyDEC,
-  includes basic visualization tools. No direct FEEC implementation. @dexterior
-- *Availability:* #weblink("https://github.com/m0lentum/dexterior", [github:m0lentum/dexterior])
+- *Key Features:* DEC in Rust, inspired by PyDEC. wgpu visualizer. @dexterior
+- *Repository:* #weblink("https://github.com/m0lentum/dexterior", [github:m0lentum/dexterior])
 
-
-This comparison highlights `formoniq`'s specific niche: providing a memory-safe,
-performant, arbitrary-dimensional FEEC implementation fundamentally based on
-intrinsic geometry, currently focused on first-order methods. It complements
-existing libraries by offering a different language choice (Rust) and a distinct
-focus on the coordinate-free geometric perspective inherent in FEEC.
+This comparison highlights `formoniq`'s specific niche: providing a
+arbitrary-dimensional FEEC implementation fundamentally based on intrinsic
+geometry, currently focused on first-order methods. It complements existing
+libraries by offering a different language choice (Rust) and a distinct focus on
+the coordinate-free geometric perspective inherent in FEEC.

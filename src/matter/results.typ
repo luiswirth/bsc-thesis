@@ -21,7 +21,7 @@ To assess the library's ability to handle *non-trivial topologies* as well
 as *globally curved geometry*, we solve a eigenvalue problem to compute the
 spectrum of the 1-form Hodge-Laplacian $Delta^1 u$ on a torus $TT^2$.
 
-A mesh of a torus with major radius $R=0.5$ and minor radius $r=0.2$ was
+A mesh of a torus with major radius $r_1=0.5$ and minor radius $r_2=0.2$ was
 generated using Gmsh @GmshPaper2009, by specifying a `.geo` file with the line:
 ```
 Torus(1) = {-0, -0, 0, 0.5, 0.2, 2*Pi};
@@ -32,8 +32,8 @@ The topology of the torus is characterized by its first *Betti number* $b_1 =
 1-forms representing the two fundamental cycles of the domain.
 
 The theoretical eigenvalues of $Delta^1$ on an idealized flat torus with
-circumferences $L_x = 2 pi R = pi$ and $L_y = 2 pi r = 0.4 pi$ are given by
-$lambda_(m,n) = 4m^2 + 25n^2$ for integers $m, n in ZZ$.
+circumferences $L_1 = 2 pi r_1 = pi$ and $L_2 = 2 pi r_2 = 0.4 pi$ are given by
+$lambda_(m,n) = ((2 pi m)/L_1)^2 + ((2 pi n)/L_2)^2 = 4m^2 + 25n^2$ for integers $m, n in ZZ$.
 
 The lowest computed eigenvalues obtained using formoniq and
 the SLEPc @SLEPcPaper2005 eigensolver are:
@@ -81,12 +81,10 @@ represented by their vector proxies.
 ) <img:evp_torus>
 
 The slight deviations between computed values and the ideal flat torus
-eigenvalues are expected due to discretization error and the intrinsic curvature
-of the embedded torus mesh, which is not accounted for in the perfectly flat
-analytical model. However, the accurate recovery of the zero eigenvalues and
-the correct multiplicities for the lowest eigenvalue groups strongly validates
-the FEEC implementation for eigenvalue problems on domains with non-trivial
-topology.
+eigenvalues are expected due to discretization error. However, the accurate
+recovery of the zero eigenvalues and the correct multiplicities for the lowest
+eigenvalue groups strongly validates the FEEC implementation for eigenvalue
+problems on domains with non-trivial topology.
 
 == Source Problem
 
