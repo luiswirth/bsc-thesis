@@ -11,7 +11,7 @@ $v: p in Omega |-> v_p$ over the manifold $Omega$ that at each point
 $p$ have a constant vector $v_p in T_p M$ as value.\
 In exterior calculus we have differential forms $omega$, which are functions
 $omega: p in Omega |-> omega_p$ over the manifold $Omega$ that at each point $p$
-have a constant *multiform* $omega_p in wedgespace (T^*_p M)$ as value @crane:ddg.
+have a constant *multiform* $omega_p in wedgespace (T^*_p M)$ as value @frankel:diffgeo @crane:ddg.
 
 If one were to implement something related to vector calculus
 it is of course crucial to be able to represent vectors in the program.
@@ -25,7 +25,7 @@ and develop a small module.
 == Exterior Algebra of Multiforms
 
 In general an exterior algebra $wedgespace (V)$ is a construction over any linear
-space $V$ @crane:ddg. In this section we want to quickly look at the specific linear
+space $V$ @frankel:diffgeo. In this section we want to quickly look at the specific linear
 space we are dealing with when modelling multiforms as element of an
 exterior algebra. But our implementation would work for any finite-dimensional
 real linear space $V$ with a given basis.
@@ -80,7 +80,7 @@ ${dif x^i}_(i=1)^n$.
 
 == Representing Exterior Elements
 
-An exterior algebra is a graded algebra.
+An exterior algebra is a graded algebra @frankel:diffgeo.
 $
   wedgespace (RR^n) = wedgespace^0 (RR^n) plus.circle.big dots.c plus.circle.big wedgespace^n (RR^n)
 $
@@ -93,9 +93,8 @@ between these various grades.
 pub type ExteriorGrade = usize;
 ```
 
-For representing an element in a particular exterior power
-$wedgespace^k (RR^n)$, we use the fact that, it itself is a linear space in it's
-own right.
+For representing an element in a particular exterior power $wedgespace^k
+(RR^n)$, we use the fact that, it itself is a linear space in it's own right.
 Due to the combinatorics of the anti-symmetric exterior algebra, we have $dim
 wedgespace^k (RR^n) = binom(n,k)$ @frankel:diffgeo.
 This means that by choosing a basis ${e_I}$ of this exterior power, we can just
@@ -117,7 +116,7 @@ This exterior basis ${e_I}_(I in cal(I)^n_k)$ is different from the basis
 ${e_i}_(i=1)^n$ of the original linear space $V$, but is best subsequently
 constructed from it.
 We do this by creating elementary multielements from the
-exterior product of basis elements.
+exterior product of basis elements @frankel:diffgeo.
 $
   e_I = wedge.big_(j=1)^k e_I_j = e_i_1 wedge dots.c wedge e_i_k
 $
@@ -313,8 +312,7 @@ to the inner product on the exterior fiber $wedge.big^k T^*_p M$, shall
 be computed.
 
 In general given an inner product on the vector space $V$, we can derive
-an inner product on the exterior power $wedgespace^k (V)$. The rule is the following:
-// TODO: FIND SOURCE
+an inner product on the exterior power $wedgespace^k (V)$. The rule is the following: @douglas:feec-book
 $
   inner(e_I, e_J) = det [inner(dif x_I_i, dif x_J_j)]_(i,j)^k
 $
@@ -322,6 +320,8 @@ $
 Computationally we represent inner products as Gramian matrices on some basis.
 This means that we compute an extended Gramian matrix as the inner product on
 multielements from the Gramian matrix of single elements using the determinant.
+
+// TODO: UPDATE THIS CODE!
 ```rust
 impl RiemannianMetricExt for RiemannianMetric {
   fn multi_form_gramian(&self, k: ExteriorGrade) -> na::DMatrix<f64> {

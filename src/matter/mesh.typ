@@ -1962,7 +1962,6 @@ and therefore is admissible @holst:gvc.
 
 === Tensor-Product Domain Meshing
 
-// TODO: FIND SOURCE
 
 Formoniq features a meshing algorithm for arbitrary dimensional
 tensor-product domains. These domains are $n$-dimensional Cartesian products $[0,1]^n$
@@ -1973,7 +1972,7 @@ To obtain a simplicial skeleton, we need to split each $n$-cube into non-overlap
 that make up its volume. In 2D it's very natural to split a square into two triangles
 of equal volume. This can be generalized to higher dimensions. The trivial
 triangulation of a $n$-cube into $n!$ simplices is based on the $n!$ many permutations
-of the $n$ coordinate axes.
+of the $n$ coordinate axes. @kuhn
 
 The $n$-cube has $2^n$ vertices, which can all be identified using multiindices
 $

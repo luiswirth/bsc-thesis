@@ -36,7 +36,7 @@ geometric structures* inherent in the underlying PDEs, ensuring stability,
 accuracy, and convergence. FEEC is now the standard
 framework for analyzing and constructing conforming finite element spaces for
 differential forms in *arbitrary dimensions* and on *domains with non-trivial topology*.
-@hiptmair:whitneyforms
+@douglas:feec-book
 
 A key strength of FEEC lies in its ability to naturally handle arbitrary
 domain topologies. This relies on fundamental connections between the algebraic
@@ -50,6 +50,7 @@ as *holes*, which influence the existence and uniqueness of PDE solutions.
 This theoretical elegance, however, is in stark contrast to many existing FEM
 software implementations, which are usually hard-coded to 3 dimensions and rely
 on vector proxies instead of actual differential forms and *exterior algebra*.
+@hiptmair:numpde
 Furthermore, almost all implementations make use of global coordinates on the
 manifolds, therefore relying on embeddings instead of the intrinsic geometry of
 the manifold.
