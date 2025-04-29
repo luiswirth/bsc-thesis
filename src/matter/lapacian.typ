@@ -227,7 +227,7 @@ We once again perform Galerkin discretization @douglas:feec-article.
 $
   sum_j sigma_j inner(phi^(k-1)_j,phi^(k-1)_i) - sum_j u_j inner(phi^k_j,dif phi^(k-1)_i) &= 0
   \
-  sum_j sigma_j inner(dif phi^(k-1)_j,phi^k_i) + sum_j u_j inner(dif phi^k_j,dif phi^k_i) + sum_j p_j inner(eta^k_j,phi^k_i) &= sum_j f_j inner(psi_j,phi^k_i)
+  sum_j sigma_j inner(dif phi^(k-1)_j,phi^k_i) + sum_j u_j inner(dif phi^k_j,dif phi^k_i) + sum_j p_j inner(eta^k_j,phi^k_i) &= inner(f,phi^k_i)
   \
   sum_j u_j inner(phi^k_j,eta^k_i) &= 0
 $
@@ -238,7 +238,7 @@ By inserting our known Galerkin matrices, we obtain.
 $
   amat(M)^(k-1) avec(sigma) - amat(C) avec(u) = 0
   \
-  amat(D) avec(sigma) + amat(L) avec(u) + amat(M) amat(H) avec(p) = amat(M)^k avec(f)
+  amat(D) avec(sigma) + amat(L) avec(u) + amat(M) amat(H) avec(p) = avec(b)
   \
   amat(H)^transp amat(M) avec(u) = 0
 $
@@ -261,7 +261,7 @@ $
   )
   vec(avec(sigma), avec(u), avec(p))
   =
-  vec(0, amat(M)^k avec(f), 0)
+  vec(0, avec(b), 0)
 $
 
 //$
@@ -274,6 +274,12 @@ $
 //  =
 //  vec(0, hodge f, 0)
 //$
+
+Where the right-hand side corresponding to the source term is approximated via quadrature.
+$
+  avec(b) = sum_(sigma in mesh) abs(sigma) sum_l w_l inner(f(avec(q)_l), phi^k_i (avec(q)_l))_(Lambda^k)
+  approx integral_mesh inner(f(x), phi^k_i (x))_(Lambda^k) vol
+$
 
 Compute harmonics
 ```rust

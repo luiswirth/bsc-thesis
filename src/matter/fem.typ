@@ -79,11 +79,11 @@ full Galerkin matrices.
 
 We first define a element matrix provider trait
 ```rust
-pub type ElMat = na::DMatrix<f64>;
-pub trait ElMatProvider {
+pub type ElMat = Matrix;
+pub trait ElMatProvider: Sync {
   fn row_grade(&self) -> ExteriorGrade;
   fn col_grade(&self) -> ExteriorGrade;
-  fn eval(&self, geometry: &SimplexGeometry) -> ElMat;
+  fn eval(&self, geometry: &SimplexLengths) -> ElMat;
 }
 ```
 The `eval` method provides us with the element matrix on a
@@ -100,44 +100,69 @@ that stores the transposed incidence matrix (coboundary operator) for any
 $k$-skeleton of a $n$-complex @crane:ddg.
 
 ```rust
-pub struct DifElmat(pub ExteriorGrade);
+pub struct DifElmat {
+  mass: HodgeMassElmat,
+  dif: Matrix,
+}
+impl DifElmat {
+  pub fn new(dim: Dim, grade: ExteriorGrade) -> Self {
+    let mass = HodgeMassElmat::new(dim, grade);
+    let dif = Complex::standard(dim).exterior_derivative_operator(grade - 1);
+    let dif = Matrix::from(&dif);
+    Self { mass, dif }
+  }
+}
 impl ElMatProvider for DifElmat {
-  fn row_grade(&self) -> ExteriorGrade { self.0 }
-  fn col_grade(&self) -> ExteriorGrade { self.0 - 1 }
-  fn eval(&self, geometry: &SimplexGeometry) -> na::DMatrix<f64> {
-    let dim = geometry.dim();
-    let grade = self.0;
-    let dif = &LOCAL_DIFFERENTIAL_OPERATORS[dim][grade - 1];
-    let mass = HodgeMassElmat(grade).eval(geometry);
-    mass * dif
+  fn row_grade(&self) -> ExteriorGrade { self.mass.grade }
+  fn col_grade(&self) -> ExteriorGrade { self.mass.grade - 1 }
+  fn eval(&self, geometry: &SimplexLengths) -> Matrix {
+    let mass = self.mass.eval(geometry);
+    mass * &self.dif
   }
 }
 
-pub struct CodifElmat(pub ExteriorGrade);
+pub struct CodifElmat {
+  mass: HodgeMassElmat,
+  codif: Matrix,
+}
+impl CodifElmat {
+  pub fn new(dim: Dim, grade: ExteriorGrade) -> Self {
+    let mass = HodgeMassElmat::new(dim, grade);
+    let dif = Complex::standard(dim).exterior_derivative_operator(grade - 1);
+    let dif = Matrix::from(&dif);
+    let codif = dif.transpose();
+    Self { mass, codif }
+  }
+}
 impl ElMatProvider for CodifElmat {
-  fn row_grade(&self) -> ExteriorGrade { self.0 - 1 }
-  fn col_grade(&self) -> ExteriorGrade { self.0 }
-  fn eval(&self, geometry: &SimplexGeometry) -> na::DMatrix<f64> {
-    let dim = geometry.dim();
-    let grade = self.0;
-    let dif = &LOCAL_DIFFERENTIAL_OPERATORS[dim][grade - 1];
-    let codif = dif.transpose();
-    let mass = HodgeMassElmat(grade).eval(geometry);
-    codif * mass
+  fn row_grade(&self) -> ExteriorGrade { self.mass.grade - 1 }
+  fn col_grade(&self) -> ExteriorGrade { self.mass.grade }
+  fn eval(&self, geometry: &SimplexLengths) -> Matrix {
+    let mass = self.mass.eval(geometry);
+    &self.codif * mass
   }
 }
 
-pub struct CodifDifElmat(pub ExteriorGrade);
-impl ElMatProvider for CodifDifElmat {
-  fn row_grade(&self) -> ExteriorGrade { self.0 }
-  fn col_grade(&self) -> ExteriorGrade { self.0 }
-  fn eval(&self, geometry: &SimplexGeometry) -> na::DMatrix<f64> {
-    let dim = geometry.dim();
-    let grade = self.0;
-    let dif = &LOCAL_DIFFERENTIAL_OPERATORS[dim][grade];
+pub struct CodifDifElmat {
+  mass: HodgeMassElmat,
+  dif: Matrix,
+  codif: Matrix,
+}
+impl CodifDifElmat {
+  pub fn new(dim: Dim, grade: ExteriorGrade) -> Self {
+    let mass = HodgeMassElmat::new(dim, grade + 1);
+    let dif = Complex::standard(dim).exterior_derivative_operator(grade);
+    let dif = Matrix::from(&dif);
     let codif = dif.transpose();
-    let mass = HodgeMassElmat(grade + 1).eval(geometry);
-    codif * mass * dif
+    Self { mass, dif, codif }
+  }
+}
+impl ElMatProvider for CodifDifElmat {
+  fn row_grade(&self) -> ExteriorGrade { self.mass.grade - 1 }
+  fn col_grade(&self) -> ExteriorGrade { self.mass.grade - 1 }
+  fn eval(&self, geometry: &SimplexLengths) -> Matrix {
+    let mass = self.mass.eval(geometry);
+    &self.codif * mass * &self.dif
   }
 }
 ```
@@ -191,52 +216,54 @@ all geometric information.
 Using this we can now implement the element matrix provider
 to the mass bilinear form in Rust.
 ```rust
-pub struct HodgeMassElmat(pub ExteriorGrade);
-impl ElMatProvider for HodgeMassElmat {
-  fn row_grade(&self) -> ExteriorGrade { self.0 }
-  fn col_grade(&self) -> ExteriorGrade { self.0 }
-  fn eval(&self, geometry: &SimplexGeometry) -> na::DMatrix<f64> {
-    let dim = geometry.dim();
-    let grade = self.0;
-
-    let nvertices = grade + 1;
-    let simplices: Vec<_> = subsimplices(dim, grade).collect();
-
-    let wedge_terms: Vec<_> = simplices
+pub struct HodgeMassElmat {
+  dim: Dim,
+  grade: ExteriorGrade,
+  simplices: Vec<Simplex>,
+  wedge_terms: Vec<ExteriorElementList>,
+}
+impl HodgeMassElmat {
+  pub fn new(dim: Dim, grade: ExteriorGrade) -> Self {
+    let simplices: Vec<_> = standard_subsimps(dim, grade).collect();
+    let wedge_terms: Vec<ExteriorElementList> = simplices
       .iter()
       .cloned()
-      .map(|simp| WhitneyForm::new(SimplexCoords::standard(dim), simp).wedge_terms())
+      .map(|simp| WhitneyLsf::standard(dim, simp).wedge_terms().collect())
       .collect();
+
+    Self { dim, grade, simplices, wedge_terms }
+  }
+}
+impl ElMatProvider for HodgeMassElmat {
+  fn row_grade(&self) -> ExteriorGrade { self.grade }
+  fn col_grade(&self) -> ExteriorGrade { self.grade }
+
+  fn eval(&self, geometry: &SimplexLengths) -> Matrix {
+    assert_eq!(self.dim, geometry.dim());
 
     let scalar_mass = ScalarMassElmat.eval(geometry);
 
-    let mut elmat = na::DMatrix::zeros(simplices.len(), simplices.len());
-    for (i, asimp) in simplices.iter().enumerate() {
-      for (j, bsimp) in simplices.iter().enumerate() {
-        let wedge_terms_a = &wedge_terms[i];
-        let wedge_terms_b = &wedge_terms[j];
-        let wedge_inners = geometry
-          .metric()
-          .multi_form_inner_product_mat(wedge_terms_a, wedge_terms_b);
+    let mut elmat = Matrix::zeros(self.simplices.len(), self.simplices.len());
+    for (i, asimp) in self.simplices.iter().enumerate() {
+      for (j, bsimp) in self.simplices.iter().enumerate() {
+        let wedge_terms_a = &self.wedge_terms[i];
+        let wedge_terms_b = &self.wedge_terms[j];
+        let wedge_inners = multi_gramian(&geometry.to_metric_tensor().inverse(), self.grade)
+          .inner_mat(wedge_terms_a.coeffs(), wedge_terms_b.coeffs());
 
+        let nvertices = self.grade + 1;
         let mut sum = 0.0;
         for avertex in 0..nvertices {
           for bvertex in 0..nvertices {
             let sign = Sign::from_parity(avertex + bvertex);
-
             let inner = wedge_inners[(avertex, bvertex)];
-
-            sum += sign.as_f64()
-              * inner
-              * scalar_mass[(asimp.vertices[avertex], bsimp.vertices[bvertex])];
+            sum += sign.as_f64() * inner * scalar_mass[(asimp[avertex], bsimp[bvertex])];
           }
         }
-
         elmat[(i, j)] = sum;
       }
     }
-
-    (factorial(grade) as f64).powi(2) * elmat
+    factorial(self.grade).pow(2) as f64 * elmat
   }
 }
 ```
@@ -273,17 +300,93 @@ impl ElMatProvider for ScalarMassElmat {
 }
 ```
 
-== Assembly
+== Source Terms & Quadrature
 
-The element matrix provider tells the assembly routine,
-what the exterior grade is of the arguments into the bilinear forms,
-based on this the right dimension of simplices are used to assemble.
-The assembly process itself is a standard FEM technique @hiptmair:numpde.
+// TODO: WRITE!
 
 ```rust
+pub type ElVec = Vector;
+pub trait ElVecProvider: Sync {
+  fn grade(&self) -> ExteriorGrade;
+  fn eval(&self, geometry: &SimplexLengths, topology: &Simplex) -> ElVec;
+}
+
+pub struct SourceElVec<'a, F>
+where
+  F: ExteriorField,
+{
+  source: &'a F,
+  mesh_coords: &'a MeshCoords,
+  qr: SimplexQuadRule,
+}
+impl<'a, F> SourceElVec<'a, F>
+where
+  F: ExteriorField,
+{
+  pub fn new(source: &'a F, mesh_coords: &'a MeshCoords, qr: Option<SimplexQuadRule>) -> Self {
+    let qr = qr.unwrap_or(SimplexQuadRule::barycentric(source.dim_intrinsic()));
+    Self { source, mesh_coords, qr }
+  }
+}
+impl<F> ElVecProvider for SourceElVec<'_, F>
+where
+  F: Sync + ExteriorField,
+{
+  fn grade(&self) -> ExteriorGrade {
+    self.source.grade()
+  }
+  fn eval(&self, geometry: &SimplexLengths, topology: &Simplex) -> ElVec {
+    let cell_coords = SimplexCoords::from_simplex_and_coords(topology, self.mesh_coords);
+
+    let dim = self.source.dim_intrinsic();
+    let grade = self.grade();
+    let dof_simps: Vec<_> = standard_subsimps(dim, grade).collect();
+    let whitneys: Vec<_> = dof_simps
+      .iter()
+      .cloned()
+      .map(|dof_simp| WhitneyLsf::standard(dim, dof_simp))
+      .collect();
+
+    let inner = multi_gramian(&geometry.to_metric_tensor().inverse(), grade);
+
+    let mut elvec = ElVec::zeros(whitneys.len());
+    for (iwhitney, whitney) in whitneys.iter().enumerate() {
+      let inner_pointwise = |local: CoordRef| {
+        let global = cell_coords.local2global(local);
+        inner.inner(
+          self
+            .source
+            .at_point(&global)
+            .precompose_form(&cell_coords.linear_transform())
+            .coeffs(),
+          whitney.at_point(local).coeffs(),
+        )
+      };
+      let value = self.qr.integrate_local(&inner_pointwise, geometry.vol());
+      elvec[iwhitney] = value;
+    }
+    elvec
+  }
+}
+```
+
+
+== Assembly
+
+The element matrix provider tells the assembly routine, what the exterior grade
+is of the arguments into the bilinear forms, based on this the right dimension
+of simplices are used to assemble. The assembly process itself is a standard FEM
+technique @hiptmair:numpde.
+
+We use rayon @crate:rayon to parallelize the assembly process over all the different cells,
+since these computations are always independent.
+
+```rust
+pub type GalMat = CooMatrix;
+/// Assembly algorithm for the Galerkin Matrix.
 pub fn assemble_galmat(
   topology: &Complex,
-  geometry: &MeshEdgeLengths,
+  geometry: &MeshLengths,
   elmat: impl ElMatProvider,
 ) -> GalMat {
   let row_grade = elmat.row_grade();
@@ -292,19 +395,75 @@ pub fn assemble_galmat(
   let nsimps_row = topology.skeleton(row_grade).len();
   let nsimps_col = topology.skeleton(col_grade).len();
 
-  let mut galmat = SparseMatrix::zeros(nsimps_row, nsimps_col);
-  for cell in topology.cells().handle_iter() {
-    let geo = geometry.simplex_geometry(cell);
-    let elmat = elmat.eval(&geo);
+  let triplets: Vec<(usize, usize, f64)> = topology
+    .cells()
+    .handle_iter()
+    // parallelization via rayon
+    .par_bridge()
+    .flat_map(|cell| {
+      let geo = geometry.simplex_lengths(cell);
+      let elmat = elmat.eval(&geo);
 
-    let row_subs: Vec<_> = cell.subsimps(row_grade).collect();
-    let col_subs: Vec<_> = cell.subsimps(col_grade).collect();
-    for (ilocal, &iglobal) in row_subs.iter().enumerate() {
-      for (jlocal, &jglobal) in col_subs.iter().enumerate() {
-        galmat.push(iglobal.kidx(), jglobal.kidx(), elmat[(ilocal, jlocal)]);
+      let row_subs: Vec<_> = cell.mesh_subsimps(row_grade).collect();
+      let col_subs: Vec<_> = cell.mesh_subsimps(col_grade).collect();
+
+      let mut local_triplets = Vec::new();
+      for (ilocal, &iglobal) in row_subs.iter().enumerate() {
+        for (jlocal, &jglobal) in col_subs.iter().enumerate() {
+          let val = elmat[(ilocal, jlocal)];
+          if val != 0.0 {
+            local_triplets.push((iglobal.kidx(), jglobal.kidx(), val));
+          }
+        }
       }
-    }
+
+      local_triplets
+    })
+    .collect();
+
+  let (rows, cols, values) = triplets.into_iter().multiunzip();
+  GalMat::try_from_triplets(nsimps_row, nsimps_col, rows, cols, values).unwrap()
+}
+```
+
+We also have an assembly algorithm for Galerkin vectors.
+```rust
+pub type GalVec = Vector;
+/// Assembly algorithm for the Galerkin Vector.
+pub fn assemble_galvec(
+  topology: &Complex,
+  geometry: &MeshLengths,
+  elvec: impl ElVecProvider,
+) -> GalVec {
+  let grade = elvec.grade();
+  let nsimps = topology.skeleton(grade).len();
+
+  let entries: Vec<(usize, f64)> = topology
+    .cells()
+    .handle_iter()
+    // parallelization via rayon
+    .par_bridge()
+    .flat_map(|cell| {
+      let geo = geometry.simplex_lengths(cell);
+      let elvec = elvec.eval(&geo, &cell);
+
+      let subs: Vec<_> = cell.mesh_subsimps(grade).collect();
+
+      let mut local_entires = Vec::new();
+      for (ilocal, &iglobal) in subs.iter().enumerate() {
+        if elvec[ilocal] != 0.0 {
+          local_entires.push((iglobal.kidx(), elvec[ilocal]));
+        }
+      }
+
+      local_entires
+    })
+    .collect();
+
+  let mut galvec = Vector::zeros(nsimps);
+  for (irow, val) in entries {
+    galvec[irow] += val;
   }
-  galmat
+  galvec
 }
 ```

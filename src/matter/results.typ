@@ -167,6 +167,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
   let _ = fs::remove_dir_all(path);
   fs::create_dir_all(path).unwrap();
 
+  let grade = 1;
   let homology_dim = 0;
 
   for dim in 2_usize..=3 {
@@ -242,10 +243,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
       let (topology, coords) = box_mesh.compute_coord_complex();
       let metric = coords.to_edge_lengths(&topology);
 
-      let source_data = cochain_projection(&laplacian_exact, &topology, &coords, None);
+      let source_data = assemble_galvec(
+        &topology,
+        &metric,
+        SourceElVec::new(&laplacian_exact, &coords, None),
+      );
 
-      let (_, galsol, _) =
-        hodge_laplace::solve_hodge_laplace_source(&topology, &metric, source_data, homology_dim);
+      let (_, galsol, _) = hodge_laplace::solve_hodge_laplace_source(
+        &topology,
+        &metric,
+        source_data,
+        grade,
+        homology_dim,
+      );
 
       let conv_rate = |errors: &[f64], curr: f64| {
         errors
@@ -279,40 +289,27 @@ The output is
 ```
 Solving Hodge-Laplace in 2d.
 |  k | L2 err   | L2 conv |   H1 err | H1 conv |
-|  0 | 3.13e0   |     inf | 6.51e-1  |     inf |
-|  1 | 1.67e0   |    0.91 | 4.83e-1  |    0.43 |
-|  2 | 7.51e-1  |    1.15 | 2.43e-1  |    0.99 |
-|  3 | 3.90e-1  |    0.94 | 1.15e-1  |    1.08 |
-|  4 | 1.97e-1  |    0.98 | 5.72e-2  |    1.01 |
-|  5 | 9.89e-2  |    1.00 | 2.86e-2  |    1.00 |
-|  6 | 4.95e-2  |    1.00 | 1.43e-2  |    1.00 |
-|  7 | 2.47e-2  |    1.00 | 7.14e-3  |    1.00 |
+|  0 | 1.96e0   |     inf | 6.51e-1  |     inf |
+|  1 | 1.57e0   |    0.31 | 4.31e-1  |    0.60 |
+|  2 | 8.02e-1  |    0.97 | 3.51e-1  |    0.30 |
+|  3 | 4.03e-1  |    0.99 | 1.35e-1  |    1.37 |
+|  4 | 1.99e-1  |    1.02 | 6.00e-2  |    1.17 |
+|  5 | 9.91e-2  |    1.01 | 2.89e-2  |    1.05 |
+|  6 | 4.95e-2  |    1.00 | 1.43e-2  |    1.01 |
+|  7 | 2.48e-2  |    1.00 | 7.15e-3  |    1.00 |
 Solving Hodge-Laplace in 3d.
 |  k | L2 err   | L2 conv |   H1 err | H1 conv |
-|  0 | 4.05e0   |     inf | 2.25e0   |     inf |
-|  1 | 2.61e0   |    0.64 | 1.15e0   |    0.96 |
-|  2 | 1.39e0   |    0.91 | 5.62e-1  |    1.04 |
-|  3 | 7.47e-1  |    0.90 | 2.65e-1  |    1.09 |
-|  4 | 3.81e-1  |    0.97 | 1.33e-1  |    1.00 |
+|  0 | 3.66e0   |     inf | 1.09e0   |     inf |
+|  1 | 2.56e0   |    0.52 | 1.76e0   |   -0.69 |
+|  2 | 1.46e0   |    0.80 | 7.49e-1  |    1.23 |
+|  3 | 7.71e-1  |    0.93 | 3.08e-1  |    1.28 |
+|  4 | 3.85e-1  |    1.00 | 1.39e-1  |    1.15 |
+|  5 | 1.92e-1  |    1.00 | 6.73e-2  |    1.04 |
 ```
 
-Let's first discuss the $H(dif)$ convergence. We get order $alpha_(H(dif)) =
-1$. This is exactly what theory predicts for 1st order finite elements
-@douglas:feec-article, suggesting a correct implementation.
-
-// TODO: FIND REFERNCE
-For $L^2$ convergence, we however also get order $alpha_(L^2) = 1$, which is
-surprising, since theory predicts order 2.
-We suspect that the reason for this is a non-admissible variational crime, incurred
-by the way we approximate the RHS source term.
-As previously stated, we first do a cochain-projection
-before we multiply by the mass matrix to obtain the RHS.
-This projection error dominates the $L^2$ finite element error, giving us a
-worse order than predicted.
-
-This result for the $L^2$ convergence is not optimal, but because of time
-constraints, we weren't able to fix this. The order 1 $H(dif)$ convergence is
-sufficient for proving a valid implementation.
+We get order $alpha_(H Lambda) = 1$ and order $alpha_(L^2) = 1$. This is exactly
+what theory predicts for 1st order finite elements @douglas:feec-article,
+suggesting a correct implementation.
 
 In @img:source_problem we provide a visualization of the 2D finite element
 solution at refinement level 2 our library has produced in the form of a vector
@@ -334,5 +331,5 @@ field proxy together with a heat map of the magnitude.
 
 In summary, the numerical experiments presented in this chapter, covering both
 an eigenvalue problem on a topologically non-trivial domain and a quantitative
-convergence study via MMS, provide strong validation for the `formoniq` library's
-implementation of Finite Element Exterior Calculus for 1-forms.
+convergence study via MMS, provide strong validation for the `formoniq`
+library's implementation of Finite Element Exterior Calculus for 1-forms.
