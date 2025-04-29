@@ -4,16 +4,68 @@
 
 = Results
 
-To verify the functionality of the library we solve a EVP and a source problem
-based on the Hodge-Laplacian operator, using the Finite Element Exterior
-Calculus framework @douglas:feec-book, @douglas:feec-article.
 
-== 1-Form EVP on Torus
+In this chapter, we present numerical results to verify the functionality and
+validate the implementation of the `formoniq` library. We focus on solving
+problems involving the Hodge-Laplace operator using the Finite Element Exterior
+Calculus framework @douglas:feec-book, @douglas:feec-article developed in the
+previous chapters.
 
-We solved a Hodge-Laplace eigenvalue problem on the torus $TT^2$.
-In @img:evp_torus the two harmonic forms on this torus are visualized
-as vector proxies. They are the representatives of the 1-cohomology group.
-The vector field show the two 1-holes on the torus in an intuitive way.
+Specifically, we examine the Hodge-Laplacian eigenvalue problem on a domain with
+non-trivial topology and perform a convergence study for the Hodge-Laplacian
+source problem using the Method of Manufactured Solutions on a hypercube domain.
+
+== 1-form Eigenvalue Problem on Torus
+
+To assess the library's ability to handle *non-trivial topologies* as well
+as *globally curved geometry*, we solve a eigenvalue problem to compute the
+spectrum of the 1-form Hodge-Laplacian $Delta^1 u$ on a torus $TT^2$.
+
+A mesh of a torus with major radius $R=0.5$ and minor radius $r=0.2$ was
+generated using Gmsh @GmshPaper2009, by specifying a `.geo` file with the line:
+```
+Torus(1) = {-0, -0, 0, 0.5, 0.2, 2*Pi};
+```
+
+The topology of the torus is characterized by its first *Betti number* $b_1 =
+2$, which predicts a two-dimensional kernel for $Delta^1$ spanned by harmonic
+1-forms representing the two fundamental cycles of the domain.
+
+The theoretical eigenvalues of $Delta^1$ on an idealized flat torus with
+circumferences $L_x = 2 pi R = pi$ and $L_y = 2 pi r = 0.4 pi$ are given by
+$lambda_(m,n) = 4m^2 + 25n^2$ for integers $m, n in ZZ$.
+
+The lowest computed eigenvalues obtained using formoniq and
+the SLEPc @SLEPcPaper2005 eigensolver are:
+```
+ieigen=0, eigenval=-0.000
+ieigen=1, eigenval=0.000
+ieigen=2, eigenval=4.116
+ieigen=3, eigenval=4.116
+ieigen=4, eigenval=4.116
+ieigen=5, eigenval=4.116
+ieigen=6, eigenval=14.447
+ieigen=7, eigenval=14.447
+ieigen=8, eigenval=14.449
+ieigen=9, eigenval=14.449
+ieigen=10, eigenval=24.649
+```
+
+These numerical results show excellent agreement with theoretical expectations:
+- The computed spectrum correctly identifies the two zero eigenvalues
+  $lambda=0.000$ corresponding to the two harmonic 1-forms $m=n=0$, accurately
+  capturing the torus's topology ($b_1=2$).
+- The first non-zero eigenvalue group is computed as $lambda approx 4.116$
+  with multiplicity 4. This closely matches the theoretical value
+  $lambda_(1,0)=4$ and its expected multiplicity.
+- The second non-zero group is computed around $lambda approx 14.447 approx 14.449$ with
+  multiplicity 4, corresponding well to the theoretical value
+  $lambda_(2,0)=16$ and its expected multiplicity.
+- The next computed eigenvalue $lambda approx 24.649$ aligns closely with
+  the theoretical value $lambda_(0,1)=25$.
+
+Figure @img:evp_torus shows visualizations of selected computed 1-form eigenfunctions,
+represented by their vector proxies.
 
 #figure(
   grid(
@@ -24,47 +76,41 @@ The vector field show the two 1-holes on the torus in an intuitive way.
     image("../../res/torus_eigen1_full.png", width: 100%),
   ),
   caption: [
-    The two harmonic forms on the torus, representing the 1-cohomology groups.
+    The two harmonic forms on the torus, representing the 1-cohomology spaces.
   ],
 ) <img:evp_torus>
 
-== 1-Form EVP on Annulus
+The slight deviations between computed values and the ideal flat torus
+eigenvalues are expected due to discretization error and the intrinsic curvature
+of the embedded torus mesh, which is not accounted for in the perfectly flat
+analytical model. However, the accurate recovery of the zero eigenvalues and
+the correct multiplicities for the lowest eigenvalue groups strongly validates
+the FEEC implementation for eigenvalue problems on domains with non-trivial
+topology.
 
-We meshed a 2D annulus $BB_1 (0) \\ BB_(1\/4) (0)$ using Gmsh @GmshPaper2009.
+== Source Problem
 
-// TODO: IMPROVE!!!
-The eigenvalues computed on the annulus correspond to the actual eigenvalues.
+We verify the source problem by means of the *method of manufactured solution*
+@hiptmair:numpde.
+We restirct ourselves to a simple setup in globally flat geometry on a subset
+of $RR^n$. We validate only the 1-form source problem, but we do this in arbitrary
+dimensions $n >= 2$.
 
-#figure(
-  grid(
-    columns: (1fr, 1fr, 1fr),
-    rows: 1,
-    gutter: 3pt,
-    image("../../res/evp0.png", width: 100%),
-    image("../../res/evp5.png", width: 100%),
-    image("../../res/evp6.png", width: 100%),
-  ),
-  caption: [
-    Three interesting computed eigenfunctions for the Hodge-Laplacian eigenvalue problem on an annulus.
-  ],
-) <img:evp_annulus>
-
-== 1-Form Source Problem on $RR^n, n >= 1$
-
-We verify the source problem by means of the method of manufactured solution @hiptmair:numpde.
-Our manufactured solution is a 1-form that follows the same pattern for any
-dimensions.
-
+Our domain is
 $
   Omega = [0,pi]^n
 $
 
+For our manufactured solution, we've chosen a simple 1-form $u in Lambda^1
+(Omega)$ that generalizes easily to arbitrary dimensions.
 $
   u = sum_(i=1)^n u_i dif x^i
   quad "with" quad
   u_i = sin^2 (x^i) product_(j != i) cos(x^j)
 $
 
+When using vector proxies $u^sharp$ we get the following vector fields in the 2D
+and 3D case.
 $
   n=2 ==> u^sharp = vec(
     sin^2(x) cos(y),
@@ -78,24 +124,44 @@ $
   )
 $
 
+We can analytically derive the exterior derivative $dif u$ of this solution $u$.
 $
   dif u = sum_(k<i) [(product_(j !=i,k) cos(x^j)) sin(x^i) sin(x^k) (sin(x^k) - sin(x^i))] dif x^k wedge dif x^i
 $
 
+In the method of manufactured solution, the source term $f$ is set
+to equal the 1-form Hodge-Laplacian $Delta^1 u$ of the exact solution $u$.
+$
+  f = Delta^1 u
+$
 
 The corresponding source term $f = Delta^1 u$ is computed analytically:
 $
   (Delta^1 avec(u))_i = Delta^0 u_i = -(2 cos(2 x^i) - (n-1) sin^2(x^i)) product_(j != i) cos(x^j)
 $
 
-The solution and it's exterior derivative are zero on the boundary,
-meaning we exactly fulfill, the homogenoeous natural boundary conditions.
+Our solution and it's derivative have boundary traces that are equal to zero.
+This leads to homogeneous natural boundary conditions, meaning no additional
+terms are required in the variational formulation.
 $
   trace_(diff Omega) u = 0
   quad quad
   trace_(diff Omega) dif u = 0
 $
 
+
+We use formoniq to solve this problem and determine the rate of convergence.
+We check dimensions 2 and 3, but even higher dimensions would work.
+For each dimension we generate finer and finer meshes with mesh width $h$
+halved in each step. The meshes are generated using our custom tensor-product triangulation
+algorithm.
+We compute the right hand side vector by projecting the exact Laplacian onto
+a 1-cochain and then we multiply it by the hodge mass matrix.
+This is a bit non-standard, but is a very easy way to obtain a approximation
+of the right-hand side vector. We will discuss this choice further below.
+
+This is the code for our convergence test.
+It can be run using `cargo run --release --example hodge_laplace_source`.
 ```rust
 fn main() -> Result<(), Box<dyn std::error::Error>> {
   tracing_subscriber::fmt::init();
@@ -124,23 +190,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let dif_solution_exact = DiffFormClosure::new(
       Box::new(move |p: CoordRef| {
         let dim = p.len();
-        let num_components = if dim > 1 { dim * (dim - 1) / 2 } else { 0 };
-        let mut components = Vec::with_capacity(num_components);
+        let ncomponents = if dim > 1 { dim * (dim - 1) / 2 } else { 0 };
+        let mut components = Vec::with_capacity(ncomponents);
 
         let sin_p: Vec<_> = p.iter().map(|&pi| pi.sin()).collect();
         let cos_p: Vec<_> = p.iter().map(|&pi| pi.cos()).collect();
 
         for k in 0..dim {
           for i in (k + 1)..dim {
-            let mut prod_cos_pik = 1.0;
+            let mut prod_cos = 1.0;
             #[allow(clippy::needless_range_loop)]
             for j in 0..dim {
               if j != i && j != k {
-                prod_cos_pik *= cos_p[j];
+                prod_cos *= cos_p[j];
               }
             }
-
-            let coeff = prod_cos_pik * sin_p[i] * sin_p[k] * (sin_p[k] - sin_p[i]);
+            let coeff = prod_cos * sin_p[i] * sin_p[k] * (sin_p[k] - sin_p[i]);
             components.push(coeff);
           }
         }
@@ -170,7 +235,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut errors_l2 = Vec::new();
     let mut errors_h1 = Vec::new();
-    for irefine in 0..=(14 / dim as u32) {
+    for irefine in 0..=(15 / dim as u32) {
       let refine_path = &format!("{path}/refine{irefine}");
       fs::create_dir_all(refine_path).unwrap();
 
@@ -183,11 +248,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
       let (_, galsol, _) =
         hodge_laplace::solve_hodge_laplace_source(&topology, &metric, source_data, homology_dim);
-
-      manifold::io::save_skeleton_to_file(&topology, dim, format!("{refine_path}/cells.skel"))?;
-      manifold::io::save_skeleton_to_file(&topology, 1, format!("{refine_path}/edges.skel"))?;
-      manifold::io::save_coords_to_file(&coords, format!("{refine_path}/vertices.coords"))?;
-      ddf::io::save_cochain_to_file(&galsol, format!("{refine_path}/fe.cochain"))?;
 
       let conv_rate = |errors: &[f64], curr: f64| {
         errors
@@ -229,22 +289,35 @@ Solving Hodge-Laplace in 2d.
 |  5 | 9.89e-2  |    1.00 | 2.86e-2  |    1.00 |
 |  6 | 4.95e-2  |    1.00 | 1.43e-2  |    1.00 |
 |  7 | 2.47e-2  |    1.00 | 7.14e-3  |    1.00 |
+Solving Hodge-Laplace in 3d.
+|  k | L2 err   | L2 conv |   H1 err | H1 conv |
+|  0 | 4.05e0   |     inf | 2.25e0   |     inf |
+|  1 | 2.61e0   |    0.64 | 1.15e0   |    0.96 |
+|  2 | 1.39e0   |    0.91 | 5.62e-1  |    1.04 |
+|  3 | 7.47e-1  |    0.90 | 2.65e-1  |    1.09 |
+|  4 | 3.81e-1  |    0.97 | 1.33e-1  |    1.00 |
 ```
 
-We get order $alpha_(H 1) = 1$ which is exactly what theory predicts for
-lowest-order Whitney form elements @douglas:feec-article, confirming the correct
-implementation.
+Let's first discuss the $H(dif)$ convergence. We get order $alpha_(H(dif)) =
+1$. This is exactly what theory predicts for 1st order finite elements
+@douglas:feec-article, suggesting a correct implementation.
 
-However we also get order $alpha_(L 2) = 1$, which is surprising, since
-theory predicts order 2.
-This is most likely due to a non-admissible variational crime, incurred
-by the way we approximate the RHS source term. We first do a cochain-projection
+For $L^2$ convergence, we however also get order $alpha_(L^2) = 1$, which is
+surprising, since theory predicts order 2. @douglas:feec-article
+We suspect that the reason for this is a non-admissible variational crime, incurred
+by the way we approximate the RHS source term.
+As previously stated, we first do a cochain-projection
 before we multiply by the mass matrix to obtain the RHS.
-This error dominates the finite element error, giving us a worse order than predicted.
-This is not optimal, but because of time constraints, we weren't able to fix this.
-The order 1 $H^1$ convergence is sufficient for proving a valid implementation.
+This projection error dominates the $L^2$ finite element error, giving us a
+worse order than predicted.
 
+This result for the $L^2$ convergence is not optimal, but because of time
+constraints, we weren't able to fix this. The order 1 $H(dif)$ convergence is
+sufficient for proving a valid implementation.
 
+In @img:source_problem we provide a visualization of the 2D finite element
+solution at refinement level 2 our library has produced in the form of a vector
+field proxy together with a heat map of the magnitude.
 #figure(
   grid(
     columns: (1fr, 1fr, 1fr),
@@ -255,6 +328,12 @@ The order 1 $H^1$ convergence is sufficient for proving a valid implementation.
     [],
   ),
   caption: [
-    Computed solution $u$ to the 1-form source problem using the method of manufactured solutions.
+    Finite element solution to manufactured source problem in 2D at refinement level 2.
   ],
 ) <img:source_problem>
+
+
+In summary, the numerical experiments presented in this chapter, covering both
+an eigenvalue problem on a topologically non-trivial domain and a quantitative
+convergence study via MMS, provide strong validation for the `formoniq` library's
+implementation of Finite Element Exterior Calculus for 1-forms.

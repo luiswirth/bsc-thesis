@@ -2,185 +2,127 @@
 #import "../setup-math.typ": *
 #import "../layout.typ": *
 
-
 = Conclusion and Outlook
 
-== Insights
+This thesis presented `formoniq`, a novel implementation of Finite Element
+Exterior Calculus (FEEC) developed in the Rust programming language. The core
+contribution lies in its foundation on intrinsic, coordinate-free geometry and
+its capability to operate on simplicial complexes in arbitrary dimensions. By
+leveraging Rust's performance and safety features, we aimed to provide a modern
+and robust tool for structure-preserving discretization of partial differential
+equations formulated in the language of differential forms.
 
-Even though in the mathematical theory of FEEC the use of the Hodge star
-operator is ubiquitous, in the implementation it is nowhere used.
-This is because we can work purely in terms of $L^2$-inner-products
-of differential forms.
+We successfully developed modules for handling the topology of
+arbitrary-dimensional simplicial complexes, representing intrinsic Riemannian
+geometry via edge lengths inspired by Regge Calculus, performing exterior
+algebra computations, and implementing discrete differential forms using
+cochains and first-order Whitney basis functions. Building upon this foundation,
+we implemented the necessary Galerkin operators for FEEC, specifically targeting
+the mixed weak formulation of the Hodge-Laplace equation. The library's
+functionality was validated through numerical experiments, including solving
+the Hodge-Laplacian eigenvalue problem on a torus, correctly capturing its
+topology via harmonic forms, and performing a Method of Manufactured Solutions
+convergence study for the source problem, which confirmed the expected $cal(O)(h)$
+convergence rate for the $H(dif)$ error.
 
-The primal weak form is not something that can be implemented,
-since it's FE discretization is not well-defined.
-One characterization of this is the fact, that the
-primal codifferential operator is not closed in the space of Whitney forms.
-
-== Failed Ideas
-
-Discarded ideas and failed approaches
-
-=== Compile-Time Type-Level Programming
-
-Tried to introduce generic (static and dynamic) dimensionality à la nalgebra/Eigen @crate:nalgebra.
-
-=== Abstracting over `Simplex` and `ExteriorTerm` using `MultiIndex`
-
-Overabstraction is worse than minor code duplication.
+While the core implementation proved successful, the suboptimal $cal(O)(h)$
+convergence observed for the $L^2$ error in the source problem highlights an
+area for improvement, likely related to the approximation strategy used for the
+load vector. Nevertheless, `formoniq` demonstrates the feasibility and benefits
+of combining the rigorous mathematical framework of intrinsic FEEC with the
+modern software engineering practices enabled by Rust.
 
 == Future Work
 
-=== Varying-Coefficents & Quadrature
-Future work could involve extending the framework to handle problems with varying material coefficients, which would necessitate the implementation of numerical quadrature rules beyond the simple barycentric rule used for constant-coefficient mass matrix assembly @douglas:feec-book, @hiptmair:numpde.
-Functor-like coefficient functions 
+Several avenues exist for extending and enhancing the `formoniq` library:
 
-=== Higher-Order FEEC: Higher-Order Manifold & Higher-Order Elements
-The current implementation focuses on first-order Whitney forms. Extending this to higher-order Finite Element Exterior Calculus @douglas:feec-book, @hiptmair:whitneyforms would allow for higher accuracy and convergence rates, but would also require corresponding higher-order representations of the manifold geometry to avoid geometric variational crimes @holst:gvc.
-
-=== More PDEs
-
-==== Hodge- Heat & Wave Equation
-
-====  Maxwell's Equations
-
-A far more meaningful PDE system that has some really interesting applications in real-life
-are Maxwell's Equation describing Electromagnetism @hiptmair:electromagnetism.
-FEEC is the perfect fit for Maxwell's equations @douglas:feec-article, since the relativistic variant of them
-is also formulated in terms of differential geometry @frankel:diffgeo, much like general relativity @regge.
-This means that purely thanks to the generality of the library we are potentially able to solve
-Maxwell's equations on curved 4D spacetime manifolds.
-
-=== Stokes' Equation
-
-=== Elasticity Equations
-
-
-@hiptmair:electromagnetism
+-  Higher-Order FEEC: Extend the implementation to support higher-order
+    polynomial basis functions for differential forms. This would enable higher
+    accuracy and faster convergence for problems with smooth solutions but must
+    be coupled with corresponding higher-order representations of the manifold
+    geometry (curved simplices) to avoid introducing non-admissible geometric
+    variational crimes. @douglas:feec-book, @hiptmair:whitneyforms, @holst:gvc
+- Maxwell's Equations: Apply the framework to solve Maxwell's equations,
+    particularly in contexts where the coordinate-free and arbitrary-dimensional
+    nature is advantageous, such as electromagnetism on curved spacetimes.
+    FEEC provides a natural and structure-preserving discretization for
+    these equations. @hiptmair:electromagnetism, @douglas:feec-article,
+    @frankel:diffgeo
+- Optimization: Profile and optimize core computational routines in Rust,
+    potentially exploring alternative sparse matrix libraries or parallelization
+    strategies beyond the assembly loop currently handled by Rayon.
 
 == Comparison to Other Implementations
 
-We researched which other implementation related to FEEC exist.
-There are other major libraries.
-Formoniq didn't draw any inspiration from them.
-Only after the fact we looked at them.
+The field of computational differential geometry and structure-preserving
+discretizations has seen several software development efforts. To position
+`formoniq` within this landscape, we briefly compare it to some notable existing
+libraries based on available documentation and publications. `formoniq` did
+not directly draw inspiration from these specific implementations but addresses
+similar challenges.
 
-We want to quickly do a comparison of formoniq and these other implementations.
+=== Formoniq (This Thesis)
 
-=== Formoniq
-
-Focus on FEEC (FEM)
-Arbitrary Dimensions
-Simplicial Complexes
-Differential Forms & Exterior Algebra
-1st order whitney form
-Intrinsic Geometry
-
-Available on
-#weblink(
-  "https://github.com/luiswirth/formoniq.jl",
-  [github:luiswirth/formoniq]
-).
+- *Focus:* FEEC
+- *Dimension:* Arbitrary
+- *Mesh:* Simplicial Complexes
+- *Geometry:* Intrinsic Regge calculus metric
+- *Discretization:* 1st order Whitney forms
+- *Language:* Rust
+- *Key Features:* Emphasis on coordinate-free intrinsic geometry in arbitrary dimensions.
+- *Availability:* #weblink("https://github.com/luiswirth/formoniq", [github:luiswirth/formoniq])
 
 === PyDEC
 
-Focus on DEC + some FEEC
-Arbitrary Dimensions
-Simplicial and Cubical Complexes
-Intrinsic and Extrinsic Geometry (Embedded and abstract complexes)
-1st order whitney forms
-
-
-Simplicial Complexes of any dimension. Embedded or Intrinsic.
-Cubical Cpmples of any dimension.
-
-PyDEC seems to be the most mature implementation of DEC and 1st order FEEC @pydec.
-It implements 1st order Whitney Forms and a Hodge Mass matrix.
-Is support simplicial and cubical complexes (maybe not for FEEC?)
-It can compute cohomology and Hodge decompositions.
-
-Available on
-#weblink(
-  "https://github.com/hirani/pydec",
-  [github:hirani/pydec],
-).
-@pydec
+- *Focus:* Primarily DEC, some FEEC elements
+- *Dimension:* Arbitrary
+- *Mesh:* Simplicial and Cubical Complexes
+- *Geometry:* Supports Intrinsic and Extrinsic (embedded)
+- *Discretization:* 1st order Whitney forms (for FEEC aspects)
+- *Language:* Python
+- *Key Features:* Mature library for DEC., includes tools for cohomology and
+  Hodge decomposition. @pydec
+- *Availability:* #weblink("https://github.com/hirani/pydec", [github:hirani/pydec])
 
 === FEEC++ / simplefem
 
-
-Focus on FEEC
-Hardcoded 2D and 3D
-Intrinsic geometry
-Arbitrary order polynomial differential forms
-
-By Martin Licht from EPFL.
-Work in progress.
-
-FEEC++ implements finite element spaces of *arbitrary (uniform) polynomial degree*
-over simplicial meshes, including Whitney forms @feecpp.
-
-Hard-coded Simplicial meshes in dimensions 1, 2, and 3.
-
-Available on
-#weblink(
-  "https://github.com/martinlicht/simplefem",
-  [github:martinlicht/simplefem]
-).
-@feecpp
+- *Focus:* FEEC
+- *Dimension:* Hardcoded 2D and 3D
+- *Mesh:* Simplicial Complexes
+- *Geometry:* Intrinsic
+- *Discretization:* Arbitrary order polynomial differential forms
+- *Language:* C++
+- *Key Features:* Focus on arbitrary polynomial order FEEC spaces in 2D/3D.
+  Developed by Martin Licht. @feecpp
+- *Availability:* #weblink("https://github.com/martinlicht/simplefem", [github:martinlicht/simplefem])
 
 === DDF.jl
 
-No focus on PDEs, but mostly DEC and FEEC
-Arbitrary dimensions
-Simplicial mesh
-Intrinsic geometry
-Higher-order discretizations
-
-Work in progres..
-
-Simplicial meshes of arbitrary dimension.
-Arbitrary order?
-
-In Julia there is quite an ecosystem for Exterior Algebra/Calculus.
-
-
-It builds on top of this library.
-https://github.com/eschnett/DifferentialForms.jl/tree/master
-
-Available on
-#weblink(
-  "https://github.com/eschnett/DDF.jl",
-  [github:eschnett/DDF.jl]
-).
-@ddfjl
+- *Focus:* Foundational tools for DEC and FEEC
+- *Dimension:* Arbitrary
+- *Mesh:* Simplicial Complexes
+- *Geometry:* Intrinsic
+- *Discretization:* Explores higher-order discretizations (work in progress)
+- *Language:* Julia
+- *Key Features:* Part of the Julia differential geometry ecosystem, builds on
+  `DifferentialForms.jl`. @ddfjl
+- *Availability:* #weblink("https://github.com/eschnett/DDF.jl", [github:eschnett/DDF.jl])
 
 === dexterior
 
-The dexterior library is a Rust-based toolkit for Discrete Exterior Calculus
-(DEC), developed by Mikael Myyrä @dexterior. It offers foundational components for
-discretizing partial differential equations (PDEs) using DEC principles.
+- *Focus:* DEC
+- *Dimension:* Arbitrary
+- *Mesh:* Simplicial Complexes
+- *Geometry:* Extrinsic (Embedding-based)
+- *Discretization:* DEC operators (discrete \(d\), \(\star\)) on cochains
+- *Language:* Rust
+- *Key Features:* Provides core DEC operators in Rust, inspired by PyDEC,
+  includes basic visualization tools. No direct FEEC implementation. @dexterior
+- *Availability:* #weblink("https://github.com/m0lentum/dexterior", [github:m0lentum/dexterior])
 
-dexterior provides building blocks for the discretization of partial
-differential equations using the mathematical framework of Discrete Exterior
-Calculus (DEC). These building blocks are sparse matrix operators (exterior
-derivative, Hodge star) and vector operands (cochains) associated with
-a simplicial mesh of any dimension. An effort is made to provide as many
-compile-time checks and type inference opportunities as possible to produce
-concise and correct code.
 
-Any dimensions.
-Simplicial Complex.
-Extrinsic Geometry based on Embedding
-Focus on DEC, no FEEC.
-
-Visualization using wgpu
-
-Heavily inspired by PyDEC, but in Rust.
-
-Available on
-#weblink(
-  "https://github.com/m0lentum/dexterior",
-  [github:m0lentum/dexterior]
-).
-@dexterior
+This comparison highlights `formoniq`'s specific niche: providing a memory-safe,
+performant, arbitrary-dimensional FEEC implementation fundamentally based on
+intrinsic geometry, currently focused on first-order methods. It complements
+existing libraries by offering a different language choice (Rust) and a distinct
+focus on the coordinate-free geometric perspective inherent in FEEC.
