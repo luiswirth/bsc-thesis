@@ -321,36 +321,34 @@ Computationally we represent inner products as Gramian matrices on some basis.
 This means that we compute an extended Gramian matrix as the inner product on
 multielements from the Gramian matrix of single elements using the determinant.
 
-// TODO: UPDATE THIS CODE!
 ```rust
-impl RiemannianMetricExt for RiemannianMetric {
-  fn multi_form_gramian(&self, k: ExteriorGrade) -> na::DMatrix<f64> {
-    let n = self.dim();
-    let bases: Vec<_> = exterior_bases(n, k).collect();
-    let covector_gramian = self.covector_gramian();
+/// Construct Gramian on lexicographically ordered standard k-element standard
+/// basis from Gramian on single elements.
+pub fn multi_gramian(single_gramian: &Gramian, grade: ExteriorGrade) -> Gramian {
+  let dim = single_gramian.dim();
+  let bases: Vec<_> = exterior_bases(dim, grade).collect();
 
-    let mut multi_form_gramian = na::DMatrix::zeros(bases.len(), bases.len());
-    let mut multi_basis_mat = na::DMatrix::zeros(k, k);
+  let mut multi_gramian = Matrix::zeros(bases.len(), bases.len());
+  let mut multi_basis_mat = Matrix::zeros(grade, grade);
 
-    for icomb in 0..bases.len() {
-      let combi = &bases[icomb];
-      for jcomb in icomb..bases.len() {
-        let combj = &bases[jcomb];
+  for icomb in 0..bases.len() {
+    let combi = &bases[icomb];
+    for jcomb in icomb..bases.len() {
+      let combj = &bases[jcomb];
 
-        for iicomb in 0..k {
-          let combii = combi[iicomb];
-          for jjcomb in 0..k {
-            let combjj = combj[jjcomb];
-            multi_basis_mat[(iicomb, jjcomb)] = covector_gramian[(combii, combjj)];
-          }
+      for iicomb in 0..grade {
+        let combii = combi[iicomb];
+        for jjcomb in 0..grade {
+          let combjj = combj[jjcomb];
+          multi_basis_mat[(iicomb, jjcomb)] = single_gramian[(combii, combjj)];
         }
-        let det = multi_basis_mat.determinant();
-        multi_form_gramian[(icomb, jcomb)] = det;
-        multi_form_gramian[(jcomb, icomb)] = det;
       }
+      let det = multi_basis_mat.determinant();
+      multi_gramian[(icomb, jcomb)] = det;
+      multi_gramian[(jcomb, icomb)] = det;
     }
-    multi_form_gramian
   }
+  Gramian::new_unchecked(multi_gramian)
 }
 ```
 

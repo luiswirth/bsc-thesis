@@ -154,9 +154,9 @@ $
   dif: Lambda^k (Omega) -> Lambda^(k+1) (Omega)
 $
 
-For our discrete setting, we require a
-discrete counterpart that acts on cochains. This can be derived through the lens
-of cochain calculus.
+For our discrete setting, we require a discrete counterpart that acts on
+cochains. A so called *discrete exterior derivative* $dif_h$, which can be derived
+through the lens of cochain calculus.
 $
   dif_h: C^k (mesh) -> C^(k+1) (mesh)
 $
@@ -187,13 +187,12 @@ $
 $
 
 This adjoint relationship provides the direct motivation for defining the
-discrete exterior derivative.
-On a simplicial complex, we use cochains as discrete differential forms
-and the boundary operator
-is a fundamental combinatorial operator acting on chains. The discrete
-exterior derivative, often called the *coboundary operator*, is thus defined
-as the adjoint of the boundary operator. By definition, this discrete
-operator preserves the structure of Stokes' Theorem at the discrete level
+discrete exterior derivative. On a simplicial complex, we use cochains
+as discrete differential forms and the boundary operator is a fundamental
+combinatorial operator acting on chains. The discrete exterior derivative, often
+called the *coboundary operator*, is thus defined as the adjoint of the boundary
+operator. By definition, this discrete operator preserves the structure of
+Stokes' Theorem at the discrete level
 @crane:ddg.
 
 From a computational perspective, the boundary operator $diff^k$ mapping
@@ -205,6 +204,8 @@ transpose of the boundary operator $diff_(k+1)$:
 // TODO: notation??
 $
   amat(dif)^k = amat(D)_(k+1)^transp
+  \
+  amat(dif)^k in {-1,0,+1}^(N_(k+1) times N_k)
 $
 
 This definition highlights a key feature of the discrete exterior derivative: it
@@ -252,12 +253,12 @@ $
   cal(W) Lambda^3 (mesh) &=^~ cal(S)^(-1)_0 (mesh) \
 $
 
-THis is the famous discrete subcomplex of the de Rham complex.
+This is the famous finite element subcomplex of the de Rham complex.
 $
   0 -> cal(S)^0_1 (mesh) limits(->)^grad bold(cal(N)) (mesh) limits(->)^curl bold(cal(R T)) (mesh) limits(->)^div cal(S)^(-1)_0 (mesh) -> 0
 $
 
-The *Whitney subcomplex* generalize it to arbitrary dimensions.
+The *Whitney subcomplex* generalize it to arbitrary dimensions and arbitrary exterior grade. @douglas:feec-book
 $
   0 -> cal(W) Lambda^0 (mesh) limits(->)^dif dots.c limits(->)^dif cal(W) Lambda^n (mesh) -> 0
 $
