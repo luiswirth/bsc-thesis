@@ -815,7 +815,6 @@ To define the topology of a simplicial $n$-manifold at its highest dimension, we
 only need to store the set of $n$-simplices that constitute it. This collection
 defines the top-level structure of the mesh. Such a collection of $n$-simplices,
 typically sharing vertices from a common pool, is called an $n$-skeleton
-@hatcher:algtop.
 
 ```rust
 /// A container for sorted simplices of the same dimension.
@@ -946,12 +945,10 @@ While general simplicial complexes can represent complex topological spaces,
 potentially including non-manifold features @hatcher:algtop, our target
 applications in PDE modeling typically require computational domains that
 are *manifolds*. A topological $n$-manifold is a space that locally resembles
-Euclidean $n$-space. For a simplicial complex, this means the neighborhood of
-each point (specifically, the link of each vertex) should be homeomorphic to an
-$(n-1)$-sphere or an $(n-1)$-ball (if on the boundary) @hatcher:algtop.
+Euclidean $n$-space.
 
 Our `Complex` data structure is designed to represent such manifold domains. We
-ensure two properties through construction:
+ensure two properties through construction: @crane:ddg
 1.  *Closure:* The complex contains all faces (subsequences) of its simplices.
   This is guaranteed by generating the complex from a list of top-level cells and
   explicitly adding all their subsequences.
@@ -1617,10 +1614,11 @@ We have seen with our coordinate simplices that our geometry is piecewise-flat
 over the cells. This means that our metric is constant over each cell
 and changes only from one cell to another.
 
-This piecewise-constant metric over the simplicial mesh is known as the *Regge
-metric* @regge and comes from Regge calculus @regge, a theory for numerical general relativity
-that is about producing simplicial approximations of spacetimes that are
-solutions to the Einstein field equation.
+This piecewise-constant metric over the simplicial mesh can be derived either
+from vertex coordiantes (relying on an embedding) or intrinsically from the
+edge lengths of the simplex by a method inspired by *Regge calculus*  @regge,
+a theory for numerical general relativity that is about producing simplicial
+approximations of spacetimes that are solutions to the Einstein field equation.
 
 
 === Deriving the Metric from Coordinate Simplices
@@ -1964,6 +1962,8 @@ and therefore is admissible @holst:gvc.
 
 === Tensor-Product Domain Meshing
 
+// TODO: FIND SOURCE
+
 Formoniq features a meshing algorithm for arbitrary dimensional
 tensor-product domains. These domains are $n$-dimensional Cartesian products $[0,1]^n$
 of the unit interval $[0,1]$. The simplicial skeleton will be computed based on
@@ -1973,7 +1973,7 @@ To obtain a simplicial skeleton, we need to split each $n$-cube into non-overlap
 that make up its volume. In 2D it's very natural to split a square into two triangles
 of equal volume. This can be generalized to higher dimensions. The trivial
 triangulation of a $n$-cube into $n!$ simplices is based on the $n!$ many permutations
-of the $n$ coordinate axes @hiptmair:numpde.
+of the $n$ coordinate axes.
 
 The $n$-cube has $2^n$ vertices, which can all be identified using multiindices
 $

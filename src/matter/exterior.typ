@@ -5,19 +5,19 @@
 = Exterior Algebra
 
 Exterior algebra is to exterior calculus, what vector algebra is to vector
-calculus @frankel:diffgeo.\
+calculus.\
 In vector calculus we have vector fields $v$, which are functions
 $v: p in Omega |-> v_p$ over the manifold $Omega$ that at each point
 $p$ have a constant vector $v_p in T_p M$ as value.\
 In exterior calculus we have differential forms $omega$, which are functions
 $omega: p in Omega |-> omega_p$ over the manifold $Omega$ that at each point $p$
-have a constant *multiform* $omega_p in wedgespace (T^*_p M)$ as value @frankel:diffgeo, @douglas:feec-book.
+have a constant *multiform* $omega_p in wedgespace (T^*_p M)$ as value @crane:ddg.
 
 If one were to implement something related to vector calculus
 it is of course crucial to be able to represent vectors in the program.
 This is usually the job of a basic linear algebra library such as Eigen in `C++`
 and nalgebra in Rust @crate:nalgebra.\
-Since we want to implement FEEC @douglas:feec-article, which uses exterior calculus,
+Since we want to implement FEEC, which uses exterior calculus,
 it is crucial, that we are able to represent multiforms in our program.
 For this there aren't any established libraries. So we do this ourselves
 and develop a small module.
@@ -25,7 +25,7 @@ and develop a small module.
 == Exterior Algebra of Multiforms
 
 In general an exterior algebra $wedgespace (V)$ is a construction over any linear
-space $V$ @frankel:diffgeo. In this section we want to quickly look at the specific linear
+space $V$ @crane:ddg. In this section we want to quickly look at the specific linear
 space we are dealing with when modelling multiforms as element of an
 exterior algebra. But our implementation would work for any finite-dimensional
 real linear space $V$ with a given basis.
@@ -80,7 +80,7 @@ ${dif x^i}_(i=1)^n$.
 
 == Representing Exterior Elements
 
-An exterior algebra is a graded algebra @frankel:diffgeo.
+An exterior algebra is a graded algebra.
 $
   wedgespace (RR^n) = wedgespace^0 (RR^n) plus.circle.big dots.c plus.circle.big wedgespace^n (RR^n)
 $
@@ -117,7 +117,7 @@ This exterior basis ${e_I}_(I in cal(I)^n_k)$ is different from the basis
 ${e_i}_(i=1)^n$ of the original linear space $V$, but is best subsequently
 constructed from it.
 We do this by creating elementary multielements from the
-exterior product of basis elements @frankel:diffgeo.
+exterior product of basis elements.
 $
   e_I = wedge.big_(j=1)^k e_I_j = e_i_1 wedge dots.c wedge e_i_k
 $
@@ -125,14 +125,14 @@ Here $I = (i_1,dots,i_k)$ is a multiindex, in particular a $k$-index, telling
 us which basis elements to wedge.
 
 Because of the anti-symmetry of the exterior product, there are certain conditions
-on the multiindices $I$ for ${e_I}$ to constitute a meaningful basis @frankel:diffgeo.
+on the multiindices $I$ for ${e_I}$ to constitute a meaningful basis.
 First $I$ must not contain any duplicate indices, because otherwise $e_I = 0$
 and second there must not be any permutations of the same index in the
 basis set, otherwise we have linear dependence of the two elements.
 We therefore only consider strictly increasing multiindices $I in cal(I)^n_k$
 and denote their set by
 $cal(I)^n_k = {(i_1,dots,i_k) in NN^k mid(|) 1 <= i_1 < dots.c < i_k <= n}$.
-This is a good convention for supporting arbitrary dimensions @douglas:feec-book.
+This is a good convention for supporting arbitrary dimensions.
 
 The basis also needs to be ordered, such that we can know which coefficient
 in `self.coeffs` corresponds to which basis. A natural choice here is
@@ -303,7 +303,7 @@ pub fn wedge_big(factors: impl IntoIterator<Item = Self>) -> Option<Self> {
 == Inner product on Exterior Elements
 
 For the weak formulations of our PDEs @hiptmair:numpde we rely on Hilbert spaces that require
-an $L^2$-inner product on differential forms @frankel:diffgeo.
+an $L^2$-inner product on differential forms.
 This is derived directly from the point-wise inner product on multiforms.
 Which itself is derived from the inner product on the tangent space,
 which comes from the Riemannian metric at the point @frankel:diffgeo.
@@ -312,9 +312,9 @@ This derivation from the inner product on the tangent space $g_p$
 to the inner product on the exterior fiber $wedge.big^k T^*_p M$, shall
 be computed.
 
-In general given an inner product on the vector space $V$, we can
-derive an inner product on the exterior power $wedgespace^k (V)$ @frankel:diffgeo, @douglas:feec-book.
-The rule is the following:
+In general given an inner product on the vector space $V$, we can derive
+an inner product on the exterior power $wedgespace^k (V)$. The rule is the following:
+// TODO: FIND SOURCE
 $
   inner(e_I, e_J) = det [inner(dif x_I_i, dif x_J_j)]_(i,j)^k
 $

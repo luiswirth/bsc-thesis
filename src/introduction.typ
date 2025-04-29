@@ -33,18 +33,19 @@ geometry* @frankel:diffgeo and *algebraic topology* @hatcher:algtop, FEEC extend
 FEM to handle problems involving *differential forms of arbitrary rank*. This
 approach offers robust discretizations that *preserve key topological and
 geometric structures* inherent in the underlying PDEs, ensuring stability,
-accuracy, and convergence @douglas:feec-article. FEEC is now the standard
+accuracy, and convergence. FEEC is now the standard
 framework for analyzing and constructing conforming finite element spaces for
-differential forms in *arbitrary dimensions* and on *domains with non-trivial topology*
-@douglas:feec-book.
+differential forms in *arbitrary dimensions* and on *domains with non-trivial topology*.
+@hiptmair:whitneyforms
 
-A key strength of FEEC lies in its ability to naturally handle arbitrary domain
-topologies. This relies on fundamental connections between the algebraic topology
-of the simplicial complex discretizing the domain (*simplicial homology* @hatcher:algtop)
-and the structure of differential forms on the continuous domain (*de Rham cohomology*
-@frankel:diffgeo). The de Rham theorem establishes an isomorphism, ensuring that the
-discrete formulation accurately captures topological features, such as *holes*, which
-influence the existence and uniqueness of PDE solutions. @douglas:feec-book
+A key strength of FEEC lies in its ability to naturally handle arbitrary
+domain topologies. This relies on fundamental connections between the algebraic
+topology of the simplicial complex discretizing the domain (*simplicial
+homology*) and the structure of differential forms on the continuous domain (*de
+Rham cohomology*) @hatcher:algtop. The de Rham theorem establishes an isomorphism, ensuring
+that the discrete formulation accurately captures topological features, such
+as *holes*, which influence the existence and uniqueness of PDE solutions.
+@douglas:feec-book
 
 This theoretical elegance, however, is in stark contrast to many existing FEM
 software implementations, which are usually hard-coded to 3 dimensions and rely
@@ -58,7 +59,7 @@ perspective inherent in differential geometry for unparalleled generality.
 Since FEEC is formulated using differential geometry, PDE domains can be treated
 as *abstract Riemannian manifolds* @frankel:diffgeo. We develop a novel finite
 element library in the Rust programming language @RustLang that operates on
-such abstract *simplicial complexes* @hatcher:algtop in arbitrary dimensions,
+such abstract *simplicial complexes* @hatcher:algtop @crane:ddg in arbitrary dimensions,
 avoiding any reliance on coordinate embeddings. The geometry is defined purely
 intrinsically via a *Riemannian metric* @frankel:diffgeo derived from *edge lengths*
 using *Regge Calculus* @regge.
@@ -69,7 +70,7 @@ This requires a *piecewise-flat approximation of the manifold geometry*,
 to constitute an *admissible geometric variational crime* @holst:gvc.
 
 The prototypical second-order elliptic operator in FEEC is the *Hodge-Laplace
-operator* @frankel:diffgeo, a generalization of the standard Laplace-Beltrami
+operator* @douglas:feec-book, a generalization of the standard Laplace-Beltrami
 operator. Central to its analysis is *Hodge theory* @frankel:diffgeo, which provides
 the crucial link between this elliptic operator, the topology of the manifold via
 cohomology, and its kernel (the space of *harmonic forms*). Our implementation is

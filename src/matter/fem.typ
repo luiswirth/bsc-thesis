@@ -18,28 +18,27 @@ are relevant to the mixed weak formulation of the Hodge-Laplace operator @dougla
 All of them are based on the $L^2$ inner product on Whitney forms @whitney:geointegration, @douglas:feec-article.
 
 Above all is the mass bilinear form, which is
-the $L^2$ inner product @frankel:diffgeo.
+the $L^2$ inner product @douglas:feec-book.
 $
   m^k (u, v) &= inner(u, v)_(L^2 Lambda^k (Omega))
   quad
   u in L^2 Lambda^k, v in L^2 Lambda^k
 $
 
-The next bilinear form involves the exterior derivative @frankel:diffgeo
+The next bilinear form involves the exterior derivative.
 $
   d^k (u, v) &= inner(dif u, v)_(L^2 Lambda^k (Omega))
   quad
   u in H Lambda^(k-1), v in L^2 Lambda^k
 $
 
-The bilinear form involving the codifferential is also relevant @frankel:diffgeo
+The bilinear form involving the codifferential is also relevant @douglas:feec-article.
 $
   c(u, v) &= inner(delta u, v)_(L^2 Lambda^k (Omega))
 $
 Using the adjoint property of the codifferential relative to the exterior
-derivative under the $L^2$ inner product @frankel:diffgeo, @douglas:feec-book,
-it can be rewritten using the exterior derivative
-applied to the test function.
+derivative under the $L^2$ inner product @douglas:feec-book, it can be rewritten
+using the exterior derivative applied to the test function.
 $
   c^k (u, v) &= inner(u, dif v)_(L^2 Lambda^k (Omega))
   quad
@@ -47,16 +46,17 @@ $
 $
 
 Lastly there is the bilinear form analogous to the scalar Laplacian, involving
-exterior derivatives on both arguments. It corresponds to the $delta dif$ part of the Hodge-Laplacian @frankel:diffgeo.
+exterior derivatives on both arguments. It corresponds to the $delta dif$ part
+of the Hodge-Laplacian @douglas:feec-book.
 $
   l^k (u, v) &= inner(dif u, dif v)_(L^2 Lambda^(k+1) (Omega))
   quad
   u in H Lambda^k, v in H Lambda^k
 $
 
-After Galerkin discretization @hiptmair:numpde, by means of the Whitney finite element space @whitney:geointegration, @douglas:feec-article
-with the Whitney basis ${phi_i^k}$, we arrive at the following Galerkin matrices for our
-four weak operators.
+After Galerkin discretization @hiptmair:numpde, by means of the Whitney finite
+element space @whitney:geointegration with the Whitney basis ${phi_i^k}$, we
+arrive at the following Galerkin matrices for our four weak operators.
 $
   amat(M)^k &= [inner(phi^k_i, phi^k_j)]_(i j) \
   amat(D)^k &= [inner(phi^k_i, dif phi^(k-1)_j)]_(i j) \
@@ -64,8 +64,9 @@ $
   amat(L)^k &= [inner(dif phi^k_i, dif phi^k_j)]_(i j) \
 $
 
-We can rewrite the 3 operators that involve the exterior derivative
-using the mass matrix and the discrete exterior derivative (coboundary/incidence matrix) @douglas:feec-article, @crane:ddg.
+We can rewrite the 3 operators that involve the exterior derivative using the
+mass matrix and the discrete exterior derivative (coboundary/incidence matrix)
+@douglas:feec-article, @crane:ddg.
 $
   amat(D)^k &= amat(M)^k amat(dif)^(k-1) \
   amat(C)^k &= (amat(dif)^(k-1))^transp amat(M)^k \
@@ -73,8 +74,8 @@ $
 $
 
 As usual in a FEM library @hiptmair:numpde, we define element matrix providers,
-that compute the element matrices on each cell of mesh and later on
-assemble the full Galerkin matrices.
+that compute the element matrices on each cell of mesh and later on assemble the
+full Galerkin matrices.
 
 We first define a element matrix provider trait
 ```rust
@@ -93,9 +94,10 @@ This information will be used by the assembly routine.
 We will now implement the 3 operators involving exterior derivatives
 based on the element matrix provider of the mass bilinear form.
 
-The local exterior derivative only depends on the local topology, which is the same
-for any simplex of the same dimension. So we use a global variable that stores
-the transposed incidence matrix (coboundary operator) for any $k$-skeleton of a $n$-complex @crane:ddg.
+The local exterior derivative only depends on the local topology, which is
+the same for any simplex of the same dimension. So we use a global variable
+that stores the transposed incidence matrix (coboundary operator) for any
+$k$-skeleton of a $n$-complex @crane:ddg.
 
 ```rust
 pub struct DifElmat(pub ExteriorGrade);
@@ -147,7 +149,8 @@ Now we need to implement the element matrix provider to the mass bilinear form.
 Here is where the geometry of the domain comes in, through the inner product, which
 depends on the Riemannian metric @frankel:diffgeo.
 
-One could also understand the mass bilinear form as a weak Hodge star operator @douglas:feec-book.
+One could also understand the mass bilinear form as a weak Hodge star operator
+@douglas:feec-book.
 $
   amat(M)_(i j) = integral_Omega phi_j wedge hodge phi_i
   = inner(phi_j, phi_i)_(L^2 Lambda^k (Omega))
@@ -161,6 +164,7 @@ extend it to an $L^2$ inner product on Whitney forms @douglas:feec-article.
 This can be done by inserting the definition of a Whitney form (in terms of barycentric
 coordinate functions) into the inner product.
 
+// TODO: FIND REFERENCE
 $
   inner(lambda_(i_0 dots i_k), lambda_(j_0 dots j_k))_(L^2 Lambda^k (Omega))
   &= k!^2 sum_(l=0)^k sum_(m=0)^k (-)^(l+m) innerlines(
@@ -176,7 +180,7 @@ $
 
 
 We can now make use of the fact that the exterior derivative of the barycentric
-coordinate functions are constant @douglas:feec-article. This makes the wedge big terms also constant.
+coordinate functions are constant @hiptmair:numpde. This makes the wedge big terms also constant.
 We can therefore pull them out of the integral inside the $L^2$-inner product
 and now it's just an inner product on constant multiforms.
 What remains in the in the integral is the product of two barycentric

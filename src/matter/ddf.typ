@@ -6,27 +6,28 @@
 
 Having discretized the smooth domain $Omega$ into a simplicial complex $mesh$,
 we now require a corresponding discretization for the differential forms
-$Lambda(Omega)$ defined upon it @frankel:diffgeo.
+$Lambda(Omega)$ defined upon it @whitney:geointegration.
 FEEC relies on discrete counterparts, called discrete differential forms (DDF)
 $Lambda_h (mesh)$ defined on the simplicial complex $mesh$, that faithfully
 represent the structure of the continuous forms @douglas:feec-book, @douglas:feec-article.
 
-Central to FEEC are two fundamental, closely related concepts:
+Central to FEEC are two fundamental, closely related concepts: @whitney:geointegration
 - *Simplicial Cochains*: These are the primary discrete objects. A $k$-cochain
   assigns a real value (a degree of freedom) to each $k$-simplex of the mesh
-  $mesh$ @hatcher:algtop. They form the algebraic backbone, capturing the combinatorial topology
-  and enabling discrete versions of operators like the exterior derivative @douglas:feec-article, @crane:ddg.
+  $mesh$. They form the algebraic backbone, capturing the combinatorial topology
+  and enabling discrete versions of operators like the exterior derivative @crane:ddg.
 - *Whitney Forms*: These constitute the lowest-order finite element space
-  for differential forms @whitney:geointegration, @douglas:feec-article. Each Whitney $k$-form is a piecewise polynomial basis
-  function associated with a $k$-simplex. They provide a means to reconstruct a
-  field across the mesh by interpolating the cochain values and are essential for
-  defining the integrals required in weak formulations @douglas:feec-book.
+  for differential forms @whitney:geointegration. Each Whitney $k$-form is
+  a piecewise polynomial basis function associated with a $k$-simplex. They
+  provide a means to reconstruct a field across the mesh by interpolating the
+  cochain values and are essential for defining the integrals required in weak
+  formulations @douglas:feec-book.
 
 We will demonstrate that the space of $k$-cochains and the space spanned by
-Whitney $k$-forms are isomorphic @douglas:feec-article. The *projection* from continuous forms to
-cochains is realized by the *integration map*, while
-the *interpolation* from cochains to the Whitney space is achieved via the
-*Whitney map* @douglas:feec-book.
+Whitney $k$-forms are isomorphic. The *projection* from
+continuous forms to cochains is realized by the *integration map*, while the
+*interpolation* from cochains to the Whitney space is achieved via the *Whitney
+map* @whitney:geointegration.
 
 This chapter explores the representation and manipulation of these discrete
 differential forms. We will focus on two key processes:
@@ -44,23 +45,19 @@ structure-preserving discrete operators used throughout FEEC @douglas:feec-book.
 This chapter lays the foundation for the discrete variational formulations used
 in FEEC.
 
-
 == Cochains
 
 A $k$-cochain $omega$ is a real-valued function $omega: Delta_k (mesh) -> RR$
-on the $k$-skeleton $Delta_k (mesh)$ of the mesh $mesh$ @hatcher:algtop, @douglas:feec-article.
+on the $k$-skeleton $Delta_k (mesh)$ of the mesh $mesh$ @whitney:geointegration.
 
 A rank $k$ differential $k$-form, becomes a $k$-cochain, defined on the simplices
 of dimension $k$ of the mesh.
 
 Simplicial cochains arise naturally from the combinatorial structure of a
-simplical complex @hatcher:algtop.
-
-A simplicial cochain is dual to a simplicial chain @hatcher:algtop.
+simplical complex. A simplicial cochain is dual to a simplicial chain.
 
 Simplicial cochains are also the fundamental combinatorial object
 in *discrete exterior calculus* (DEC) @crane:ddg.
-
 
 One can represent this function on the simplices, using a list of real values
 that are ordered according to the global numbering of the simplices.
@@ -75,9 +72,7 @@ Simplicial cochains preserve the structure of the de Rham complex at a discrete
 level and therefore retain the key topological and geometrical properties from
 differential topology/geometry @douglas:feec-article.
 
-Cochains can be seen as the coefficents or DOFs of our FE spaces @douglas:feec-book.
-
-
+Cochains can be seen as the coefficents or DOFs of our FE spaces.
 
 === Discretization: Cochain-Projection via Integration
 
@@ -88,9 +83,9 @@ of a continuous differential form to this discrete form.
 The discretization of differential forms happens by projection
 onto the cochain space. This cochain-projection is the simple operation
 of integration the given continuous differential $k$-form over every $k$-simplex
-of the mesh @douglas:feec-article, @frankel:diffgeo. This gives a real number for each $k$-simplex, which is exactly
+of the mesh. This gives a real number for each $k$-simplex, which is exactly
 the cochain values.
-This projection is called the *integration map* @douglas:feec-book.
+This projection is called the *integration map* @whitney:geointegration
 $
   I: Lambda^k (Omega) -> C^k (mesh; RR)
 $
@@ -111,8 +106,7 @@ $
 The last expression is a traditional pre-differential geometry integral over a
 subset $hat(sigma) in RR^k$. No exterior calculus required.
 
-We approximate this integral using barycentric quadrature. @hiptmair:numpde,
-@hiptmair:numcse.
+We approximate this integral using barycentric quadrature.
 $
   integral_sigma omega approx |hat(sigma)| omega_(phi(avec(m)_hat(sigma))) (avec(e)_1,dots,avec(e)_n)
 $
@@ -187,8 +181,7 @@ $
   inner(dif omega, c) = inner(omega, diff c)
 $
 This equation reveals that, with respect to this dual pairing, the exterior
-derivative operator $dif$ is the adjoint of the boundary operator $diff$
-@douglas:feec-article.
+derivative operator $dif$ is the adjoint of the boundary operator $diff$.
 $
   dif = diff^*
 $
@@ -201,11 +194,11 @@ is a fundamental combinatorial operator acting on chains. The discrete
 exterior derivative, often called the *coboundary operator*, is thus defined
 as the adjoint of the boundary operator. By definition, this discrete
 operator preserves the structure of Stokes' Theorem at the discrete level
-@douglas:feec-article, @crane:ddg.
+@crane:ddg.
 
 From a computational perspective, the boundary operator $diff^k$ mapping
 $k$-chains to $(k-1)$-chains can be represented as a signed incidence matrix
-between the simplices in the $k$-skeleton and $(k-1)$-skeleton @hatcher:algtop.
+between the simplices in the $k$-skeleton and $(k-1)$-skeleton @crane:ddg.
 The adjoint property then translates directly to the discrete exterior
 derivative $dif^k$ (mapping $k$-cochains to $(k+1)$-cochains) being the
 transpose of the boundary operator $diff_(k+1)$:
@@ -218,7 +211,7 @@ This definition highlights a key feature of the discrete exterior derivative: it
 is a purely topological operator. Its definition and computation depend only on
 the combinatorial structure of the simplicial complex (captured by the incidence
 relationships in the boundary operator), and not on the geometry or metric of
-the underlying manifold @douglas:feec-book.
+the underlying manifold @crane:ddg.
 
 In our implementation, we represent the discrete exterior derivative as a sparse
 matrix. Using an extension trait, we provide a method to compute this matrix for
@@ -238,11 +231,10 @@ impl ManifoldComplexExt for Complex {
 
 *Whitney forms* are the *finite element differential forms* that correspond to
 cochains. They are the piecewise-linear (over the cells) differential
-forms defined over the simplicial manifold @whitney:geointegration,
-@douglas:feec-article.
+forms defined over the simplicial manifold @whitney:geointegration.
 
 The Whitney space $cal(W) Lambda^k (mesh)$ is the space of all Whitney forms
-over our mesh $mesh$ @douglas:feec-book.
+over our mesh $mesh$
 
 For a $mesh$ with topological dimension $n$, the Whitney $0$-form space coincides with
 the Lagrangian space and the $n$-forms coincides with piecewise-constant discontinuous elements.
@@ -285,7 +277,7 @@ Let's take a look at the local shape functions (LSF).
 
 The local Whitney form $lambda_(i_0 dots i_k)$ associated with the DOF simplex
 $sigma = [i_0 dots i_k] subset.eq tau$ on the cell $tau = [j_0 dots j_n]$ is
-defined using the barycentric coordinate functions $lambda_i_s$ of the cell @douglas:feec-article, @hiptmair:electromagnetism.
+defined using the barycentric coordinate functions $lambda_i_s$ of the cell.
 $
   lambda_(i_0 dots i_k) =
   k! sum_(l=0)^k (-1)^l lambda_i_l
@@ -470,7 +462,7 @@ We can implement one more functionality.
 
 Since the Whitney form is a linear differential form over the cell,
 it's exterior derivative must be a constant multiform.
-We can easily derive it's value @douglas:feec-article.
+We can easily derive it's value.
 $
   dif lambda_(i_0 dots i_k)
   &= k! sum_(l=0)^k (-1)^l dif lambda_i_l wedge
@@ -496,7 +488,7 @@ This is the corresponding implementation.
 ```
 
 The defining property of the Whitney basis is a from pointwise to integral
-generalized Lagrange basis property @douglas:feec-article:\
+generalized Lagrange basis property @whitney:geointegration:\
 For any two $k$-simplices $sigma, tau in Delta_k (mesh)$, we have
 $
   integral_sigma lambda_tau = cases(
@@ -547,7 +539,7 @@ fn whitney_basis_property() {
 
 === Reconstruction: Whitney-Interpolation via the Whitney map
 
-There is a one-to-one correspondance between $k$-cochain and Whitney $k$-form @douglas:feec-article.
+There is a one-to-one correspondance between $k$-cochain and Whitney $k$-form @whitney:geointegration
 
 We have already seen how to obtain a cochain from a continuous differential form via
 cochain-projection. This is how we can obtain the cochain corresponding to a Whitney
@@ -556,7 +548,7 @@ But what about the other way? How can we reconstruct a continuous differential f
 from a cochain. How can we obtain the Whitney form corresponding to this cochain?
 
 
-This reconstruction is achieved by the so called *Whitney map* @douglas:feec-book.
+This reconstruction is achieved by the so called *Whitney map* @whitney:geointegration.
 
 $
   W: C^k (mesh; RR) -> cal(W)^k (mesh) subset.eq Lambda^k (Omega)
@@ -568,7 +560,7 @@ $
 It can be seen as a generalized interpolation operator.
 Instead of pointwise interpolation, we have interpolation in an integral sense.
 It takes cochains to differential forms that have the cochains values as integral
-values @douglas:feec-article.
+values @whitney:geointegration.
 
 The isomorphism between Whitney forms and cochains can now be constructed
 $

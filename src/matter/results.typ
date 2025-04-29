@@ -302,8 +302,9 @@ Let's first discuss the $H(dif)$ convergence. We get order $alpha_(H(dif)) =
 1$. This is exactly what theory predicts for 1st order finite elements
 @douglas:feec-article, suggesting a correct implementation.
 
+// TODO: FIND REFERNCE
 For $L^2$ convergence, we however also get order $alpha_(L^2) = 1$, which is
-surprising, since theory predicts order 2. @douglas:feec-article
+surprising, since theory predicts order 2.
 We suspect that the reason for this is a non-admissible variational crime, incurred
 by the way we approximate the RHS source term.
 As previously stated, we first do a cochain-projection
