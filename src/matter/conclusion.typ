@@ -25,12 +25,9 @@ topology via harmonic forms, and performing a Method of Manufactured Solutions
 convergence study for the source problem, which confirmed the expected $cal(O)(h)$
 convergence rate for the $H(dif)$ error.
 
-While the core implementation proved successful, the suboptimal $cal(O)(h)$
-convergence observed for the $L^2$ error in the source problem highlights an
-area for improvement, likely related to the approximation strategy used for the
-load vector. Nevertheless, `formoniq` demonstrates the feasibility and benefits
-of combining the rigorous mathematical framework of intrinsic FEEC with the
-modern software engineering practices enabled by Rust.
+`formoniq` demonstrates the feasibility and benefits of combining the rigorous
+mathematical framework of intrinsic FEEC with the modern software engineering
+practices enabled by Rust.
 
 == Future Work
 
@@ -61,8 +58,7 @@ libraries based on available documentation and publications. `formoniq` did
 not directly draw inspiration from these specific implementations but addresses
 similar challenges.
 
-=== Formoniq (This Thesis)
-
+*Formoniq (This Thesis)*
 - *Focus:* FEEC
 - *Dimension:* Arbitrary
 - *Mesh:* Simplicial Complexes
@@ -71,9 +67,9 @@ similar challenges.
 - *Language:* Rust
 - *Key Features:* Emphasis on FEEC on coordinate-free intrinsic geometry in arbitrary dimensions.
 - *Repository:* #weblink("https://github.com/luiswirth/formoniq", [github:luiswirth/formoniq])
+#v(0.5cm)
 
-=== PyDEC
-
+*PyDEC*
 - *Focus:* Primarily DEC, some FEEC elements
 - *Dimension:* Arbitrary
 - *Mesh:* Simplicial and Cubical Complexes
@@ -83,9 +79,9 @@ similar challenges.
 - *Key Features:* Mature library for DEC., includes tools for cohomology and
   Hodge decomposition. @pydec
 - *Repository:* #weblink("https://github.com/hirani/pydec", [github:hirani/pydec])
+#v(0.5cm)
 
-=== FEEC++ / simplefem
-
+*FEEC++ / simplefem*
 - *Focus:* FEEC
 - *Dimension:* Hardcoded 1D, 2D and 3D
 - *Mesh:* Simplicial Complexes
@@ -96,9 +92,9 @@ similar challenges.
   including Whitney and Sullivan forms. Comes with all necessary linear algebra
   subroutines. @feecpp
 - *Repository:* #weblink("https://github.com/martinlicht/simplefem", [github:martinlicht/simplefem])
+#v(0.5cm)
 
-=== DDF.jl
-
+*DDF.jl*
 - *Focus:* Foundational tools for DEC and FEEC
 - *Dimension:* Arbitrary
 - *Mesh:* Simplicial Complexes
@@ -107,9 +103,9 @@ similar challenges.
 - *Language:* Julia
 - *Key Features:* Arbitrary dimensions and higher-order methods. Unfinished. @ddfjl
 - *Repository:* #weblink("https://github.com/eschnett/DDF.jl", [github:eschnett/DDF.jl])
+#v(0.5cm)
 
-=== dexterior
-
+*dexterior*
 - *Focus:* DEC
 - *Dimension:* Arbitrary
 - *Mesh:* Simplicial Complexes
