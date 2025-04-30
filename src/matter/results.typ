@@ -86,6 +86,17 @@ recovery of the zero eigenvalues and the correct multiplicities for the lowest
 eigenvalue groups strongly validates the FEEC implementation for eigenvalue
 problems on domains with non-trivial topology.
 
+This example program which computes the eigenvalue works on any mesh. The
+program asks for the `.obj` or `.msh` (gmsh) file, then loads it in and computes
+the eigenpairs. The FE eigenfunction is then sampled at each barycenter and the
+values are written into a file, which can then be visualized, with for instance
+paraview.
+
+The example program can be run using
+```sh
+cargo run --release --example hodge_laplace_source
+```
+
 == Source Problem
 
 We verify the source problem by means of the *method of manufactured solution*
@@ -148,15 +159,38 @@ $
 $
 
 
-We use formoniq to solve this problem and determine the rate of convergence.
-We check dimensions 2 and 3, but even higher dimensions would work.
-For each dimension we generate finer and finer meshes with mesh width $h$
-halved in each step. The meshes are generated using our custom tensor-product triangulation
-algorithm.
-We compute the right hand side vector by projecting the exact Laplacian onto
-a 1-cochain and then we multiply it by the hodge mass matrix.
-This is a bit non-standard, but is a very easy way to obtain a approximation
-of the right-hand side vector. We will discuss this choice further below.
+We use formoniq to solve this problem and determine the rate of convergence for
+dimensions 2 and 3, but even higher dimensions would work.
+
+For each dimension we generate finer and finer meshes with mesh width $h$ halved in each
+step. The meshes are generated using our custom tensor-product triangulation
+algorithm. We compute the right hand side vector by assembling the element
+matrix provider for the source term based on the exact Laplacian.
+Then we just call the `solve_hodge_laplace_source` routine.
+
+We compute the $L^2$ error by computing the pointwise error norm $norm(u -
+u_h)_(Lambda^k)$ and integrating using quadrature of order 3, which is sufficent
+for the quadrature error to not dominate the finite element error.
+For the $H Lambda$ error we do the same as for the $L^2$ error, just
+with the exterior derivative of the solution.
+
+```rust
+pub fn fe_l2_error<E: ExteriorField>(
+  fe_cochain: &Cochain,
+  exact: &E,
+  topology: &Complex,
+  coords: &MeshCoords,
+) -> f64 {
+  let dim = topology.dim();
+  let qr = SimplexQuadRule::order3(dim);
+  let fe_whitney = WhitneyForm::new(fe_cochain.clone(), topology, coords);
+  let inner = multi_gramian(&Gramian::standard(dim), fe_cochain.dim());
+  let error_pointwise = |x: CoordRef, cell: SimplexHandle| {
+    inner.norm_sq((exact.at_point(x) - fe_whitney.eval_known_cell(cell, x)).coeffs())
+  };
+  qr.integrate_mesh(&error_pointwise, topology, coords).sqrt()
+}
+```
 
 This is the code for our convergence test.
 It can be run using `cargo run --release --example hodge_laplace_source`.
