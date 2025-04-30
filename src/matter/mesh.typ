@@ -1272,7 +1272,7 @@ pub struct SimplexQuadRule {
 The integral of a function $f$ defined in local coordinates over
 any simplex $sigma$ is approximated as:
 $
-  integral_(hat(sigma)^n) f vol approx abs(sigma^n) sum_i w_i f(q_i)
+  integral_(hat(sigma)^n) f vol_g approx abs(sigma^n) sum_i w_i f(q_i)
 $
 Note that here we have factored the volume of the simplex out of the weights,
 which allows us to store normalized weights that sum to one.
@@ -1337,7 +1337,7 @@ The most important of which is the barycentric quadrature rule.
 It generalizes trivially to arbitrary dimensional $n$-simplicies.
 This rule has polynomial exactness degree 1, meaning it integrates
 affine linear functions exactly. This is sufficient for most applications
-in 1st order FEEC, since it constitutes an admissible variational crime. @holst:gvc
+in 1st order FEEC, since it constitutes an admissible variational crime. @hiptmair:numpde
 ```rust
 /// Integrates 1st order affine linear functions exactly.
 pub fn barycentric(dim: Dim) -> Self {

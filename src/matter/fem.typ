@@ -200,7 +200,7 @@ $
     dif lambda_i_0 wedge dots.c wedge hat(dif lambda)_i_l wedge dots.c wedge dif lambda_i_k,
     dif lambda_j_0 wedge dots.c wedge hat(dif lambda)_j_m wedge dots.c wedge dif lambda_j_k,
   )_(Lambda^k)
-  integral_K lambda_i_l lambda_j_m vol \
+  integral_K lambda_i_l lambda_j_m vol_g \
 $
 
 
@@ -302,15 +302,52 @@ impl ElMatProvider for ScalarMassElmat {
 
 == Source Terms & Quadrature
 
-// TODO: WRITE!
+Next to bilinear forms and element matrix providers, there are also linear forms
+and corresponding element vector providers.
 
+We define a trait for element vector providers, just like we did for the element
+matrices.
 ```rust
 pub type ElVec = Vector;
 pub trait ElVecProvider: Sync {
   fn grade(&self) -> ExteriorGrade;
   fn eval(&self, geometry: &SimplexLengths, topology: &Simplex) -> ElVec;
 }
+```
+Here in contrast to the element matrix provider, we also pass the topology as an argument,
+to the evaluation method. This might come as a surprise, as this element vector should
+be purely local and therefore not work with any global topological information.
+However the element matrix provider for the source term will need global coordinates, but since
+we don't want to include coordinates in our `ElVecProvider` trait, we need to supply
+information on which topological simplex we are on, in order to reconstruct the corresponding coordinates.
 
+We only have a single implementor of the `ElVecProvider` trait, which is the
+element vector that corresponds to the right-hand-side source term, as it appears for instance
+in the Hodge-Laplace source problem.
+$
+  avec(b)_K = [inner(f, phi^k_j)_(L^2 Lambda^k (K))]_(i=1)^(N_k)
+$
+
+It takes in as input an `ExteriorField` that corresponds to $f$, represented as
+a functor that takes a global coordinate $avec(x) in RR^N$ (based on an embedding) and produces the
+multiform $f_avec(x)$ at that position. It constitutes the coordinate-based
+representation of the arbitrary continuous differential form $f$.
+
+Since only point-evaluation is available to us, we need to rely on quadrature @hiptmair:numpde
+to compute the element vector corresponding to the source term. For this we
+pullback the `ExteriorField` representing `f` to the using `precompose_form`
+reference cell and compute the pointwise inner product.
+$
+  inner(f, phi^k_j)_(L^2 Lambda^k)
+  = integral_K inner(f (avec(x)), phi^k_j (avec(x)))_(Lambda^k) vol_g
+  approx abs(K) sum_l w_l inner(phi_K^* f (avec(q)_l), phi^k_j (avec(q)_l))_(Lambda^k)
+$
+
+The choice of quadrature is free, but simple barycentric quadrature suffices, to get
+an admissable variational crime for 1st order FE. @hiptmair:numpde
+
+This is what the full implementation of this element vector provider then looks like.
+```rust
 pub struct SourceElVec<'a, F>
 where
   F: ExteriorField,

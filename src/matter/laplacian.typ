@@ -98,8 +98,8 @@ $
   =
   lambda
   mat(
-    amat(0)_(sigma times sigma),amat(0)_(sigma times u);
-    amat(0)_(u times sigma),amat(M)^k
+    amat(0)_(N^(k-1) times N^(k-1)),amat(0)_(N^(k-1) times N^k);
+    amat(0)_(N^k times N^(k-1)),amat(M)^k
   )
   vec(avec(sigma), avec(u))
 $
@@ -278,7 +278,7 @@ $
 Where the right-hand side corresponding to the source term is approximated via quadrature.
 $
   avec(b) = sum_(sigma in mesh) abs(sigma) sum_l w_l inner(f(avec(q)_l), phi^k_i (avec(q)_l))_(Lambda^k)
-  approx integral_mesh inner(f(x), phi^k_i (x))_(Lambda^k) vol
+  approx integral_mesh inner(f(x), phi^k_i (x))_(Lambda^k) vol_g
 $
 
 Compute harmonics

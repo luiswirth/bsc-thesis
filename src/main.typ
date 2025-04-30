@@ -1,7 +1,7 @@
 #import "setup.typ": *
 #show: thesis-template
 
-//#show image: none
+#show image: none
 
 #preface-style[
   #include "title.typ"
@@ -15,7 +15,7 @@
   #include "matter/exterior.typ"
   #include "matter/ddf.typ"
   #include "matter/fem.typ"
-  #include "matter/lapacian.typ"
+  #include "matter/laplacian.typ"
   #include "matter/results.typ"
   #include "matter/conclusion.typ"
 ]
