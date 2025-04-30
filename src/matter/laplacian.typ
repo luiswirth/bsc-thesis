@@ -108,33 +108,61 @@ This is a symmetric indefinite sparse generalized matrix eigenvalue problem,
 that can be solved by an iterative eigensolver such as Krylov-Schur.
 In SLEPc @SLEPcPaper2005 terminology this is called a GHIEP problem.
 
+We have a helper struct for computing all the the relevant Galerkin matrices,
+as well as a system matrix for the mixed problem.
+The computation of the Galerkin matrices is done efficently, by
+only assemblign as few mass matrices as possible and then
+combining them with the full exterior derivatives, instead
+of assembling each bilinear form separatly.
 ```rust
 pub struct MixedGalmats {
   mass_sigma: GalMat,
   dif_sigma: GalMat,
   codif_u: GalMat,
-  difdif_u: GalMat,
+  codifdif_u: GalMat,
   mass_u: GalMat,
 }
 impl MixedGalmats {
-  pub fn compute(topology: &Complex, geometry: &MeshEdgeLengths, grade: ExteriorGrade) -> Self {
+  pub fn compute(topology: &Complex, geometry: &MeshLengths, grade: ExteriorGrade) -> Self {
+    let dim = topology.dim();
+    assert!(grade <= dim);
+
+    let mass_u = assemble_galmat(topology, geometry, HodgeMassElmat::new(dim, grade));
+    let mass_u_csr = CsrMatrix::from(&mass_u);
+
     let (mass_sigma, dif_sigma, codif_u) = if grade > 0 {
-      (
-        assemble_galmat(topology, geometry, HodgeMassElmat(grade - 1)),
-        assemble_galmat(topology, geometry, DifElmat(grade)),
-        assemble_galmat(topology, geometry, CodifElmat(grade)),
-      )
+      let mass_sigma = assemble_galmat(topology, geometry, HodgeMassElmat::new(dim, grade - 1));
+
+      let exdif_sigma = topology.exterior_derivative_operator(grade - 1);
+      let exdif_sigma = CsrMatrix::from(&exdif_sigma);
+
+      let dif_sigma = &mass_u_csr * &exdif_sigma;
+      let dif_sigma = CooMatrix::from(&dif_sigma);
+
+      let codif_u = &exdif_sigma.transpose() * &mass_u_csr;
+      let codif_u = CooMatrix::from(&codif_u);
+
+      (mass_sigma, dif_sigma, codif_u)
     } else {
-      (GalMat::default(), GalMat::default(), GalMat::default())
+      (GalMat::new(0, 0), GalMat::new(0, 0), GalMat::new(0, 0))
     };
-    let difdif_u = assemble_galmat(topology, geometry, CodifDifElmat(grade));
-    let mass_u = assemble_galmat(topology, geometry, HodgeMassElmat(grade));
+
+    let codifdif_u = if grade < topology.dim() {
+      let mass_plus = assemble_galmat(topology, geometry, HodgeMassElmat::new(dim, grade + 1));
+      let mass_plus = CsrMatrix::from(&mass_plus);
+      let exdif_u = topology.exterior_derivative_operator(grade);
+      let exdif_u = CsrMatrix::from(&exdif_u);
+      let codifdif_u = exdif_u.transpose() * mass_plus * exdif_u;
+      CooMatrix::from(&codifdif_u)
+    } else {
+      GalMat::new(0, 0)
+    };
 
     Self {
       mass_sigma,
       dif_sigma,
       codif_u,
-      difdif_u,
+      codifdif_u,
       mass_u,
     }
   }
@@ -146,51 +174,50 @@ impl MixedGalmats {
     self.mass_u.nrows()
   }
 
-  pub fn mixed_hodge_laplacian(&self) -> SparseMatrix {
+  pub fn mixed_hodge_laplacian(&self) -> CooMatrix {
     let Self {
       mass_sigma,
       dif_sigma,
       codif_u,
-      difdif_u,
+      codifdif_u,
       ..
     } = self;
     let codif_u = codif_u.clone();
-    SparseMatrix::block(&[&[mass_sigma, &(-codif_u)], &[dif_sigma, difdif_u]])
+    CooMatrix::block(&[&[mass_sigma, &(codif_u.neg())], &[dif_sigma, codifdif_u]])
   }
 }
 ```
 
+The code for solving the actual EVP is then very simple. It calls the PETSc/SLEPc solver.
 ```rust
 pub fn solve_hodge_laplace_evp(
   topology: &Complex,
-  geometry: &MeshEdgeLengths,
+  geometry: &MeshLengths,
   grade: ExteriorGrade,
   neigen_values: usize,
-) -> (na::DVector<f64>, na::DMatrix<f64>) {
+) -> (Vector, Matrix, Matrix) {
   let galmats = MixedGalmats::compute(topology, geometry, grade);
 
   let lhs = galmats.mixed_hodge_laplacian();
 
   let sigma_len = galmats.sigma_len();
   let u_len = galmats.u_len();
-  let mut rhs = SparseMatrix::zeros(sigma_len + u_len, sigma_len + u_len);
-  for &(mut r, mut c, v) in galmats.mass_u.triplets() {
+  let mut rhs = CooMatrix::zeros(sigma_len + u_len, sigma_len + u_len);
+  for (mut r, mut c, &v) in galmats.mass_u.triplet_iter() {
     r += sigma_len;
     c += sigma_len;
     rhs.push(r, c, v);
   }
 
-  petsc_ghiep(
-    &lhs.to_nalgebra_csr(),
-    &rhs.to_nalgebra_csr(),
-    neigen_values,
-  )
+  let (eigenvals, eigenvectors) = petsc_ghiep(&(&lhs).into(), &(&rhs).into(), neigen_values);
+
+  let eigen_sigmas = eigenvectors.rows(0, sigma_len).into_owned();
+  let eigen_us = eigenvectors.rows(sigma_len, u_len).into_owned();
+  (eigenvals, eigen_sigmas, eigen_us)
 }
 ```
 
 == Source Problem
-
-// TODO: RHS vector discussion
 
 The Hodge-Laplace Source Problem is the generalization of the Poisson equation
 to arbitrary differential $k$-forms @douglas:feec-book. In strong form it is\
@@ -234,7 +261,6 @@ $
 
 By inserting our known Galerkin matrices, we obtain.
 
-
 $
   amat(M)^(k-1) avec(sigma) - amat(C) avec(u) = 0
   \
@@ -275,44 +301,44 @@ $
 //  vec(0, hodge f, 0)
 //$
 
-Where the right-hand side corresponding to the source term is approximated via quadrature.
-$
-  avec(b) = sum_(sigma in mesh) abs(sigma) sum_l w_l inner(f(avec(q)_l), phi^k_i (avec(q)_l))_(Lambda^k)
-  approx integral_mesh inner(f(x), phi^k_i (x))_(Lambda^k) vol_g
-$
+Where the right-hand side $avec(b)$ corresponding to the source term that is
+approximated via quadrature, as previously discussed.
 
-Compute harmonics
+Compute harmonics is just a matter of solving the EVP to obtain the
+eigenfunctions that correspond to zero eigenvalues.
 ```rust
 pub fn solve_hodge_laplace_harmonics(
   topology: &Complex,
-  geometry: &MeshEdgeLengths,
+  geometry: &MeshLengths,
   grade: ExteriorGrade,
   homology_dim: usize,
-) -> na::DMatrix<f64> {
+) -> Matrix {
   if homology_dim == 0 {
     let nwhitneys = topology.nsimplices(grade);
-    return na::DMatrix::zeros(nwhitneys, 0);
+    return Matrix::zeros(nwhitneys, 0);
   }
 
-  let (eigenvals, harmonics) = solve_hodge_laplace_evp(topology, geometry, grade, homology_dim);
+  let (eigenvals, _, harmonics) = solve_hodge_laplace_evp(topology, geometry, grade, homology_dim);
   assert!(eigenvals.iter().all(|&eigenval| eigenval <= 1e-12));
   harmonics
 }
 ```
 
+To solve the actual source problem, we now just need to assemble
+the system matrix and RHS vector.
 ```rust
 pub fn solve_hodge_laplace_source(
   topology: &Complex,
-  geometry: &MeshEdgeLengths,
+  geometry: &MeshLengths,
+  source_galvec: GalVec,
   grade: ExteriorGrade,
-  source_data: Cochain,
   homology_dim: usize,
 ) -> (Cochain, Cochain, Cochain) {
   let harmonics = solve_hodge_laplace_harmonics(topology, geometry, grade, homology_dim);
 
   let galmats = MixedGalmats::compute(topology, geometry, grade);
 
-  let mass_u = galmats.mass_u.to_nalgebra_csr();
+  let mass_u = CsrMatrix::from(&galmats.mass_u);
   let mass_harmonics = &mass_u * &harmonics;
 
   let sigma_len = galmats.sigma_len();
@@ -337,17 +363,16 @@ pub fn solve_hodge_laplace_source(
     galmat.push(r, c, v);
   }
 
-  let galmat = galmat.to_nalgebra_csr();
+  let system_matrix = CsrMatrix::from(&galmat);
 
-  let galvec = mass_u * source_data.coeffs;
   #[allow(clippy::toplevel_ref_arg)]
-  let galvec = na::stack![
-    na::DVector::zeros(sigma_len);
-    galvec;
-    na::DVector::zeros(harmonics.ncols());
+  let rhs = na::stack![
+    Vector::zeros(sigma_len);
+    source_galvec;
+    Vector::zeros(harmonics.ncols());
   ];
 
-  let galsol = petsc_saddle_point(&galmat, &galvec);
+  let galsol = petsc_saddle_point(&system_matrix, &rhs);
   let sigma = Cochain::new(grade - 1, galsol.view_range(..sigma_len, 0).into_owned());
   let u = Cochain::new(
     grade,
