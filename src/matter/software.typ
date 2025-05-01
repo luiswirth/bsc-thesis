@@ -86,7 +86,7 @@ fragmented `C++` ecosystem.
   write inline documentation using Markdown, seamlessly integrated with code
   comments. This documentation can be compiled into a browsable website with
   `cargo doc` and is automatically published to `docs.rs` when a crate is uploaded
-  to `crates.io`. The documentation for our libraries is also available there.
+  to `crates.io`.
 - *Rusttest* is the testing functionality built into Cargo for running unit
   and integration tests. Unit tests can be placed alongside the normal source code
   with a simple `#[test]` attribute, and the `cargo test` command will execute
@@ -141,10 +141,7 @@ The core crates are:
 - `ddf`: Discrete differential forms consisting of Cochains and Whitney forms.
 - `formoniq`: The main library assembling components and providing FEEC solvers.
 
-All of these have been published to `crates.io` @RustLang.
-
 The chapters of the thesis parallel the structure and outline of these libraries.
-
 
 == External libraries
 

@@ -20,18 +20,6 @@ cochains and first-order Whitney basis functions. Building upon this foundation,
 we implemented the necessary Galerkin operators for FEEC, specifically targeting
 the mixed weak formulation of the Hodge-Laplace equation.
 
-The library's functionality was validated through numerical experiments,
-including solving the Hodge-Laplacian eigenvalue problem on a torus, correctly
-capturing its topology via harmonic forms, and performing a Method of
-Manufactured Solutions convergence study for the source problem. This study
-confirmed the expected $O(h^1)$ convergence rate for the $L^2$ error of the
-exterior derivative, consistent with theory. However, the study also revealed
-an $O(h^1)$ rate for the $L^2$ error of the solution itself, differing
-from the commonly expected $O(h^2)$ rate, an observation requiring further
-investigation. Furthermore, the analysis constituted a partial validation,
-as the error related to the codifferential was not assessed due to time
-constraints.
-
 `formoniq` demonstrates the feasibility and benefits of combining the rigorous
 mathematical framework of intrinsic FEEC with the modern software engineering
 practices enabled by Rust.
@@ -83,7 +71,7 @@ similar challenges.
 - *Geometry:* Embedded
 - *Discretization:* Cochains
 - *Language:* Python
-- *Key Features:* Mature library for DEC., includes tools for cohomology and
+- *Key Features:* Mature library for DEC. Includes tools for cohomology and
   Hodge decomposition. @pydec
 - *Repository:* #weblink("https://github.com/hirani/pydec", [github:hirani/pydec])
 #v(0.5cm)

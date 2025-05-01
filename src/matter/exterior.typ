@@ -47,15 +47,14 @@ The space of multivectors and multiforms are dual to each other @frankel:diffgeo
 $
   wedgespace (T^*_p M) =^~ (wedgespace (T_p M))^*
 $
-The space of multivectors only plays a minor role in exterior calculus, since it
-is not metric independent. We just wanted to quickly mentioned it here.
+The space of multivectors only plays a minor role in exterior calculus.
 
-It is common practice to call the elements of any exterior algebra
-multivectors, irregardless what the underlying linear space $V$ is.
-This is confusing when working with multiforms, which are distinct from multivectors.
-To avoid confusion, we therefore just call the elements of the exterior algebra
-exterior elements or multielements, just like we say linear space instead of
-vector space.
+The elements of an exterior algebra are commenly called multivectors,
+irregardless what the underlying linear space $V$ is. This is confusing
+when working with multiforms, which are distinct from multivectors. To avoid
+confusion, we therefore just call the elements of the exterior algebra exterior
+elements or multielements, just like we say linear space instead of vector
+space.
 
 == The Numerical Exterior Algebra $wedgespace (RR^n)$
 
@@ -73,7 +72,7 @@ on a computer we always just use the linear space $RR^n$.
 The same idea can be used to computationally work with exterior algebras @crane:ddg.
 By choosing a basis of $V$, we also get an isomorphism on the exterior algebra
 $wedgespace (V) =^~ wedgespace (RR^n)$.
-Therefore our implementation will be we directly on $wedgespace (RR^n)$.
+Therefore we use $wedgespace (RR^n)$ in our implementation.
 
 For our space of multiforms, we will be using the standard cotangent basis
 ${dif x^i}_(i=1)^n$.
@@ -131,7 +130,7 @@ basis set, otherwise we have linear dependence of the two elements.
 We therefore only consider strictly increasing multiindices $I in cal(I)^n_k$
 and denote their set by
 $cal(I)^n_k = {(i_1,dots,i_k) in NN^k mid(|) 1 <= i_1 < dots.c < i_k <= n}$.
-This is a good convention for supporting arbitrary dimensions.
+This works for arbitrary dimensions.
 
 The basis also needs to be ordered, such that we can know which coefficient
 in `self.coeffs` corresponds to which basis. A natural choice here is
@@ -311,7 +310,7 @@ This derivation from the inner product on the tangent space $g_p$
 to the inner product on the exterior fiber $wedge.big^k T^*_p M$, shall
 be computed.
 
-In general given an inner product on the vector space $V$, we can derive
+In general given an inner product on the linear space $V$, we can derive
 an inner product on the exterior power $wedgespace^k (V)$. The rule is the following: @douglas:feec-book
 $
   inner(e_I, e_J) = det [inner(dif x_I_i, dif x_J_j)]_(i,j)^k

@@ -6,10 +6,7 @@
 
 
 In this chapter, we present numerical results to verify the functionality and
-validate the implementation of the `formoniq` library. We focus on solving
-problems involving the Hodge-Laplace operator using the Finite Element Exterior
-Calculus framework @douglas:feec-book, @douglas:feec-article developed in the
-previous chapters.
+validate the implementation of the `formoniq` library.
 
 Specifically, we examine the Hodge-Laplacian eigenvalue problem on a domain with
 non-trivial topology and perform a convergence study for the Hodge-Laplacian
@@ -19,7 +16,7 @@ source problem using the Method of Manufactured Solutions on a hypercube domain.
 
 To assess the library's ability to handle *non-trivial topologies* as well
 as *globally curved geometry*, we solve a eigenvalue problem to compute the
-spectrum of the 1-form Hodge-Laplacian $Delta^1 u$ on a torus $TT^2$.
+spectrum of the 1-form Hodge-Laplacian $Delta^1$ on a torus $TT^2$.
 
 A mesh of a torus with major radius $r_1=0.5$ and minor radius $r_2=0.2$ was
 generated using Gmsh @GmshPaper2009, by specifying a `.geo` file with the line:
@@ -64,8 +61,8 @@ These numerical results show excellent agreement with theoretical expectations:
 - The next computed eigenvalue $lambda approx 24.649$ aligns closely with
   the theoretical value $lambda_(0,1)=25$.
 
-Figure @img:evp_torus shows visualizations of selected computed 1-form eigenfunctions,
-represented by their vector proxies.
+@img:evp_torus shows visualizations of the two harmonic 1-forms, represented by
+their vector proxies.
 
 #figure(
   grid(
@@ -101,7 +98,7 @@ cargo run --release --example hodge_laplace_source
 
 We verify the source problem by means of the *method of manufactured solution*
 @hiptmair:numpde.
-We restirct ourselves to a simple setup in globally flat geometry on a subset
+We restrict ourselves to a simple setup in globally flat geometry on a subset
 of $RR^n$. We validate only the 1-form source problem, but we do this in arbitrary
 dimensions $n >= 2$.
 
@@ -168,10 +165,12 @@ algorithm. We compute the right hand side vector by assembling the element
 matrix provider for the source term based on the exact Laplacian.
 Then we just call the `solve_hodge_laplace_source` routine.
 
-We compute the $L^2$ error by computing the pointwise error norm $norm(u -
-u_h)_(L^2)$ and integrating using quadrature of order 3, which is sufficent
-for the quadrature error to not dominate the finite element error.
-We also compute the $L^2$ error in the exterior derivative, $norm(dif u - dif u_h)_(L^2)$.
+We compute the $L^2$ norm of the error in the function value $norm(u -
+u_h)_(L^2)$. we do this by computing the pointwise error norm $norm(u -
+u_h)_(Lambda^k)$ and integrating it using quadrature of order 3, which is
+sufficent for the quadrature error to not dominate the finite element error
+@hiptmair:numpde. We also compute the $L^2$ error in the exterior derivative,
+$norm(dif u - dif u_h)_(L^2)$ using the same approach.
 
 ```rust
 pub fn fe_l2_error<E: ExteriorField>(
@@ -340,22 +339,9 @@ Solving Hodge-Laplace in 3d.
 |  5 | 1.92e-1  |    1.00 | 6.73e-2  |    1.04 |
 ```
 
-We get order $alpha_(H (dif)) = 1$ and order $alpha_(L^2) = 1$.
-
-The $alpha_(H (dif)) = 1$ is promising. It suggests a valid implementation, since it
-agress with the theory @douglas:feec-book.
-
-The $alpha_(L^2) = 1$ is not so clear. It would allow for a $alpha_(H Lambda)
-= 1$ convergence, which is good. However it's entirely clear to us, if here
-a Aubin-Nitsche duality argument can be applied, which would imply a order 2
-convergence, which we don't observe.
-
-We must admit that this is only a partial validation of the implementation,
-because we don't measure the full energy norm
-
-We observe experimental convergence rates approaching $alpha_(H(dif))
-= 1$ for the $L^2$ error of the exterior derivative $norm(dif u - dif u_h)_(L^2)$
-and $alpha_(L^2) = 1$ for the $L^2$ error of the solution value itself $norm(u - u_h)_(L^2)$.
+We observe experimental convergence $cal(O) (h^1)$ for the $L^2$ error of
+the exterior derivative $norm(dif u - dif u_h)_(L^2)$ and converge $cal(O) (h^1)$ for
+the $L^2$ error of the solution value itself $norm(u - u_h)_(L^2)$.
 
 The observed rate $alpha_(H(dif)) = 1$ is promising. It
 matches the convergence rate expected for the $norm(dif dot)_(L^2)$
@@ -383,7 +369,7 @@ $
 This analysis was not performed here, due to time constraints.
 
 In @img:source_problem we provide a visualization of the 2D finite element
-solution at refinement level 2 our library has produced in the form of a vector
+solution at refinement level 4 our library has produced in the form of a vector
 field proxy together with a heat map of the magnitude.
 #figure(
   grid(
@@ -395,7 +381,7 @@ field proxy together with a heat map of the magnitude.
     [],
   ),
   caption: [
-    Finite element solution to manufactured source problem in 2D at refinement level 2.
+    Finite element solution to manufactured source problem in 2D at refinement level 4.
   ],
 ) <img:source_problem>
 

@@ -23,19 +23,18 @@ Central to FEEC are two fundamental, closely related concepts: @whitney:geointeg
   cochain values and are essential for defining the integrals required in weak
   formulations @douglas:feec-book.
 
-We will demonstrate that the space of $k$-cochains and the space spanned by
-Whitney $k$-forms are isomorphic. The *projection* from
-continuous forms to cochains is realized by the *integration map*, while the
-*interpolation* from cochains to the Whitney space is achieved via the *Whitney
-map* @whitney:geointegration.
+The space of $k$-cochains and the space spanned by Whitney $k$-forms are
+isomorphic. The *projection* from continuous forms to cochains is realized by
+the *integration map*, while the *interpolation* from cochains to the Whitney
+space is achieved via the *Whitney map* @whitney:geointegration.
 
 This chapter explores the representation and manipulation of these discrete
 differential forms. We will focus on two key processes:
 - *Discretization*: Projecting continuous differential forms onto the discrete
   setting, yielding degrees of freedom associated with the mesh simplices.
 - *Reconstruction*: Interpolating these discrete degrees of freedom using basis
-  functions to obtain a continuous (albeit piecewise polynomial) representation
-  over the mesh, suitable for variational methods.
+  functions to obtain a piecewise continuous representation over the mesh,
+  suitable for variational methods.
 
 
 Understanding these discrete structures and the maps connecting them is crucial,
@@ -47,17 +46,14 @@ in FEEC.
 
 == Cochains
 
+The discretization of a differential $k$-form is a $k$-cochain.
 A $k$-cochain $omega$ is a real-valued function $omega: Delta_k (mesh) -> RR$
 on the $k$-skeleton $Delta_k (mesh)$ of the mesh $mesh$ @whitney:geointegration.
 
-A rank $k$ differential $k$-form, becomes a $k$-cochain, defined on the simplices
-of dimension $k$ of the mesh.
-
 Simplicial cochains arise naturally from the combinatorial structure of a
-simplical complex. A simplicial cochain is dual to a simplicial chain.
-
-Simplicial cochains are also the fundamental combinatorial object
-in *discrete exterior calculus* (DEC) @crane:ddg.
+simplical complex, they are the duals of simplicial chains. Simplicial cochains
+are also the fundamental combinatorial object in *discrete exterior calculus*
+(DEC) @crane:ddg.
 
 One can represent this function on the simplices, using a list of real values
 that are ordered according to the global numbering of the simplices.
@@ -82,7 +78,7 @@ of a continuous differential form to this discrete form.
 
 The discretization of differential forms happens by projection
 onto the cochain space. This cochain-projection is the simple operation
-of integration the given continuous differential $k$-form over every $k$-simplex
+of integrating the given continuous differential $k$-form over every $k$-simplex
 of the mesh. This gives a real number for each $k$-simplex, which is exactly
 the cochain values.
 This projection is called the *integration map* @whitney:geointegration
@@ -237,50 +233,29 @@ forms defined over the simplicial manifold @whitney:geointegration.
 The Whitney space $cal(W) Lambda^k (mesh)$ is the space of all Whitney forms
 over our mesh $mesh$
 
-For a $mesh$ with topological dimension $n$, the Whitney $0$-form space coincides with
-the Lagrangian space and the $n$-forms coincides with piecewise-constant discontinuous elements.
-$
-  cal(W) Lambda^0 (mesh) &=^~ cal(S)^0_1 (mesh) \
-  cal(W) Lambda^n (mesh) &=^~ cal(S)^(-1)_0 (mesh) \
-$
-
-For a 3D mesh, we additionaly have a correspondance with Raviart-Thomas
-$bold(cal(R T))(mesh)$ and Nédélec $bold(cal(N))(mesh)$ Finite Element spaces.
-$
-  cal(W) Lambda^0 (mesh) &=^~ cal(S)^0_1 (mesh) \
-  cal(W) Lambda^1 (mesh) &=^~ bold(cal(N)) (mesh) \
-  cal(W) Lambda^2 (mesh) &=^~ bold(cal(R T)) (mesh) \
-  cal(W) Lambda^3 (mesh) &=^~ cal(S)^(-1)_0 (mesh) \
-$
-
-This is the famous finite element subcomplex of the de Rham complex.
-$
-  0 -> cal(S)^0_1 (mesh) limits(->)^grad bold(cal(N)) (mesh) limits(->)^curl bold(cal(R T)) (mesh) limits(->)^div cal(S)^(-1)_0 (mesh) -> 0
-$
-
-The *Whitney subcomplex* generalize it to arbitrary dimensions and arbitrary exterior grade. @douglas:feec-book
+The *Whitney subcomplex* is a subcomplex of the continuous de Rham complex of
+differential forms. @douglas:feec-book
 $
   0 -> cal(W) Lambda^0 (mesh) limits(->)^dif dots.c limits(->)^dif cal(W) Lambda^n (mesh) -> 0
 $
-
 
 === Whitney Basis
 
 There is a special basis for the space of Whitney forms, called the *Whitney
 basis* @whitney:geointegration, @douglas:feec-article. Just like there is a
 cochain value for each $k$-simplex, there is a Whitney basis function for each
-$k$-simplex. They have their DOF on this $K$-simplex.
+$k$-simplex. They have their DOF on this $k$-simplex.
 $
-  cal(W) Lambda^k (mesh) = "span" {lambda_sigma : sigma in Delta_k (mesh)}
+  cal(W) Lambda^k (mesh) = "span" {phi_sigma : sigma in Delta_k (mesh)}
 $
 
 Let's take a look at the local shape functions (LSF).
 
 The local Whitney form $lambda_(i_0 dots i_k)$ associated with the DOF simplex
-$sigma = [i_0 dots i_k] subset.eq tau$ on the cell $tau = [j_0 dots j_n]$ is
+$sigma = [i_0 dots i_k] subset.eq K$ on the cell $K = [j_0 dots j_n]$ is
 defined using the barycentric coordinate functions $lambda_i_s$ of the cell.
 $
-  lambda_(i_0 dots i_k) =
+  restr(phi_sigma)_K = lambda_(i_0 dots i_k) =
   k! sum_(l=0)^k (-1)^l lambda_i_l
   (dif lambda_i_0 wedge dots.c wedge hat(dif lambda)_i_l wedge dots.c wedge dif lambda_i_k)
 $ <def:whitney>
@@ -542,15 +517,12 @@ fn whitney_basis_property() {
 
 There is a one-to-one correspondance between $k$-cochain and Whitney $k$-form @whitney:geointegration
 
-We have already seen how to obtain a cochain from a continuous differential form via
-cochain-projection. This is how we can obtain the cochain corresponding to a Whitney
-form.
-But what about the other way? How can we reconstruct a continuous differential form
-from a cochain. How can we obtain the Whitney form corresponding to this cochain?
-
+We have already seen how to obtain a cochain from a continuous differential
+form via cochain-projection. This is how we can obtain the cochain corresponding
+to a Whitney form. But what about the other way? How can we reconstruct a
+continuous differential form from a cochain?
 
 This reconstruction is achieved by the so called *Whitney map* @whitney:geointegration.
-
 $
   W: C^k (mesh; RR) -> cal(W)^k (mesh) subset.eq Lambda^k (Omega)
 $

@@ -16,7 +16,7 @@ This is best done through the official Rust installer and toolchain manager
 Rustup, which is easily installed by running a single `curl` command
 in the shell, which can be found on #weblink("https://rustup.rs/")[rustup.rs].
 
-In the repository root we have a `./Cargo.toml` file that specifies a Cargo
+In the repository root `./` we have a `./Cargo.toml` file that specifies a Cargo
 workspace. Therefore *all Cargo commands should be run from this root directory*.
 In `./crates/` all the various libraries that make up Formoniq are placed.
 Each of them follows the standard structure of a Rust library.
@@ -42,6 +42,13 @@ mode, instead of debug mode to profit from optimizations.
 To figure out the names of the available examples one can look into the example
 directory or use tab-completion in the cargo command.
 
+A documentation website can be generated using rustdoc, by running the following
+command
+```sh
+cargo doc --no-deps --open
+```
+This can serve as a index of all the datastructures we have developed.
+
 == PETSc/SLEPc Solver
 
 Due to the immature Rust sparse linear algebra ecosystem, we have to rely
@@ -54,10 +61,10 @@ disk, solve the problem and write the solution back to disk.
 Our Rust program interoperates with these programs, by doing this writing and
 reading to disk as well, to communicate the problem setup and retrieve the solution.
 It then also automatically calls the PETSc/SLEPc program.
-So really the user does never directly interact with these solvers, but the
-Rust code manages this itself.
+The user does never directly interact with these solvers, but the Rust code
+manages this itself.
 
-All the user has to do is to the small solver programs.
+The user needs to compile this small solver program.
 For this both PETSc and SLEPc need to be installed on the system.
 We refer to the official PETSc and SLEPc documentation on #weblink("https://petsc.org/")[petsc.org]
 and #weblink("https://slepc.upv.es/")[slepc.upv.es], where installation
@@ -120,10 +127,10 @@ uv run src/main.py --quiver-count=5 --heatmap-res=10 in/triforce/
 
 = Thesis Typst Source Code
 
-The thesis document itself has been written using the new modern type-setting language
+The thesis document itself has been written using the new type-setting language
 Typst, which can be found under #weblink("https://typst.app/")[typst.app].
-It is very similar to LaTeX, but aims to do things better and to elevate
-various points of frustration that are common in LaTeX.
+It is very similar to LaTeX, but aims to elevate various points of frustration
+that are common in LaTeX and to provide a more modern feel.
 
 The source code for this Typst document, is available on GitHub.
 #[
@@ -132,20 +139,9 @@ The source code for this Typst document, is available on GitHub.
   #weblink("https://github.com/luiswirth/bsc-thesis")[github:luiswirth/bsc-thesis]
 ]
 
-To build the document in the form of a PDF, one needs to have the Typst
-compiler installed and then only has to run the `./build.sh` script from the root
-
-The document is also available as a project on the Typst web app.
-It can be viewed under the following read-only link.
-#[
-  #set text(size: 20pt)
-  #set align(center)
-  #weblink("https://typst.app/project/rxBzpCgbFpynXA0BT9V6Ks")[typst.app/project/rxBzpCgbFpynXA0BT9V6Ks]
-]
-
-
-
-
+To build the document in the form of a PDF, the Typst compiler needs to
+be installed and then the `./build.sh` script can be run from the root
+project directory.
 
 = PETSc/SLEPc Installation
 <appendix:petsc>

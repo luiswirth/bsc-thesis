@@ -209,8 +209,7 @@ coordinate functions are constant @hiptmair:numpde. This makes the wedge big ter
 We can therefore pull them out of the integral inside the $L^2$-inner product
 and now it's just an inner product on constant multiforms.
 What remains in the in the integral is the product of two barycentric
-coordinate functions. This integral is with respect to the metric and contains
-all geometric information.
+coordinate functions.
 
 
 Using this we can now implement the element matrix provider

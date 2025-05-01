@@ -111,9 +111,9 @@ In SLEPc @SLEPcPaper2005 terminology this is called a GHIEP problem.
 We have a helper struct for computing all the the relevant Galerkin matrices,
 as well as a system matrix for the mixed problem.
 The computation of the Galerkin matrices is done efficently, by
-only assemblign as few mass matrices as possible and then
+only assembling as few mass matrices as possible and then
 combining them with the full exterior derivatives, instead
-of assembling each bilinear form separatly.
+of assembling each bilinear form separately.
 ```rust
 pub struct MixedGalmats {
   mass_sigma: GalMat,
@@ -223,7 +223,10 @@ The Hodge-Laplace Source Problem is the generalization of the Poisson equation
 to arbitrary differential $k$-forms @douglas:feec-book. In strong form it is\
 Find $u in Lambda^k (Omega)$, given $f in Lambda^k (Omega)$, s.t.
 $
-  Delta u = f - P_frak(H) f, quad u perp frak(H)
+  Delta u = f - P_frak(H) f quad "in" Omega \
+  u perp frak(H)
+  tr hodge u = 0, quad tr hodge dif u = 0 quad "on" diff Omega
+
 $
 This equation is not quite as simple as the normal Poisson equation $Delta u = f$.
 Instead it includes two additional parts involving $frak(H)$, which is the space
@@ -231,9 +234,8 @@ of harmonic forms $frak(H)^k = ker Delta = { v in Lambda^k mid(|) Delta v = 0}$ 
 The first change is that we remove the harmonic part $P_frak(H) f$ of $f$. The second
 difference is that we require that our solution $u$ is orthogonal to harmonic forms.
 
-The harmonic forms give a concrete realizations of the cohomology @frankel:diffgeo @douglas:feec-book.
-They are a representative of the cohomology quotient group $cal(H)^k = (ker dif)/(im dif)$
-and as such they are isomorphic $frak(H)^k =^~ cal(H)^k$.
+Harmonic forms are concrete representative of the cohomology quotient group
+$cal(H)^k = (ker dif)/(im dif)$ @frankel:diffgeo @douglas:feec-book.
 
 We once again tackle a mixed weak formulation based on the auxiliary variable
 $sigma$ and this time a second one $p$ that represents $f$ without harmonic
@@ -324,8 +326,8 @@ pub fn solve_hodge_laplace_harmonics(
 }
 ```
 
-To solve the actual source problem, we now just need to assemble
-the system matrix and RHS vector.
+To solve the actual source problem, we now just need to assemble the system
+matrix and call the PETSc solver.
 ```rust
 pub fn solve_hodge_laplace_source(
   topology: &Complex,

@@ -26,7 +26,7 @@ unmatched generality and elegance. This can be done for simplicial meshes in
 arbitrary dimension.
 ]
 
-*Finite Element Exterior Calculus* (FEEC) developed by Douglas Arnold and Richard
+*Finite Element Exterior Calculus* (FEEC) developed by Douglas Arnold, Richard
 Falk and Ragnar Winther @douglas:feec-article, @douglas:feec-book is exactly
 this unified mathematical framework. By employing the language of *differential
 geometry* @frankel:diffgeo and *algebraic topology* @hatcher:algtop, FEEC extends
