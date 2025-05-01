@@ -10,7 +10,7 @@ and accurately is therefore central to modern computational science.
 The *Finite Element Method* (FEM) is one of the most important methods employed to
 numerically solve PDEs, particularly on unstructured meshes, drawing inspiration
 from *functional analysis* @hiptmair:numpde.
-While scalar-valued FEM using Lagrangian finite element spaces is
+While scalar-valued FEM, using Lagrangian finite element spaces, is
 well-established, extending FEM to vector-valued problems traditionally involved
 intricate constructions. @hiptmair:whitneyforms
 
@@ -73,11 +73,12 @@ to constitute an *admissible geometric variational crime* @holst:gvc.
 The prototypical second-order elliptic operator in FEEC is the *Hodge-Laplace
 operator* @douglas:feec-book, a generalization of the standard Laplace-Beltrami
 operator. Central to its analysis is *Hodge theory* @frankel:diffgeo, which provides
-the crucial link between this elliptic operator, the topology of the manifold via
-cohomology, and its kernel (the space of *harmonic forms*). Our implementation is
-guided by the goal of solving the Hodge-Laplace eigenvalue and source problems on
-the $n$D *de Rham complex* @douglas:feec-article. For both problems, we utilize a
-*mixed weak formulation* @douglas:feec-article, @douglas:feec-book.
+the crucial link between the kernel of this elliptic operator (the *space
+of harmonic forms*) and the topology of the manifold via cohomology. Our
+implementation is guided by the goal of solving the Hodge-Laplace eigenvalue
+and source problems on the $n$D *de Rham complex* @douglas:feec-article. For
+both problems, we utilize a *mixed weak formulation* @douglas:feec-article,
+@douglas:feec-book.
 
 The choice of *Rust* @RustLang stems from its strong guarantees in memory safety,
 performance comparable to C/C++, and modern language features suitable for

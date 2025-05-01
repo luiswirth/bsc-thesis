@@ -86,13 +86,11 @@ pub fn is_same_dim(&self) -> bool { self.dim_intrinsic() == self.dim_ambient() }
 === Barycentric Coordinates
 
 The coefficients $avec(lambda) = [lambda^i]_(i=0)^n$ in @def-simplex are called
-*barycentric coordinates* @frankel:diffgeo, @hiptmair:numpde. They appear in the
-convex combination $sum_(i=0)^n lambda^i avec(v)_i$ as weights
-$lambda^i in [0,1]$ (for points within the simplex) that sum to one
-$sum_(i=0)^n lambda^i = 1$, in front of the Cartesian vertex coordinates
-$avec(v)_i in RR^N$. They constitute an intrinsic local coordinate representation with
-respect to the simplex $sigma$, independent of the embedding in $RR^N$, relying
-only on the convex combination of vertices.
+*barycentric coordinates* @frankel:diffgeo, @hiptmair:numpde. They appear in
+the convex combination $sum_(i=0)^n lambda^i avec(v)_i$ as weights $lambda^i in
+[0,1]$ (for points within the simplex) that sum to one $sum_(i=0)^n lambda^i =
+1$. They constitute an intrinsic local coordinate representation with respect to
+the simplex $sigma$, independent of the embedding in $RR^N$.
 
 The coordinate transformation $phi: avec(lambda) |-> avec(x)$ from intrinsic
 barycentric coordinates $avec(lambda)$ to ambient Cartesian coordinates $avec(x)$
@@ -103,12 +101,12 @@ $
 
 This transformation can be implemented as:
 ```rust
-pub fn bary2global<'a>(&self, bary: impl Into<CoordRef<'a>>) -> Coord {
+pub fn bary2global(&self, bary: CoordRef) -> Coord {
   self
     .vertices
     .coord_iter()
-    .zip(bary.into().iter())
-    .map(|(vi, &baryi)| baryi * vi)
+    .zip(bary.iter())
+    .map(|(vi, baryi)| baryi * vi)
     .sum()
 }
 ```
@@ -119,8 +117,7 @@ $sum_(i=0)^n lambda^i = 1$ must still hold, but only points $avec(x) in sigma$
 strictly inside the simplex have all $lambda^i in [0,1]$. Outside the simplex,
 some $lambda^i$ will be greater than one or negative.
 ```rust
-pub fn is_bary_inside<'a>(bary: impl Into<CoordRef<'a>>) -> bool {
-  let bary = bary.into();
+pub fn is_bary_inside(bary: CoordRef) -> bool {
   assert_relative_eq!(bary.sum(), 1.0);
   bary.iter().all(|&b| (0.0..=1.0).contains(&b))
 }
@@ -128,7 +125,7 @@ pub fn is_bary_inside<'a>(bary: impl Into<CoordRef<'a>>) -> bool {
 
 The barycenter $avec(m) = 1/(n+1) sum_(i=0)^n avec(v)_i$ always has the special
 barycentric coordinate $avec(lambda) = [1/(n+1)]^(n+1)$ and
-is namesake for the barycentric coordinates.
+gives the barycentric coordinates their name.
 ```rust
 pub fn barycenter(&self) -> Coord {
   let mut barycenter = na::DVector::zeros(self.dim_ambient());
@@ -138,7 +135,7 @@ pub fn barycenter(&self) -> Coord {
 }
 ```
 
-This coordinate system treats all vertices symmetrically, assigning a weight to
+This coordinate representation treats all vertices symmetrically, assigning a weight to
 each. Consequently, with $n+1$ coordinates $lambda^0, ..., lambda^n$ for an
 $n$-dimensional affine subspace subject to the constraint $sum lambda^i = 1$,
 there is redundancy. This representation is not a minimal coordinate system.
@@ -150,25 +147,21 @@ pub fn base_vertex(&self) -> CoordRef { self.coord(0) }
 ```
 We can then omit the redundant coordinate $lambda^0 = 1 - sum_(i=1)^n lambda^i$
 associated with $avec(v)_0$. The remaining *reduced barycentric coordinates*
-$avec(lambda)^- = [lambda^i]_(i=1)^n$ form a proper coordinate system for the
-$n$-dimensional affine subspace. This is also referred to as the *local
-coordinate system*. In this system, the local coordinates $lambda^1, ..., lambda^n$
-are unconstrained, providing a unique representation for every point in the
-affine subspace via a bijection with $RR^n$.
+also called *local coordinates* $avec(t) = [lambda^i]_(i=1)^n$ form a proper coordinate system for the
+$n$-dimensional affine subspace. In this system, the local coordinates
+$lambda^1, ..., lambda^n$ are unconstrained, providing a unique representation
+for every point in the affine subspace via a bijection with $RR^n$.
 
 
 ```rust
-pub fn bary2local<'a>(bary: impl Into<CoordRef<'a>>) -> Coord {
-  let bary = bary.into();
+pub fn bary2local(bary: CoordRef) -> Coord {
   bary.view_range(1.., ..).into()
 }
-pub fn local2bary<'a>(local: impl Into<CoordRef<'a>>) -> Coord {
-  let local = local.into();
+pub fn local2bary(local: CoordRef) -> Coord {
   let bary0 = 1.0 - local.sum();
   local.insert_row(0, bary0)
 }
 ```
-
 
 #v(0.5cm)
 === Spanning Vectors
@@ -210,14 +203,14 @@ $
   = sum_(i=0)^n lambda^i avec(v)_i 
   = (1 - sum_(i=1)^n lambda^i) avec(v)_0 + sum_(i=1)^n lambda^i avec(v)_i
   = avec(v)_0 + sum_(i=1)^n lambda^i (avec(v)_i - avec(v)_0)
-  = avec(v)_0 + amat(E) avec(lambda)^-
+  = avec(v)_0 + amat(E) avec(t)
 $
 
 This shows that the transformation $phi$ is actually an affine map $phi:
-avec(lambda)^- |-> avec(x)$ consisting of the linear map represented by $amat(E)$
+avec(t) |-> avec(x)$ consisting of the linear map represented by $amat(E)$
 followed by a translation by $avec(v)_0$.
 $
-  phi: avec(lambda)^- |-> avec(x) = avec(v)_0 + amat(E) avec(lambda)^-
+  phi: avec(t) |-> avec(x) = avec(v)_0 + amat(E) avec(t)
 $
 
 We implement functions for this affine transformation:
@@ -228,8 +221,7 @@ pub fn affine_transform(&self) -> AffineTransform {
   let linear = self.linear_transform();
   AffineTransform::new(translation, linear)
 }
-pub fn local2global<'a>(&self, local: impl Into<CoordRef<'a>>) -> Coord {
-  let local = local.into();
+pub fn local2global(&self, local: CoordRef) -> Coord {
   self.affine_transform().apply_forward(local)
 }
 ```
@@ -250,30 +242,29 @@ impl AffineTransform {
 }
 ```
 
-The reverse transformation $psi: avec(x) |-> avec(lambda)^-$ from local
-$avec(x)$ to global $avec(lambda)^-$ coordinates is
-more complex due to the potentially higher-dimensional ambient space $RR^N$ with $N >= n$.
-The global coordinate point might not lie exactly in the affine subspace due
-to floating-point inaccuracies. This makes the linear system for the reverse
-transformation $avec(x) - avec(v)_0 = amat(E) avec(lambda)^-$ potentially
-underdetermined. We use the Moore-Penrose pseudo-inverse $amat(E)^dagger$
-@hiptmair:numcse, typically computed via Singular Value Decomposition (SVD), to
-find the unique least-squares solution of smallest norm:
+The reverse transformation $psi: avec(x) |-> avec(t)$ from global $avec(x)$
+to local $avec(t)$ coordinates is more complex due to the potentially
+higher-dimensional ambient space $RR^N$ with $N >= n$. The global coordinate
+point might not lie exactly in the affine subspace due to floating-point
+inaccuracies. This makes the linear system $amat(E) avec(t) = avec(x) -
+avec(v)_0$ for the reverse transformation  potentially underdetermined.
+We use the Moore-Penrose pseudo-inverse $amat(E)^dagger$ @hiptmair:numcse,
+typically computed via Singular Value Decomposition (SVD), to find the unique
+least-squares solution of smallest norm:
 $
-  psi: avec(x) |-> avec(lambda)^- = amat(E)^dagger (avec(x) - avec(v)_0)
+  psi: avec(x) |-> avec(t) = amat(E)^dagger (avec(x) - avec(v)_0)
 $
 
 ```rust
 impl SimplexCoords {
-  pub fn global2local<'a>(&self, global: impl Into<CoordRef<'a>>) -> Coord {
-    let global = global.into();
+  pub fn global2local(&self, global: CoordRef) -> Coord {
     self.affine_transform().apply_backward(global)
   }
 }
 
 impl AffineTransform {
-  pub fn apply_backward(&self, coord: VectorView) -> Vector {
-    if self.dim_domain() == 0 { return Vector::zeros(0); }
+  pub fn apply_backward(&self, coord: Coord) -> Vector {
+    if self.dim_domain() == 0 { return Coord::zeros(0); }
     self
       .linear
       .clone()
@@ -283,7 +274,7 @@ impl AffineTransform {
   }
   pub fn pseudo_inverse(&self) -> Self {
     if self.dim_domain() == 0 {
-      return Self::new(Vector::zeros(0), Matrix::zeros(0, self.dim_image()));
+      return Self::new(Coord::zeros(0), Matrix::zeros(0, self.dim_image()));
     }
     let linear = self.linear.clone().pseudo_inverse(1e-12).unwrap();
     let translation = &linear * &self.translation;
@@ -292,14 +283,14 @@ impl AffineTransform {
 }
 ```
 
-The derivatives of the affine transformation $phi: avec(lambda)^- |->
+The derivatives of the affine transformation $phi: avec(t) |->
 avec(x)$ reveal that the spanning vectors $avec(e)_i$ form a natural basis
 for the tangent space $T_p sigma$ at any point $p$ within the simplex $sigma$
 @frankel:diffgeo. The Jacobian of the affine map is precisely $amat(E)$.
 $
   diff/(diff lambda^i) = (diff avec(x))/(diff lambda^i) = avec(e)_i
   quad quad
-  (diff avec(x))/(diff avec(lambda)^-) = amat(E)
+  (diff avec(x))/(diff avec(t)) = amat(E)
 $
 
 In differential geometry terms, the linear map represented by $amat(E)$ acts as
@@ -311,8 +302,8 @@ It transforms intrinsic tangent vectors $avec(u) = u^i diff/(diff lambda^i)$ to
 ambient tangent vectors $avec(w) = w^i avec(e)_i$.
 ```rust
 /// Local2Global Tangentvector
-pub fn pushforward_vector<'a>(&self, local: impl Into<TangentVectorRef<'a>>) -> TangentVector {
-  self.linear_transform() * local.into()
+pub fn pushforward_vector(&self, local: TangentVectorRef) -> TangentVector {
+  self.linear_transform() * local
 }
 ```
 
@@ -326,13 +317,9 @@ $
   phi^*: avec(omega) |-> avec(eta) = avec(omega) amat(E)
 $
 ```rust
-
 /// Global2Local Cotangentvector
-pub fn pullback_covector<'a>(
-  &self,
-  global: impl Into<CoTangentVectorRef<'a>>,
-) -> CoTangentVector {
-  global.into() * self.linear_transform()
+pub fn pullback_covector(&self, global: CoTangentVectorRef) -> CoTangentVector {
+  global * self.linear_transform()
 }
 ```
 
@@ -340,7 +327,7 @@ Separately, we can consider the differentials of the barycentric coordinate
 functions $lambda^i$ as functions of the global coordinates $avec(x)$. These
 differentials, $dif lambda^i$, form a basis for the cotangent space $T^*_p sigma$.
 Their components relative to the ambient basis $dif x^i$ are found using the
-differential of the inverse map $psi: avec(x) -> avec(lambda)^-$, which involves the
+differential of the inverse map $psi: avec(x) -> avec(t)$, which involves the
 pseudo-inverse $amat(E)^dagger$. Specifically, the rows of $amat(E)^dagger$ give
 the components of $dif lambda^1, ..., dif lambda^n$.
 The
@@ -348,7 +335,7 @@ differential $dif lambda^0$ is determined by the constraint $sum_i dif lambda^i 
 $
 
 
-  (diff avec(lambda)^-)/(diff avec(x)) = amat(E)^dagger
+  (diff avec(t))/(diff avec(x)) = amat(E)^dagger
   quad quad
   dif lambda^i = (diff lambda^i)/(diff avec(x)) = epsilon^i = (amat(E)^dagger)_(i,:)
   quad quad
@@ -367,7 +354,7 @@ $
 /// a matrix.
 pub fn difbarys(&self) -> Matrix {
   let difs = self.inv_linear_transform();
-  let mut difs = difs.insert_row(0, 0.0); // Add row for lambda^0
+  let mut difs = difs.insert_row(0, 0.0);
   difs.set_row(0, &-difs.row_sum()); // lambda^0 = -sum(dif lambda^i)
   difs
 }
@@ -378,6 +365,8 @@ the *Riemannian metric tensor*. This metric on the simplex is induced by the amb
 Euclidean metric via the affine embedding.
 $
   amat(G) = amat(E)^transp amat(E)
+  quad quad
+  amat(G)_(i j) = e_i dot e_j
 $
 
 Our implementation has a struct for working with Gramians, which will discuss
@@ -389,9 +378,7 @@ pub fn metric_tensor(&self) -> Gramian {
 ```
 Since $amat(E)$ is constant across the simplex, this induced metric $amat(G)$
 is also *constant* everywhere within the simplex. This constancy implies that
-the simplex is *intrinsically flat* (zero Riemannian curvature). Consequently,
-geodesics (shortest paths between points) within the simplex are simply straight
-line segments in the embedding.
+the simplex is *intrinsically flat* (zero Riemannian curvature).
 
 The spanning vectors also define a parallelepiped. The volume of the $n$-simplex $sigma$
 is $1/n!$ times the $n$-dimensional volume of this parallelepiped. The signed volume
@@ -419,13 +406,11 @@ impl SimplexCoords {
   pub fn vol(&self) -> f64 { self.det().abs() }
   pub fn is_degenerate(&self) -> bool { self.vol() <= 1e-12 }
 }
-pub fn refsimp_vol(dim: Dim) -> f64 {
-  factorialf(dim).recip()
-}
+pub fn refsimp_vol(dim: Dim) -> f64 { factorialf(dim).recip() }
 ```
 
 The sign of the signed volume gives the global orientation of the coordinate
-simplex relative to the ambient space $RR^N$.
+simplex relative to the ambient space.
 ```rust
 pub fn orientation(&self) -> Sign {
   Sign::from_f64(self.det()).unwrap()
@@ -478,19 +463,14 @@ metric tensor is the identity matrix $amat(G) = amat(I)_n$, representing the
 standard Euclidean inner product. Its volume is $(n!)^(-1)$.
 
 When looking at an arbitrary "real" $n$-simplex $tau$,
-the local to global map $phi_tau: avec(lambda)^- |-> avec(x)$ can be seen as a
+the local to global map $phi_tau: avec(t) |-> avec(x)$ can be seen as a
 parametrization $phi_tau: hat(sigma)^n -> tau subset.eq RR^N$, where the parametrization domain
 is the reference $n$-simplex. The real simplex is then the image of the reference simplex
-$
-  sigma = phi_sigma (hat(sigma)^n)
-$
-Conversely the global to local map $psi_tau: avec(x) |-> avec(lambda)^-$ can
+$sigma = phi_sigma (hat(sigma)^n)$
+
+Conversely the global to local map $psi_tau: avec(x) |-> avec(t)$ can
 be seen as a chart map $psi_tau: tau -> hat(sigma)^n$ where the chart itself
 is the reference $n$-simplex.
-
-When taking the "real" simplex to be the reference simplex, then
-the parametrization and chart maps are both identity maps.
-
 
 == Abstract Simplices
 
@@ -562,11 +542,11 @@ swapping two vertices in a coordinate simplex flips its orientation due to
 the properties of the determinant. The same behavior is present in abstract
 simplices, based purely on the ordering of the vertices. All permutations of a
 given set of vertices can be divided into two equivalence classes relative to
-a reference ordering: even and odd permutations @hatcher:algtop. We associate
+a reference ordering: even and odd permutations. We associate
 simplices with even permutations with positive orientation and those with
 odd permutations with negative orientation. Therefore, every abstract simplex
 has exactly two orientations, positive and negative, depending on its vertex
-ordering relative to a reference.
+ordering relative to a reference. @hatcher:algtop
 
 We use our canonical sorted representation as the reference ordering. We can
 determine the orientation of any simplex relative to this sorted permutation by
@@ -619,17 +599,12 @@ pub fn orientation_eq(&self, other: &Self) -> bool {
 
 === Subsets
 
-// TODO: There is some concern that the naming here is confusing.
-// Subsets or sets in general are unordered, so producing multiple
-// objects that are permutations of each other, might confuse...
-
 Another important notion is that of a subsimplex or a face of a simplex
-@hatcher:algtop. In this context, we first consider the concept of vertex
-subsets.
+@hatcher:algtop. In this context, we first consider the concept of subset simplices.
 
-A simplex $sigma$ can be considered a subset of another simplex $tau$ if all vertices
-of $sigma$ are also vertices of $tau$. We can check this condition directly: $sigma
-subset.eq tau <=> (forall a in sigma => a in tau)$
+A simplex $sigma$ can be considered as the subset of another simplex $tau$ if
+all vertices of $sigma$ are also vertices of $tau$. We can check this condition
+directly: $sigma subset.eq tau <=> (forall a in sigma => a in tau)$
 ```rust
 pub fn is_subset_of(&self, other: &Self) -> bool {
   self.iter().all(|v| other.vertices.contains(v))
@@ -638,24 +613,8 @@ pub fn is_superset_of(&self, other: &Self) -> bool {
   other.is_subset_of(self)
 }
 ```
-
-We can also generate all $k$-simplices whose vertex sets of size $k+1$
-form subsets of the original $n$-simplex's $n+1$ vertices. The following
-function generates all ordered $(k+1)$-tuples by taking *permutations* of
-the $n+1$-tuple from the original simplex.
-```rust
-pub fn subsets(&self, sub_dim: Dim) -> impl Iterator<Item = Self> {
-  itertools::Itertools::permutations(self.clone().into_iter(), sub_dim + 1).map(Self::from)
-}
-```
-
-The number of distinct vertex subsets of size $k+1$ within a set of $n+1$
-vertices is given by the binomial coefficient $binom(n+1, k+1)$.
-```rust
-pub fn nsubsimplices(dim_cell: Dim, dim_sub: Dim) -> usize {
-  binomial(dim_cell + 1, dim_sub + 1)
-}
-```
+Note that this only consideres the simplices as sets, even though they are
+actually lists with an ordering.
 
 Given a simplex that is a subset of a larger simplex, we can compute its vertex
 indices relative to:
@@ -677,11 +636,11 @@ pub fn relative_to(&self, sup: &Self) -> Simplex {
 
 === Subsequences
 
-When considering the faces (like facets) of an $n$-simplex, it is often
-desirable to have a unique representative simplex for each subset of vertices,
-rather than all possible permutations. Furthermore, preserving the relative
-order of vertices from the original simplex is often important, particularly for
-defining orientations via the boundary operator.
+When considering the subsimplices of an $n$-simplex there are multiple
+simplices (as ordered vertex lists) that have the same vertex set.
+However it's desirable to have a unique representative simplex for each vertex subset.
+A natural choice for this is the subset that preserves the ordering of the vertices.
+This is particularly important for the boundary operator.
 
 For this, we consider *subsequences* of the original simplex's vertex list. A
 subsequence maintains the relative order of the vertices it contains. We can
@@ -698,8 +657,8 @@ pub fn is_supersequence_of(&self, other: &Self) -> bool {
 
 We provide a method for generating all $k$-dimensional subsimplices that
 are *subsequences* of an $n$-simplex. This is achieved by generating all
-$(k+1)$-length combinations (which preserve order) of the original $(n+1)$
-vertices, using an implementation provided by the `itertools` crate @crate:itertools.
+$(k+1)$-length selections of the original $(n+1)$ vertices, using an
+implementation provided by the `itertools` crate @crate:itertools.
 ```rust
 pub fn subsequences(&self, sub_dim: Dim) -> impl Iterator<Item = Self> {
   itertools::Itertools::combinations(self.clone().into_iter(), sub_dim + 1).map(Self::from)
@@ -707,7 +666,7 @@ pub fn subsequences(&self, sub_dim: Dim) -> impl Iterator<Item = Self> {
 ```
 This implementation conveniently provides the subsequences in lexicographical
 order with respect to the vertex indices of the original simplex. If the
-original simplex was sorted, then the generated subsequences are also
+original simplex was sorted, then the generated subsequences are also absolutely
 lexicographically ordered.
 
 A standard operation is to generate all subsequence simplices of the standard
@@ -741,6 +700,14 @@ pub fn supersequences(
 }
 ```
 
+The number of distinct vertex subsequences of size $k+1$ within a set of $n+1$
+vertices is given by the binomial coefficient $binom(n+1, k+1)$.
+```rust
+pub fn nsubsimplices(dim_cell: Dim, dim_sub: Dim) -> usize {
+  binomial(dim_cell + 1, dim_sub + 1)
+}
+```
+
 === Boundary
 
 A special operation related to subsequence simplices is the *boundary operator*
@@ -750,8 +717,8 @@ $
   diff sigma = sum_(i=0)^n (-1)^i [v_0,...,hat(v)_i,...,v_n]
 $
 Here, $hat(v)_i$ indicates that vertex $v_i$ is omitted. The result is a formal
-sum of all $(n-1)$-dimensional subsequence simplices (facets) of $sigma$. Each
-facet is assigned a sign $(-1)^i$, giving the boundary an orientation consistent
+sum of all $(n-1)$-dimensional subsequence simplices of $sigma$. Each
+subsimplex is assigned a sign $(-1)^i$, giving the boundary an orientation consistent
 with the orientation of $sigma$. When viewed as elements of the free Abelian
 group generated by all oriented simplices, this operator is linear.
 
@@ -763,9 +730,9 @@ Rearranging terms to follow a path gives $[0,1] + [1,2] + [2,0]$, which
 corresponds to traversing the edges of the triangle.
 
 Our implementation generates the boundary facets using the `subsequences`
-method, which yields them in an order based on the index of the *retained*
+method, which yields them in an order based on the index of the retained
 vertices (lexicographical combinations). This order differs from the summation
-index $i$ (based on the *omitted* vertex) in the standard definition $sum_i
+index $i$ (based on the omitted vertex) in the standard definition $sum_i
 (-1)^i [...]$. The code calculates the appropriate sign for each generated
 subsequence to ensure consistency with the standard alternating sign convention
 of the boundary operator.
@@ -801,15 +768,10 @@ region within an $N$-dimensional Euclidean space.
 
 If we, in contrast, build our mesh using only abstract simplices, we lack
 this explicit geometric information, since abstract simplices only specify the
-vertices (via indices) they comprise. This information, however, fully defines
-the *topology* of our discrete $n$-manifold @hatcher:algtop. The connectivity
-between simplices—whether they are adjacent or incident—is determined entirely
-by shared vertices. This makes the topology purely combinatorial.
-
-In the following sections, we will study this simplicial topology and implement
-the necessary data structures and algorithms.
-
-#v(1cm)
+*connectivity* via verticex indices. This information, however, fully defines
+the topology of our discrete $n$-manifold @hatcher:algtop. The connectivity
+(incidence and adjacency) between simplices is determined entirely by shared
+vertices. This makes the topology purely combinatorial.
 
 To define the topology of a simplicial $n$-manifold at its highest dimension, we
 only need to store the set of $n$-simplices that constitute it. This collection
@@ -845,7 +807,7 @@ impl IntoIterator for Skeleton {
 ```
 Crucially, it provides unique identification for each simplex through a
 global numbering scheme within that dimension. This establishes a bijective
-mapping between an integer index (`KSimplexIdx`) and the abstract simplex
+mapping between an integer index `KSimplexIdx` and the abstract simplex
 itself. This functionality is achieved using the `IndexSet` data structure
 from the `indexmap` crate. `IndexSet` maintains insertion order, allowing
 efficient retrieval of a `Simplex` given its index (similar to `Vec`), while
@@ -908,73 +870,26 @@ the skeleton.
 == Simplicial Complex
 
 An $n$-skeleton provides the top-level topological information of a mesh by
-defining its $n$-dimensional cells. However, this structure alone is often
-insufficient for applications like Finite Element Exterior Calculus (FEEC)
-@douglas:feec-book. Many FE methods associate degrees of freedom (DOFs) or
-basis functions not only with cells but also with the lower-dimensional entities, in our
-case subsimplices.
+defining its $n$-dimensional cells $Delta_n (mesh)$. However, this structure alone is often
+insufficient for applications like FEEC @douglas:feec-book. This is because
+degrees of freedom (DOFs) or basis functions are not only associated with cells
+but also with the lower-dimensional subsimplices $Delta_k (mesh), k <= n$.
 Therefore, we need a data structure that explicitly represents the topology of
-_all_ relevant simplices within the mesh.
-
-The skeleton only stores the top-level simplices $Delta_n (mesh)$. Our FEM
-library, however, also needs to reference the lower-level simplices $Delta_k
-(mesh)$ for $k < n$, since these are also mesh entities potentially carrying
-DOFs.
+_all_ relevant simplices within the mesh, including subsimplices.
 
 Enter the *simplicial complex* @hatcher:algtop. A simplicial complex $K$ is a
 collection of simplices such that:
-+ Every face (subsequence simplex) of a simplex in $K$ is also in $K$.
++ Every subsimplex of a simplex in $K$ is also in $K$.
 + The intersection of any two simplices in $K$ is either empty or a face of both.
 
 In our implementation, we represent an $n$-dimensional simplicial complex by
 storing the complete set of $k$-simplices for each dimension $k$ from $0$ to
 $n$. Effectively, it comprises $n+1$ distinct skeletons, one for each dimension.
 
-We use standard terminology for low-dimensional simplices within the complex:
--   The $0$-simplices are called *vertices*.
--   The $1$-simplices are called *edges*.
--   The $2$-simplices are called *faces*.
--   The $3$-simplices are called *tets*.
--   The $(n-1)$-simplices are called *facets*.
--   The $n$-simplices are called *cells*.
-The `Complex` will serve as the main *topological data structure* passed as an
-argument into our FEEC algorithm routines, providing access to all mesh entities
-and their relationships.
-
-While general simplicial complexes can represent complex topological spaces,
-potentially including non-manifold features @hatcher:algtop, our target
-applications in PDE modeling typically require computational domains that
-are *manifolds*. A topological $n$-manifold is a space that locally resembles
-Euclidean $n$-space.
-
-Our `Complex` data structure is designed to represent such manifold domains. We
-ensure two properties through construction: @crane:ddg
-1.  *Closure:* The complex contains all faces (subsequences) of its simplices.
-  This is guaranteed by generating the complex from a list of top-level cells and
-  explicitly adding all their subsequences.
-2.  *Purity:* Every simplex of dimension $k < n$ is a face of at least one
-  $n$-simplex (cell). This is also ensured by constructing the complex downwards
-  from the cells.
-
-However, the input `cells` skeleton itself might implicitly define a
-non-manifold topology. A common example in 2D is when three or more triangles
-meet along a single edge, or in 3D when multiple tetrahedra share a common face
-like pages of a book. To ensure the represented space is a manifold (potentially
-with boundary), we perform a check. A necessary condition for an $n$-dimensional
-simplicial complex to be a manifold (without boundary) is that every facet
-($(n-1)$-simplex) must be shared by exactly two cells ($(n)$-simplices). If
-facets are shared by only one cell, this indicates they lie on the boundary
-of the manifold. Our check verifies that each facet is contained in *at most*
-two cells. This check is performed *after* building the full complex structure
-because the required incidence information (which cells contain each facet) is
-naturally computed during the construction process. It fundamentally serves as a
-validation step for the input cell skeleton.
 
 ```rust
-/// A simplicial manifold complex.
 #[derive(Default, Debug, Clone)]
 pub struct Complex {
-  // Stores skeletons for dimensions 0 to n.
   skeletons: Vec<ComplexSkeleton>,
 }
 impl Complex {
@@ -988,18 +903,7 @@ pub struct ComplexSkeleton {
   skeleton: Skeleton,
   complex_data: SkeletonComplexData,
 }
-impl ComplexSkeleton {
-  pub fn skeleton(&self) -> &Skeleton {
-    &self.skeleton
-  }
-  /// Accessor for the complex-specific data associated with each simplex
-  /// in this skeleton.
-  pub fn complex_data(&self) -> &[SimplexComplexData] {
-    &self.complex_data
-  }
-}
 
-/// Complex-specific data for all simplices in a single skeleton.
 pub type SkeletonComplexData = Vec<SimplexComplexData>;
 
 /// Complex-specific data associated with a single simplex within the complex.
@@ -1011,22 +915,56 @@ pub struct SimplexComplexData {
 }
 ```
 
+We store some minimal additional information to the skeletons, which
+are the parent cells (cocells) of each simplex. This allows us to find
+the supersimplices of each simplex, because then we have a root for searching in.
+This allows us to traverse the whole hierarchy of simplices efficiently.
+
+We use the following terminology for simplices of various dimensions within the complex:
+-   The $0$-simplices are called *vertices*.
+-   The $1$-simplices are called *edges*.
+-   The $2$-simplices are called *faces*.
+-   The $3$-simplices are called *tets*.
+-   The $(n-1)$-simplices are called *facets*.
+-   The $n$-simplices are called *cells*.
+
+The complex will serve as the main *topological data structure* passed as an
+argument into our FEEC algorithm routines, providing access to all mesh entities
+and their relationships.
+
+While general simplicial complexes can represent complex topological spaces,
+potentially including non-manifold features @hatcher:algtop, our target
+applications in PDE modeling typically require computational domains that
+are *manifolds*. A topological $n$-manifold is a space that locally resembles
+Euclidean $n$-space.
+
+Our `Complex` data structure is designed to only represent such manifold
+domains. We ensure two properties through construction: @crane:ddg
+1.  *Closure:* The complex contains all faces (subsequences) of its simplices.
+  This is guaranteed by generating the complex from a list of top-level cells and
+  explicitly adding all their subsequences.
+2.  *Purity:* Every simplex of dimension $k < n$ is a face of at least one
+  $n$-simplex (cell). This is also ensured by constructing the complex downwards
+  from the cells.
+
 The primary method for creating a `Complex` is by providing the skeleton of
 its highest-dimensional cells ($n$-simplices). The `from_cells` constructor
 then systematically builds the skeletons for all lower dimensions ($k=0, ...,
 n-1$) by generating all subsequence simplices of the input cells. During this
-process, it also computes crucial topological incidence information: for each
-simplex, it records the list of top-level cells that contain it (its `cocells`).
-This information is stored alongside the skeletons in the `ComplexSkeleton`
-structure.
+process, it also strores the cocells of each simplex.
 
-After populating all skeletons and computing the incidence data, the
-constructor performs the manifold topology check described earlier. It examines
-the $(n-1)$-skeleton (facets) and verifies that each facet is listed as a
-subsequence of either one cell (indicating a boundary facet) or two cells
-(indicating an interior facet). If any facet belongs to more than two cells,
-the input `cells` skeleton does not represent a manifold, and the constructor
-asserts failure.
+However, the input `cells` skeleton itself might implicitly define a
+non-manifold topology. A common example in 2D is when three or more triangles
+meet along a single edge, like pages of a book.
+To ensure the represented space is a manifold (potentially with boundary), we
+perform a check. A necessary condition for an $n$-dimensional simplicial complex
+to be a manifold is that every facet must be shared by at most 2 cells. If
+facets are shared by only one cell, this indicates they lie on the boundary of
+the manifold. This check is performed after building the full complex structure
+because the required incidence information (which cells contain each facet) is
+naturally computed during the construction process. It fundamentally serves as a
+validation step for the input cell skeleton.
+
 ```rust
 impl Complex {
   pub fn from_cells(cells: Skeleton) -> Self {
@@ -1076,6 +1014,8 @@ impl Complex {
   }
 }
 ```
+
+
 
 === Simplices in the Mesh: Simplex Indices and Handles
 
