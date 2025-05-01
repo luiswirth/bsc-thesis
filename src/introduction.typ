@@ -27,7 +27,7 @@ arbitrary dimension.
 ]
 
 *Finite Element Exterior Calculus* (FEEC) developed by Douglas Arnold, Richard
-Falk and Ragnar Winther @douglas:feec-article, @douglas:feec-book is exactly
+Falk and Ragnar Winther @douglas:feec-article, @douglas:feec-book provides exactly
 this unified mathematical framework. By employing the language of *differential
 geometry* @frankel:diffgeo and *algebraic topology* @hatcher:algtop, FEEC extends
 FEM to handle problems involving *differential forms of arbitrary rank*. This

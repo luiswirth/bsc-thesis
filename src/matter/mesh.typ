@@ -1652,7 +1652,7 @@ to derive the metric.
 It turns out that, while vertex coordinates are over-specified, edge lengths
 in contrast are exactly the required information.
 Edge lengths are invariant under isometric transformations.
-This is known from *Regge Caluclus* @regge.
+This is known from *Regge Calculus* @regge.
 
 Instead of giving all vertices a global coordinate, as one would do in extrinsic
 geometry, we just give each edge in the mesh a positive length. Just knowing

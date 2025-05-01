@@ -1,7 +1,7 @@
 = Software Design & Implementation Choices
 
-In this chapter we want to briefly discuss some general software engineering
-decisions for our library, #strong("formoniq").
+In this chapter we briefly discuss some general software engineering decisions
+for our library, #strong("formoniq").
 
 == Rust
 
@@ -12,11 +12,11 @@ choice, some of which we briefly outline here.
 === Memory Safety + Performance
 
 Rust is a strongly-typed, modern systems programming language that combines
-performance on par with `C/C++` with strong memory safety guarantees.
-Unlike traditional memory-safe languages that rely on garbage collection, Rust
-achieves memory safety through a unique ownership and borrowing model inspired
-by formal software verification and static analysis techniques. This ensures
-safety at compile-time without compromising runtime performance @klabnik:rust.
+performance on par with `C/C++` with strong memory safety guarantees. Unlike
+traditional memory-safe languages that rely on garbage collection, Rust achieves
+memory safety through a unique ownership and borrowing model inspired by formal
+software verification and static analysis techniques. This ensures safety at
+compile-time without compromising runtime performance, @klabnik:rust.
 
 The Rust compiler acts as a proof checker, requiring the programmer to provide
 sufficient evidence for the safety of their code.
@@ -26,7 +26,7 @@ memory responsibility @jung:rustbelt.
 
 This system completely eliminates entire classes of memory-related bugs
 (dangling pointers, use-after-free, data races), making software significantly
-more reliable. This isn't limited to simple single-threaded serial computations,
+more reliable. This is not limited to simple single-threaded serial computations,
 but extends to concurrent, parallel and distributed computing, ensuring
 that data races can never occur. This "fearless concurrency" feature allows
 developers to be fully confident that any parallel code written in Rust that
