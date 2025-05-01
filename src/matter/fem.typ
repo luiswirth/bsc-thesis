@@ -205,12 +205,10 @@ $
 
 
 We can now make use of the fact that the exterior derivative of the barycentric
-coordinate functions are constant @hiptmair:numpde. This makes the wedge big terms also constant.
-We can therefore pull them out of the integral inside the $L^2$-inner product
-and now it's just an inner product on constant multiforms.
-What remains in the in the integral is the product of two barycentric
-coordinate functions.
-
+coordinate functions are constant @hiptmair:numpde. This makes the big wedge
+terms also constant. We can therefore pull them out of the $L^2$ integral and
+now it's just an inner product on constant multiforms. What remains in the in
+the integral is the product of two barycentric coordinate functions.
 
 Using this we can now implement the element matrix provider
 to the mass bilinear form in Rust.
@@ -270,7 +268,7 @@ impl ElMatProvider for HodgeMassElmat {
 Now we are just missing an element matrix provider for the scalar mass
 bilinear form.
 Luckily there exists a closed form solution, for
-this integral, which only depends on the volume of the cell @hiptmair:numpde, @douglas:feec-book.
+this integral, which only depends on the volume of the cell @hiptmair:numpde.
 $
   integral_K lambda_i lambda_j vol
   = abs(K)/((n+2)(n+1)) (1 + delta_(i j))
@@ -281,7 +279,6 @@ $
   =
   n! abs(K) (alpha_0 ! space dots.c space alpha_n !)/(alpha_0 + dots.c + alpha_n + n)!
 $
-$K in Delta_n, avec(alpha) in NN^(n+1)$
 
 ```rust
 pub struct ScalarMassElmat;
@@ -327,15 +324,15 @@ $
   avec(b)_K = [inner(f, phi^k_j)_(L^2 Lambda^k (K))]_(i=1)^(N_k)
 $
 
-It takes in as input an `ExteriorField` that corresponds to $f$, represented as
+It takes as input an `ExteriorField` that corresponds to $f$, represented as
 a functor that takes a global coordinate $avec(x) in RR^N$ (based on an embedding) and produces the
 multiform $f_avec(x)$ at that position. It constitutes the coordinate-based
 representation of the arbitrary continuous differential form $f$.
 
 Since only point-evaluation is available to us, we need to rely on quadrature @hiptmair:numpde
 to compute the element vector corresponding to the source term. For this we
-pullback the `ExteriorField` representing `f` to the using `precompose_form`
-reference cell and compute the pointwise inner product.
+pullback the `ExteriorField` representing `f` to the reference cell using
+`precompose_form` and compute the pointwise inner product.
 $
   inner(f, phi^k_j)_(L^2 Lambda^k)
   = integral_K inner(f (avec(x)), phi^k_j (avec(x)))_(Lambda^k) vol_g
@@ -409,17 +406,16 @@ where
 
 == Assembly
 
-The element matrix provider tells the assembly routine, what the exterior grade
-is of the arguments into the bilinear forms, based on this the right dimension
-of simplices are used to assemble. The assembly process itself is a standard FEM
-technique @hiptmair:numpde.
+The element matrix provider provides the exterior grade of the bilinear
+form arguments. Based on this the corresponding dimension of simplices are
+used to assemble. The assembly process itself is a standard FEM technique
+@hiptmair:numpde.
 
 We use rayon @crate:rayon to parallelize the assembly process over all the different cells,
 since these computations are always independent.
 
 ```rust
 pub type GalMat = CooMatrix;
-/// Assembly algorithm for the Galerkin Matrix.
 pub fn assemble_galmat(
   topology: &Complex,
   geometry: &MeshLengths,
@@ -427,7 +423,6 @@ pub fn assemble_galmat(
 ) -> GalMat {
   let row_grade = elmat.row_grade();
   let col_grade = elmat.col_grade();
-
   let nsimps_row = topology.skeleton(row_grade).len();
   let nsimps_col = topology.skeleton(col_grade).len();
 
@@ -456,7 +451,6 @@ pub fn assemble_galmat(
       local_triplets
     })
     .collect();
-
   let (rows, cols, values) = triplets.into_iter().multiunzip();
   GalMat::try_from_triplets(nsimps_row, nsimps_col, rows, cols, values).unwrap()
 }
@@ -465,7 +459,6 @@ pub fn assemble_galmat(
 We also have an assembly algorithm for Galerkin vectors.
 ```rust
 pub type GalVec = Vector;
-/// Assembly algorithm for the Galerkin Vector.
 pub fn assemble_galvec(
   topology: &Complex,
   geometry: &MeshLengths,
@@ -482,7 +475,6 @@ pub fn assemble_galvec(
     .flat_map(|cell| {
       let geo = geometry.simplex_lengths(cell);
       let elvec = elvec.eval(&geo, &cell);
-
       let subs: Vec<_> = cell.mesh_subsimps(grade).collect();
 
       let mut local_entires = Vec::new();
@@ -491,7 +483,6 @@ pub fn assemble_galvec(
           local_entires.push((iglobal.kidx(), elvec[ilocal]));
         }
       }
-
       local_entires
     })
     .collect();

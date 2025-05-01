@@ -1572,6 +1572,8 @@ From a different perspective the spanning vectors just constitute our chosen bas
 and therefore it's Gramian w.r.t. the Euclidean inner product is the metric tensor.
 $
   amat(G) = amat(E)^transp amat(E)
+  \
+  amat(G)_(i j) = e_i dot e_j
 $
 ```rust
 impl SimplexCoords {
@@ -1602,6 +1604,8 @@ it's enough to give the whole mesh it's piecewise-flat geometry.
 Mathematically this is just a function on the edges to the positive real numbers.
 $
   d: Delta_1 (mesh) -> RR^+
+  \
+  d_(i j) = d([v_i, v_j])
 $
 that gives each edge $e in Delta_1 (mesh)$ a positive length $l_e in RR^+$. \
 We denote the edge length between vertices $i$ and $j$ by $d_(i j)$.
@@ -1982,27 +1986,21 @@ $l^n$ cubes. So the overall computational complexity is dominated by $cal(O)(l^n
 a terrible result, due to the curse of dimensionality.
 The memory usage is dictated by the same scaling law.
 
-=== Gmsh Import
+=== Mesh Import
 
-The formoniq manifold crate can read gmsh `.msh` files @GmshPaper2009 and turn them
-into a simplicial complex that we can work on.
-This is thanks to the `gmshio` crate.
+The formoniq manifold crate supports multiple mesh formats for importing.
 
+Formoniq can read gmsh `.msh` files @GmshPaper2009 and turn them into a
+simplicial complex that we can work on. This is thanks to the `gmshio` crate @crate:mshio.
 ```rust
-pub fn gmsh2coord_cells(bytes: &[u8]) -> (Skeleton, MeshVertexCoords)
+pub fn gmsh2coord_complex(bytes: &[u8]) -> (Complex, MeshCoords)
 ```
 
-=== Blender IO: OBJ and MDD
-
-The formoniq manifold crate supports reading and writing of file formats related to blender,
-for the easy visualization of the 2-manifold embedded in $RR^3$.
-
-These two formats are OBJ and MDD. Thanks to the simplicity of these formats
-we don't rely on any external libraries, but just have very basic
-custom readers and writers for these.
-
-=== Custom Format for Arbitrary Dimensions
-
-We also have a maximally simple custom file format that works
-great for arbitrary dimensional manifolds.
+Formioniq also supports reading and writing `.obj` files, which are
+very common in computer graphics software, such as blender.
+We implemented some very basic custom readers and writers, since the format
+is very simple.
+```rust
+pub fn obj2coord_complex(obj_string: &str) -> (Complex, MeshCoords)
+```
 

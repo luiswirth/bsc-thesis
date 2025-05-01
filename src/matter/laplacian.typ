@@ -26,8 +26,8 @@ $
 
 == Eigenvalue Problem
 
-We first consider the Eigenvalue problem, because it's a bit simpler
-and the source problem, relies on the eigenvalue problem.
+We first consider the Eigenvalue problem, because it's simpler than the source
+problem. Furthermore the source problem _relies_ on the eigenvalue problem.
 
 The strong primal form of the Hodge-Laplace eigenvalue problem is @douglas:feec-book\
 Find $lambda in RR, u in Lambda^k (Omega)$, s.t.
@@ -35,11 +35,11 @@ $
   (dif delta + delta dif) u = lambda u
 $
 
-
-In FEM we don't solve the PDE based on the strong form, but instead we rely
-on a weak variational form.
-The primal weak form is not suited for discretization, so instead we make use of
-a mixed variational form that includes an auxiliary variable $sigma$ @douglas:feec-article, @douglas:feec-book.
+In FEM we don't solve the PDE based on the strong form, but instead we
+rely on a weak variational form. However the primal weak form is not
+suited for discretization, so instead we make use of a *mixed variational
+form* that includes an *auxiliary variable* $sigma$ @douglas:feec-article,
+@douglas:feec-book.
 
 The mixed weak form is @douglas:feec-article, @douglas:feec-book\
 Find $lambda in RR$, $(sigma, u) in (H Lambda^(k-1) times H Lambda^k \\ {0})$, s.t.
@@ -105,7 +105,7 @@ $
 $
 
 This is a symmetric indefinite sparse generalized matrix eigenvalue problem,
-that can be solved by an iterative eigensolver such as Krylov-Schur.
+that can be solved by an iterative eigensolver such as Krylov-Schur @douglas:feec-book.
 In SLEPc @SLEPcPaper2005 terminology this is called a GHIEP problem.
 
 We have a helper struct for computing all the the relevant Galerkin matrices,
@@ -166,13 +166,8 @@ impl MixedGalmats {
       mass_u,
     }
   }
-
-  pub fn sigma_len(&self) -> usize {
-    self.mass_sigma.nrows()
-  }
-  pub fn u_len(&self) -> usize {
-    self.mass_u.nrows()
-  }
+  pub fn sigma_len(&self) -> usize { self.mass_sigma.nrows() }
+  pub fn u_len(&self) -> usize { self.mass_u.nrows() }
 
   pub fn mixed_hodge_laplacian(&self) -> CooMatrix {
     let Self {
@@ -220,12 +215,12 @@ pub fn solve_hodge_laplace_evp(
 == Source Problem
 
 The Hodge-Laplace Source Problem is the generalization of the Poisson equation
-to arbitrary differential $k$-forms @douglas:feec-book. In strong form it is\
+to arbitrary differential $k$-forms @douglas:feec-book. In strong form it is: \
 Find $u in Lambda^k (Omega)$, given $f in Lambda^k (Omega)$, s.t.
 $
   Delta u = f - P_frak(H) f quad "in" Omega \
+  tr hodge u = 0, quad tr hodge dif u = 0 quad "on" diff Omega \
   u perp frak(H)
-  tr hodge u = 0, quad tr hodge dif u = 0 quad "on" diff Omega
 
 $
 This equation is not quite as simple as the normal Poisson equation $Delta u = f$.
@@ -303,11 +298,11 @@ $
 //  vec(0, hodge f, 0)
 //$
 
-Where the right-hand side $avec(b)$ corresponding to the source term that is
+Where the right-hand side $avec(b)$, corresponding to the source term, is
 approximated via quadrature, as previously discussed.
 
-Compute harmonics is just a matter of solving the EVP to obtain the
-eigenfunctions that correspond to zero eigenvalues.
+Computing harmonics is just a matter of solving the EVP to obtain the
+eigenfunctions that correspond to eigenvalue zero.
 ```rust
 pub fn solve_hodge_laplace_harmonics(
   topology: &Complex,

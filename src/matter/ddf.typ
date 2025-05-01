@@ -33,21 +33,16 @@ differential forms. We will focus on two key processes:
 - *Discretization*: Projecting continuous differential forms onto the discrete
   setting, yielding degrees of freedom associated with the mesh simplices.
 - *Reconstruction*: Interpolating these discrete degrees of freedom using basis
-  functions to obtain a piecewise continuous representation over the mesh,
-  suitable for variational methods.
-
+  functions to obtain a piecewise continuous representation over the mesh.
 
 Understanding these discrete structures and the maps connecting them is crucial,
 as they provide the foundation for constructing the finite element spaces and
 structure-preserving discrete operators used throughout FEEC @douglas:feec-book.
 
-This chapter lays the foundation for the discrete variational formulations used
-in FEEC.
+== Simplicial Cochains
 
-== Cochains
-
-The discretization of a differential $k$-form is a $k$-cochain.
-A $k$-cochain $omega$ is a real-valued function $omega: Delta_k (mesh) -> RR$
+The discretization of a differential $k$-form is a simplicial $k$-cochain.
+A simplicial $k$-cochain $omega$ is a real-valued function $omega: Delta_k (mesh) -> RR$
 on the $k$-skeleton $Delta_k (mesh)$ of the mesh $mesh$ @whitney:geointegration.
 
 Simplicial cochains arise naturally from the combinatorial structure of a
@@ -64,11 +59,9 @@ pub struct Cochain {
 }
 ```
 
-Simplicial cochains preserve the structure of the de Rham complex at a discrete
-level and therefore retain the key topological and geometrical properties from
-differential topology/geometry @douglas:feec-article.
+Simplicial cochains preserve the cohomology of the de Rham complex at a discrete
+level and therefore retain the key topological properties @douglas:feec-article.
 
-Cochains can be seen as the coefficients or DOFs of our FE spaces.
 
 === Discretization: Cochain-Projection via Integration
 
@@ -96,16 +89,20 @@ $
   integral_sigma omega
   &= integral_hat(sigma) phi^* omega \
   &= integral_hat(sigma) omega_(phi(lambda^1,dots,lambda^k)) (phi_* nvec(e)_1, dots, phi_* nvec(e)_k) dif lambda^1 dots dif lambda^k \
-  &= integral_hat(sigma) omega_(phi(lambda^1,dots,lambda^k)) ((diff avec(x))/(diff lambda_1), dots, (diff avec(x))/(diff lambda_k)) dif lambda^1 dots dif lambda^k
+  &= integral_hat(sigma) omega_(phi(lambda^1,dots,lambda^k)) (avec(e)_1, dots, avec(e)_n) dif lambda^1 dots dif lambda^k
 $
-
 The last expression is a traditional pre-differential geometry integral over a
 subset $hat(sigma) in RR^k$. No exterior calculus required.
-
-We approximate this integral using barycentric quadrature.
+We approximate this ordindary integral using barycentric quadrature.
 $
   integral_sigma omega approx |hat(sigma)| omega_(phi(avec(m)_hat(sigma))) (avec(e)_1,dots,avec(e)_n)
 $
+
+Here the $e_i$ are the spanning vectors of the simplex $sigma$. We work
+here with coordinate representation of differential froms, that rely on an embedding.
+Computationally we will have functors that can be evaluated at coordinates to
+get the multiform.
+
 
 And the implementation just looks like this:
 ```rust
@@ -158,9 +155,8 @@ $
 $
 
 A crucial property of the continuous exterior derivative is captured by *Stokes'
-Theorem*. For a differential form $omega$ and a chain $c$, this theorem relates
-the integral of the exterior derivative over the chain to the integral of the
-form over the chain's boundary @frankel:diffgeo, @hatcher:algtop:
+Theorem on chains*. For a differential form $omega$ and a chain $c$, this theorem relates
+the exterior derivative with the boundary operator @frankel:diffgeo, @hatcher:algtop:
 $
   integral_c dif omega = integral_(diff c) omega
 $
@@ -183,13 +179,10 @@ $
 $
 
 This adjoint relationship provides the direct motivation for defining the
-discrete exterior derivative. On a simplicial complex, we use cochains
-as discrete differential forms and the boundary operator is a fundamental
-combinatorial operator acting on chains. The discrete exterior derivative, often
-called the *coboundary operator*, is thus defined as the adjoint of the boundary
-operator. By definition, this discrete operator preserves the structure of
-Stokes' Theorem at the discrete level
-@crane:ddg.
+discrete exterior derivative. The discrete exterior derivative, often called the
+*coboundary operator*, is thus defined as the adjoint of the boundary operator.
+By definition, this discrete operator preserves the structure of Stokes' Theorem
+at the discrete level @crane:ddg.
 
 From a computational perspective, the boundary operator $diff^k$ mapping
 $k$-chains to $(k-1)$-chains can be represented as a signed incidence matrix
@@ -197,7 +190,6 @@ between the simplices in the $k$-skeleton and $(k-1)$-skeleton @crane:ddg.
 The adjoint property then translates directly to the discrete exterior
 derivative $dif^k$ (mapping $k$-cochains to $(k+1)$-cochains) being the
 transpose of the boundary operator $diff_(k+1)$:
-// TODO: notation??
 $
   amat(dif)^k = amat(D)_(k+1)^transp
   \
@@ -251,20 +243,20 @@ $
 
 Let's take a look at the local shape functions (LSF).
 
-The local Whitney form $lambda_(i_0 dots i_k)$ associated with the DOF simplex
+The local Whitney form $restr(phi_sigma)_K = lambda_sigma = lambda_(i_0 dots i_k)$ associated with the DOF simplex
 $sigma = [i_0 dots i_k] subset.eq K$ on the cell $K = [j_0 dots j_n]$ is
-defined using the barycentric coordinate functions $lambda_i_s$ of the cell.
+defined using the barycentric coordinate functions $lambda_j_s: K -> RR$ of the cell.
 $
-  restr(phi_sigma)_K = lambda_(i_0 dots i_k) =
+  lambda_(i_0 dots i_k) =
   k! sum_(l=0)^k (-1)^l lambda_i_l
   (dif lambda_i_0 wedge dots.c wedge hat(dif lambda)_i_l wedge dots.c wedge dif lambda_i_k)
 $ <def:whitney>
 
 To get some intuition for the kind of fields this produces, let's look at some
-visualizations. We do this specifically for 1-forms, since we can visualize
-these using vector field proxies.
+visualizations. We do this specifically for 1-forms, since we can intuitively
+visualize these using vector field proxies.
 
-We have the following formula for Whitney 1-forms.
+We have the following formula for local shape functions of Whitney 1-forms.
 $
   lambda_(i j) = lambda_i dif lambda_j - lambda_j dif lambda_i
 $
@@ -317,8 +309,9 @@ with the edges of the middle triangle.
   ],
 ) <img:global_whitneys>
 
-Via linear combination of these GSF we can obtain
-any Whitney form.
+Via linear combination of these GSF we can obtain any Whitney form $u =
+sum_(sigma in Delta_k (mesh)) c^sigma phi_sigma$, where $c in C^k (mesh)$ is a
+simplicial cochain providing the coefficients $c^i$.
 
 We can for instance construct the following constant, purely divergent,
 and purely rotational vector fields.
@@ -515,19 +508,15 @@ fn whitney_basis_property() {
 
 === Reconstruction: Whitney-Interpolation via the Whitney map
 
-There is a one-to-one correspondence between $k$-cochain and Whitney $k$-form @whitney:geointegration
-
-We have already seen how to obtain a cochain from a continuous differential
-form via cochain-projection. This is how we can obtain the cochain corresponding
-to a Whitney form. But what about the other way? How can we reconstruct a
-continuous differential form from a cochain?
+There is a one-to-one correspondence between $k$-cochains and Whitney $k$-forms
+@whitney:geointegration. We have already seen how to obtain a cochain from a
+continuous differential form via cochain-projection. But what about the other
+way? How can we reconstruct a continuous differential form from a cochain?
 
 This reconstruction is achieved by the so called *Whitney map* @whitney:geointegration.
 $
   W: C^k (mesh; RR) -> cal(W)^k (mesh) subset.eq Lambda^k (Omega)
-$
-
-$
+  \
   W(c) = sum_(sigma in mesh_k) c(sigma) omega_sigma
 $
 It can be seen as a generalized interpolation operator.

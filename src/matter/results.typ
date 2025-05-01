@@ -10,7 +10,8 @@ validate the implementation of the `formoniq` library.
 
 Specifically, we examine the Hodge-Laplacian eigenvalue problem on a domain with
 non-trivial topology and perform a convergence study for the Hodge-Laplacian
-source problem using the Method of Manufactured Solutions on a hypercube domain.
+source problem using the Method of Manufactured Solutions on a $n$-dimensional
+hypercube domain.
 
 == 1-form Eigenvalue Problem on Torus
 
