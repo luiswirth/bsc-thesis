@@ -167,7 +167,7 @@ matrix provider for the source term based on the exact Laplacian.
 Then we just call the `solve_hodge_laplace_source` routine.
 
 We compute the $L^2$ norm of the error in the function value $norm(u -
-u_h)_(L^2)$. we do this by computing the pointwise error norm $norm(u -
+u_h)_(L^2)$. We do this by computing the pointwise error norm $norm(u -
 u_h)_(Lambda^k)$ and integrating it using quadrature of order 3, which is
 sufficient for the quadrature error to not dominate the finite element error
 @hiptmair:numpde. We also compute the $L^2$ error in the exterior derivative,
@@ -344,20 +344,19 @@ We observe experimental convergence $cal(O) (h^1)$ for the $L^2$ error of
 the exterior derivative $norm(dif u - dif u_h)_(L^2)$ and converge $cal(O) (h^1)$ for
 the $L^2$ error of the solution value itself $norm(u - u_h)_(L^2)$.
 
-The observed rate $alpha_(H(dif)) = 1$ is promising. It
+The observed rate $alpha = 1$ for the exterior derivative is promising. It
 matches the convergence rate expected for the $norm(dif dot)_(L^2)$
-component within the $H Lambda$ energy norm for first-order Whitney
-elements, as predicted by theory @douglas:feec-book. This suggests a valid
-implementation of the discretization related to the exterior derivative
-operator.
+component within the $H Lambda$ norm for first-order Whitney elements, as
+predicted by theory @douglas:feec-book. This suggests a valid implementation of
+the discretization related to the exterior derivative operator.
 
-The interpretation of the $alpha_(L^2) = 1$ rate is less
+The interpretation of the $L^2$ rate $alpha = 1$ for the function value is less
 straightforward. While this rate is compatible with an overall $cal(O)(h^1)$
 convergence in the full $H Lambda$ norm, standard FEEC theory often predicts
-$cal(O)(h^2)$ convergence for the $L^2$ error itself via an Aubin-Nitsche duality
-argument @douglas:feec-book. The reason why this higher rate is not observed
-in our results requires further investigation, potentially related to the
-quadrature rules used for error computation or other implementation details.
+$cal(O)(h^2)$ convergence for the $L^2$ error itself via an Aubin-Nitsche
+duality argument @douglas:feec-book. The reason why this higher rate is not
+observed in our results requires further investigation, potentially related to
+the quadrature rules used for error computation or other implementation details.
 
 It should be noted that this study constitutes only a partial validation of the
 implementation. A complete verification would require measuring the error in

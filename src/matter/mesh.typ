@@ -613,7 +613,7 @@ pub fn is_superset_of(&self, other: &Self) -> bool {
   other.is_subset_of(self)
 }
 ```
-Note that this only consideres the simplices as sets, even though they are
+Note that this only considers the simplices as sets, even though they are
 actually lists with an ordering.
 
 Given a simplex that is a subset of a larger simplex, we can compute its vertex
@@ -940,10 +940,10 @@ Euclidean $n$-space.
 
 Our `Complex` data structure is designed to only represent such manifold
 domains. We ensure two properties through construction: @crane:ddg
-1.  *Closure:* The complex contains all faces (subsequences) of its simplices.
++ *Closure:* The complex contains all faces (subsequences) of its simplices.
   This is guaranteed by generating the complex from a list of top-level cells and
   explicitly adding all their subsequences.
-2.  *Purity:* Every simplex of dimension $k < n$ is a face of at least one
++ *Purity:* Every simplex of dimension $k < n$ is a face of at least one
   $n$-simplex (cell). This is also ensured by constructing the complex downwards
   from the cells.
 
@@ -951,7 +951,7 @@ The primary method for creating a `Complex` is by providing the skeleton of
 its highest-dimensional cells ($n$-simplices). The `from_cells` constructor
 then systematically builds the skeletons for all lower dimensions ($k=0, ...,
 n-1$) by generating all subsequence simplices of the input cells. During this
-process, it also strores the cocells of each simplex.
+process, it also stores the cocells of each simplex.
 
 However, the input `cells` skeleton itself might implicitly define a
 non-manifold topology. A common example in 2D is when three or more triangles
@@ -1430,8 +1430,6 @@ impl Gramian {
   }
 
   pub fn matrix(&self) -> &na::DMatrix<f64> { &self.matrix }
-
-
   pub fn dim(&self) -> Dim { self.matrix.nrows() }
   pub fn det(&self) -> f64 { self.matrix.determinant() }
   pub fn det_sqrt(&self) -> f64 { self.det().sqrt() }
@@ -1532,16 +1530,7 @@ $
 The Jacobian has as columns our immersed basis tangent vectors, therefore
 really we just need these to compute a metric.
 ```rust
-pub fn from_tangent_basis(basis: na::DMatrix<f64>) -> Self {
-  let metric_tensor = basis.gramian();
-  Self::new(metric_tensor)
-}
-impl DMatrixExt for na::DMatrix<f64> {
-  fn gramian(&self) -> Self {
-    self.transpose() * self
-  }
-  // ...omitted
-}
+pub fn from_euclidean_vectors(vectors: na::DMatrix<f64>) -> Self
 ```
 
 == Simplicial Riemannian Geometry & Regge Calculus
@@ -1819,7 +1808,7 @@ is realizable in Euclidean space $RR^N$ (for $N >= n$) if and only if the
 Cayley-Menger determinant is non-negative: $c m >= 0$ @distgeo. A strictly
 positive determinant indicates realizability in exactly $n$ dimensions
 (non-degenerate), while a zero determinant implies the simplex is degenerate and
-lies within an $(n-1)$-dimensional affine subspace.
+lies within an lower dimensional affine subspace.
 ```rust
 pub fn is_coordinate_realizable(&self) -> bool {
   self.cayley_menger_det() >= 0
