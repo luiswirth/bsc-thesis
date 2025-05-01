@@ -49,7 +49,7 @@ $
 $
 The space of multivectors only plays a minor role in exterior calculus.
 
-The elements of an exterior algebra are commenly called multivectors,
+The elements of an exterior algebra are commonly called multivectors,
 irregardless what the underlying linear space $V$ is. This is confusing
 when working with multiforms, which are distinct from multivectors. To avoid
 confusion, we therefore just call the elements of the exterior algebra exterior

@@ -51,7 +51,7 @@ A $k$-cochain $omega$ is a real-valued function $omega: Delta_k (mesh) -> RR$
 on the $k$-skeleton $Delta_k (mesh)$ of the mesh $mesh$ @whitney:geointegration.
 
 Simplicial cochains arise naturally from the combinatorial structure of a
-simplical complex, they are the duals of simplicial chains. Simplicial cochains
+simplicial complex, they are the duals of simplicial chains. Simplicial cochains
 are also the fundamental combinatorial object in *discrete exterior calculus*
 (DEC) @crane:ddg.
 
@@ -68,7 +68,7 @@ Simplicial cochains preserve the structure of the de Rham complex at a discrete
 level and therefore retain the key topological and geometrical properties from
 differential topology/geometry @douglas:feec-article.
 
-Cochains can be seen as the coefficents or DOFs of our FE spaces.
+Cochains can be seen as the coefficients or DOFs of our FE spaces.
 
 === Discretization: Cochain-Projection via Integration
 
@@ -409,7 +409,7 @@ We write a function that computes these constants.
 ```
 
 Now we can implement the `ExteriorField` trait for our `WhitneyLsf`
-struct to make it point evaluable, based on a coordiante.
+struct to make it point evaluable, based on a coordinate.
 ```rust
 impl ExteriorField for WhitneyLsf {
   fn dim_ambient(&self) -> exterior::Dim { self.cell_coords.dim_ambient() }
@@ -515,7 +515,7 @@ fn whitney_basis_property() {
 
 === Reconstruction: Whitney-Interpolation via the Whitney map
 
-There is a one-to-one correspondance between $k$-cochain and Whitney $k$-form @whitney:geointegration
+There is a one-to-one correspondence between $k$-cochain and Whitney $k$-form @whitney:geointegration
 
 We have already seen how to obtain a cochain from a continuous differential
 form via cochain-projection. This is how we can obtain the cochain corresponding

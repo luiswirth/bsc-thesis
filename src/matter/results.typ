@@ -168,7 +168,7 @@ Then we just call the `solve_hodge_laplace_source` routine.
 We compute the $L^2$ norm of the error in the function value $norm(u -
 u_h)_(L^2)$. we do this by computing the pointwise error norm $norm(u -
 u_h)_(Lambda^k)$ and integrating it using quadrature of order 3, which is
-sufficent for the quadrature error to not dominate the finite element error
+sufficient for the quadrature error to not dominate the finite element error
 @hiptmair:numpde. We also compute the $L^2$ error in the exterior derivative,
 $norm(dif u - dif u_h)_(L^2)$ using the same approach.
 

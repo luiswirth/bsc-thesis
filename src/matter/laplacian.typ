@@ -110,7 +110,7 @@ In SLEPc @SLEPcPaper2005 terminology this is called a GHIEP problem.
 
 We have a helper struct for computing all the the relevant Galerkin matrices,
 as well as a system matrix for the mixed problem.
-The computation of the Galerkin matrices is done efficently, by
+The computation of the Galerkin matrices is done efficiently, by
 only assembling as few mass matrices as possible and then
 combining them with the full exterior derivatives, instead
 of assembling each bilinear form separately.

@@ -1334,7 +1334,7 @@ where
 The library provides several standard quadrature rules.
 
 The most important of which is the barycentric quadrature rule.
-It generalizes trivially to arbitrary dimensional $n$-simplicies.
+It generalizes trivially to arbitrary dimensional $n$-simplices.
 This rule has polynomial exactness degree 1, meaning it integrates
 affine linear functions exactly. This is sufficient for most applications
 in 1st order FEEC, since it constitutes an admissible variational crime. @hiptmair:numpde
@@ -1615,7 +1615,7 @@ over the cells. This means that our metric is constant over each cell
 and changes only from one cell to another.
 
 This piecewise-constant metric over the simplicial mesh can be derived either
-from vertex coordiantes (relying on an embedding) or intrinsically from the
+from vertex coordinates (relying on an embedding) or intrinsically from the
 edge lengths of the simplex by a method inspired by *Regge calculus*  @regge,
 a theory for numerical general relativity that is about producing simplicial
 approximations of spacetimes that are solutions to the Einstein field equation.

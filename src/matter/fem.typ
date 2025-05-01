@@ -343,7 +343,7 @@ $
 $
 
 The choice of quadrature is free, but simple barycentric quadrature suffices, to get
-an admissable variational crime for 1st order FE. @hiptmair:numpde
+an admissible variational crime for 1st order FE. @hiptmair:numpde
 
 This is what the full implementation of this element vector provider then looks like.
 ```rust
