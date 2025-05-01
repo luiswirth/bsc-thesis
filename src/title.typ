@@ -40,8 +40,7 @@
     lengths via Regge Calculus. We focus on solving elliptic Hodge-Laplace
     eigenvalue and source problems on the $n$D de Rham complex. We restrict
     ourselves to first-order Whitney basis functions. The implementation
-    is verified through convergence studies using manufactured solutions,
-    demonstrating expected theoretical accuracy.
+    is partially verified through convergence studies.
   ]
 
   #v(1cm)

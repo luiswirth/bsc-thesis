@@ -1,7 +1,7 @@
 #import "setup.typ": *
 #show: thesis-template
 
-#show image: none
+//#show image: none
 
 #preface-style[
   #include "title.typ"

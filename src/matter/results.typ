@@ -169,10 +169,9 @@ matrix provider for the source term based on the exact Laplacian.
 Then we just call the `solve_hodge_laplace_source` routine.
 
 We compute the $L^2$ error by computing the pointwise error norm $norm(u -
-u_h)_(Lambda^k)$ and integrating using quadrature of order 3, which is sufficent
+u_h)_(L^2)$ and integrating using quadrature of order 3, which is sufficent
 for the quadrature error to not dominate the finite element error.
-For the $H Lambda$ error we do the same as for the $L^2$ error, just
-with the exterior derivative of the solution.
+We also compute the $L^2$ error in the exterior derivative, $norm(dif u - dif u_h)_(L^2)$.
 
 ```rust
 pub fn fe_l2_error<E: ExteriorField>(
@@ -263,11 +262,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!(
       "| {:>2} | {:8} | {:>7} | {:>8} | {:>7} |",
-      "k", "L2 err", "L2 conv", "H1 err", "H1 conv",
+      "k", "L2 err", "L2 conv", "Hd err", "Hd conv",
     );
 
     let mut errors_l2 = Vec::new();
-    let mut errors_h1 = Vec::new();
+    let mut errors_hd = Vec::new();
     for irefine in 0..=(15 / dim as u32) {
       let refine_path = &format!("{path}/refine{irefine}");
       fs::create_dir_all(refine_path).unwrap();
@@ -303,13 +302,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
       errors_l2.push(error_l2);
 
       let dif_galsol = galsol.dif(&topology);
-      let error_h1 = fe_l2_error(&dif_galsol, &dif_solution_exact, &topology, &coords);
-      let conv_rate_h1 = conv_rate(&errors_h1, error_h1);
-      errors_h1.push(error_h1);
+      let error_hd = fe_l2_error(&dif_galsol, &dif_solution_exact, &topology, &coords);
+      let conv_rate_hd = conv_rate(&errors_hd, error_hd);
+      errors_hd.push(error_hd);
 
       println!(
         "| {:>2} | {:<8.2e} | {:>7.2} | {:<8.2e} | {:>7.2} |",
-        irefine, error_l2, conv_rate_l2, error_h1, conv_rate_h1
+        irefine, error_l2, conv_rate_l2, error_hd, conv_rate_hd
       );
     }
   }
@@ -322,7 +321,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 The output is
 ```
 Solving Hodge-Laplace in 2d.
-|  k | L2 err   | L2 conv |   H1 err | H1 conv |
+|  k | L2 err   | L2 conv |   Hd err | Hd conv |
 |  0 | 1.96e0   |     inf | 6.51e-1  |     inf |
 |  1 | 1.57e0   |    0.31 | 4.31e-1  |    0.60 |
 |  2 | 8.02e-1  |    0.97 | 3.51e-1  |    0.30 |
@@ -332,7 +331,7 @@ Solving Hodge-Laplace in 2d.
 |  6 | 4.95e-2  |    1.00 | 1.43e-2  |    1.01 |
 |  7 | 2.48e-2  |    1.00 | 7.15e-3  |    1.00 |
 Solving Hodge-Laplace in 3d.
-|  k | L2 err   | L2 conv |   H1 err | H1 conv |
+|  k | L2 err   | L2 conv |   Hd err | Hd conv |
 |  0 | 3.66e0   |     inf | 1.09e0   |     inf |
 |  1 | 2.56e0   |    0.52 | 1.76e0   |   -0.69 |
 |  2 | 1.46e0   |    0.80 | 7.49e-1  |    1.23 |
@@ -341,9 +340,47 @@ Solving Hodge-Laplace in 3d.
 |  5 | 1.92e-1  |    1.00 | 6.73e-2  |    1.04 |
 ```
 
-We get order $alpha_(H Lambda) = 1$ and order $alpha_(L^2) = 1$. This is exactly
-what theory predicts for 1st order finite elements @douglas:feec-article,
-suggesting a correct implementation.
+We get order $alpha_(H (dif)) = 1$ and order $alpha_(L^2) = 1$.
+
+The $alpha_(H (dif)) = 1$ is promising. It suggests a valid implementation, since it
+agress with the theory @douglas:feec-book.
+
+The $alpha_(L^2) = 1$ is not so clear. It would allow for a $alpha_(H Lambda)
+= 1$ convergence, which is good. However it's entirely clear to us, if here
+a Aubin-Nitsche duality argument can be applied, which would imply a order 2
+convergence, which we don't observe.
+
+We must admit that this is only a partial validation of the implementation,
+because we don't measure the full energy norm
+
+We observe experimental convergence rates approaching $alpha_(H(dif))
+= 1$ for the $L^2$ error of the exterior derivative $norm(dif u - dif u_h)_(L^2)$
+and $alpha_(L^2) = 1$ for the $L^2$ error of the solution value itself $norm(u - u_h)_(L^2)$.
+
+The observed rate $alpha_(H(dif)) = 1$ is promising. It
+matches the convergence rate expected for the $norm(dif dot)_(L^2)$
+component within the $H Lambda$ energy norm for first-order Whitney
+elements, as predicted by theory @douglas:feec-book. This suggests a valid
+implementation of the discretization related to the exterior derivative
+operator.
+
+The interpretation of the $alpha_(L^2) = 1$ rate is less
+straightforward. While this rate is compatible with an overall $cal(O)(h^1)$
+convergence in the full $H Lambda$ norm, standard FEEC theory often predicts
+$cal(O)(h^2)$ convergence for the $L^2$ error itself via an Aubin-Nitsche duality
+argument @douglas:feec-book. The reason why this higher rate is not observed
+in our results requires further investigation, potentially related to the
+quadrature rules used for error computation or other implementation details.
+
+It should be noted that this study constitutes only a partial validation of the
+implementation. A complete verification would require measuring the error in
+the codifferential, $norm(delta(u - u_h))_(L^2)$, to assess convergence in
+the the full $H Lambda$ norm or the associated energy norm.
+$
+  norm(dot)_(H Lambda) =
+  norm(dot)_(L^2) + norm(dot)_(H (dif)) + norm(dot)_(H (delta))
+$
+This analysis was not performed here, due to time constraints.
 
 In @img:source_problem we provide a visualization of the 2D finite element
 solution at refinement level 2 our library has produced in the form of a vector
@@ -362,8 +399,3 @@ field proxy together with a heat map of the magnitude.
   ],
 ) <img:source_problem>
 
-
-In summary, the numerical experiments presented in this chapter, covering both
-an eigenvalue problem on a topologically non-trivial domain and a quantitative
-convergence study via MMS, provide strong validation for the `formoniq`
-library's implementation of Finite Element Exterior Calculus for 1-forms.

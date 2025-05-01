@@ -18,12 +18,19 @@ geometry via edge lengths inspired by Regge Calculus, performing exterior
 algebra computations, and implementing discrete differential forms using
 cochains and first-order Whitney basis functions. Building upon this foundation,
 we implemented the necessary Galerkin operators for FEEC, specifically targeting
-the mixed weak formulation of the Hodge-Laplace equation. The library's
-functionality was validated through numerical experiments, including solving
-the Hodge-Laplacian eigenvalue problem on a torus, correctly capturing its
-topology via harmonic forms, and performing a Method of Manufactured Solutions
-convergence study for the source problem, which confirmed the expected $cal(O)(h)$
-convergence rate for the $H(dif)$ error.
+the mixed weak formulation of the Hodge-Laplace equation.
+
+The library's functionality was validated through numerical experiments,
+including solving the Hodge-Laplacian eigenvalue problem on a torus, correctly
+capturing its topology via harmonic forms, and performing a Method of
+Manufactured Solutions convergence study for the source problem. This study
+confirmed the expected $O(h^1)$ convergence rate for the $L^2$ error of the
+exterior derivative, consistent with theory. However, the study also revealed
+an $O(h^1)$ rate for the $L^2$ error of the solution itself, differing
+from the commonly expected $O(h^2)$ rate, an observation requiring further
+investigation. Furthermore, the analysis constituted a partial validation,
+as the error related to the codifferential was not assessed due to time
+constraints.
 
 `formoniq` demonstrates the feasibility and benefits of combining the rigorous
 mathematical framework of intrinsic FEEC with the modern software engineering
