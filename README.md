@@ -2,8 +2,9 @@
 
 This repository contains the [Typst](https://typst.app/) source files for
 the Bachelor's Thesis of Luis Wirth under the supervision of Prof. Dr. Ralf
-Hiptmair, for Computational Science and Engineering at ETH Zürich. For the
-implementation itself, see [Formoniq](https://github.com/luiswirth/formoniq).
+Hiptmair, for Computational Science and Engineering at ETH Zürich.
+Compiled thesis as PDF available under [GitHub releases](https://github.com/luiswirth/bsc-thesis/releases/tag/bsc-thesis).
+For the implementation itself, see [Formoniq](https://github.com/luiswirth/formoniq).
 
 ## Abstract
 
